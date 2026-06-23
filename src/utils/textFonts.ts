@@ -4,17 +4,17 @@ export const TEXT_FONT_OPTIONS: { value: TextFontFamily; label: string; css: str
   {
     value: 'sans',
     label: 'Sans',
-    css: "var(--font-sans), 'DM Sans', sans-serif",
+    css: 'var(--font-sans), sans-serif',
   },
   {
     value: 'serif',
     label: 'Serif',
-    css: "var(--font-body-serif), 'Spectral', serif",
+    css: 'var(--font-body-serif), serif',
   },
   {
     value: 'display',
     label: 'Display',
-    css: "var(--font-serif), 'Playfair Display', serif",
+    css: 'var(--font-serif), serif',
   },
 ];
 

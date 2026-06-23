@@ -1,12 +1,12 @@
-import { BoardProvider, useBoard } from './context/BoardContext';
-import { TopNav } from './components/TopNav';
-import { Sidebar } from './components/Sidebar';
-import { MainCanvas } from './components/MainCanvas';
-import { CommentWidget } from './components/CommentWidget';
-import { ErrorBoundary } from './components/ErrorBoundary';
-import { PresentOverlay } from './components/PresentOverlay';
-import './styles/tokens.css';
-import './styles/app.css';
+'use client';
+
+import { BoardProvider, useBoard } from '@/context/BoardContext';
+import { TopNav } from '@/components/TopNav';
+import { Sidebar } from '@/components/Sidebar';
+import { MainCanvas } from '@/components/MainCanvas';
+import { CommentWidget } from '@/components/CommentWidget';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { PresentOverlay } from '@/components/PresentOverlay';
 
 function RoleToggle() {
   const { role, setRole } = useBoard();
@@ -31,7 +31,7 @@ function RoleToggle() {
   );
 }
 
-function MoodboardApp() {
+function MoodboardShell() {
   const { isPresenting } = useBoard();
 
   return (
@@ -48,11 +48,11 @@ function MoodboardApp() {
   );
 }
 
-export default function App() {
+export function MoodboardApp() {
   return (
     <ErrorBoundary>
       <BoardProvider>
-        <MoodboardApp />
+        <MoodboardShell />
       </BoardProvider>
     </ErrorBoundary>
   );
