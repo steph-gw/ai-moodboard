@@ -153,6 +153,12 @@ button {
   color: var(--text-primary);
 }
 
+.btn-ghost.active {
+  background: var(--gold-light);
+  color: var(--gold-hover);
+  border-color: var(--gold-border);
+}
+
 .btn-primary {
   color: #fff;
   background: var(--gold);
@@ -456,100 +462,169 @@ button {
   border-radius: 20px;
 }
 
-/* ── Slide strip ── */
+/* ── Slide strip (vertical, Google Slides-style) ── */
 .slide-strip {
+  width: var(--slide-strip-w);
+  flex-shrink: 0;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
+  flex-direction: column;
+  background: var(--white);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+  min-height: 0;
 }
 
 .slide-strip-scroll {
   display: flex;
-  gap: 8px;
-  overflow-x: auto;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
-  padding-bottom: 4px;
-  scrollbar-width: none;
+  padding: 12px 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.1) transparent;
 }
 
 .slide-strip-scroll::-webkit-scrollbar {
-  display: none;
+  width: 3px;
+}
+
+.slide-strip-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 2px;
 }
 
 .slide-tab {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--white);
-  padding: 6px;
+  gap: 8px;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
   cursor: pointer;
   transition: all 0.15s;
   flex-shrink: 0;
-  min-width: 72px;
+  width: 100%;
+  text-align: left;
 }
 
-.slide-tab:hover {
+.slide-tab-index {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  line-height: 1;
+  min-width: 14px;
+  padding-top: 0;
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.slide-tab:hover .slide-tab-preview {
   border-color: var(--border-strong);
 }
 
-.slide-tab.active {
+.slide-tab.active .slide-tab-index {
+  color: var(--gold);
+}
+
+.slide-tab.active .slide-tab-preview {
   border-color: var(--gold);
   box-shadow: 0 0 0 1px var(--gold-border);
 }
 
 .slide-tab-preview {
-  width: 64px;
-  height: 36px;
+  flex: 1;
+  aspect-ratio: 16 / 9;
   border-radius: 4px;
   overflow: hidden;
+  background: var(--white);
+  border: 1px solid var(--border);
+  display: block;
+  position: relative;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  min-width: 0;
+  pointer-events: none;
+}
+
+.slide-tab-mini {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: var(--white);
+  transform-origin: top left;
+  pointer-events: none;
+}
+
+.slide-mini-image {
   background: var(--surface);
+  border-radius: 1px;
+}
+
+.slide-mini-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.slide-mini-text {
   display: flex;
   align-items: center;
-  justify-content: center;
+  padding: 4px 8px;
+  box-sizing: border-box;
+  line-height: 1.25;
+  word-break: break-word;
+  overflow: hidden;
 }
 
 .slide-tab-preview img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  pointer-events: none;
 }
 
 .slide-tab-number {
-  font-size: 12px;
+  font-size: 10px;
   color: var(--text-muted);
   font-weight: 500;
-}
-
-.slide-tab-label {
-  font-size: 9px;
-  color: var(--text-muted);
-  letter-spacing: 0.02em;
-  max-width: 64px;
+  padding: 0 4px;
+  text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
 
 .slide-tab-add {
+  align-items: center;
   justify-content: center;
-  min-height: 68px;
+  gap: 0;
+  min-height: 56px;
   color: var(--text-muted);
-  border-style: dashed;
+  border: 1px dashed var(--border-strong);
+  border-radius: 4px;
+  background: transparent;
+  aspect-ratio: 16 / 9;
+  margin-left: 22px;
+  width: calc(100% - 22px);
 }
 
 .slide-tab-add:hover {
   color: var(--text-secondary);
   border-color: var(--gold-border);
+  background: var(--gold-light);
 }
 
 .slide-strip-actions {
   display: flex;
+  justify-content: center;
   gap: 4px;
   flex-shrink: 0;
+  padding: 8px 10px 12px;
+  border-top: 1px solid var(--border);
 }
 
 .slide-action-btn {
@@ -708,21 +783,8 @@ button {
   gap: 5px;
 }
 
-.text-format-color-picker {
-  position: relative;
-  cursor: pointer;
-}
-
-.text-format-color-picker input[type='color'] {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  width: 100%;
-  height: 100%;
-  cursor: pointer;
-}
-
 .text-format-color-swatch {
+  display: inline-block;
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -732,6 +794,27 @@ button {
   padding: 0;
   flex-shrink: 0;
   transition: transform 0.12s, box-shadow 0.12s;
+  vertical-align: middle;
+}
+
+.text-format-color-picker {
+  position: relative;
+  display: inline-flex;
+  cursor: pointer;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+}
+
+.text-format-color-picker input[type='color'] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  border: none;
+  padding: 0;
 }
 
 .text-format-color-swatch:hover {
@@ -817,6 +900,261 @@ button {
   opacity: 1;
 }
 
+/* ── Pinterest right drawer ── */
+.pinterest-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  border: none;
+  padding: 0;
+  background: rgba(26, 23, 20, 0.18);
+  cursor: pointer;
+}
+
+.pinterest-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 120;
+  width: min(400px, 92vw);
+  display: flex;
+  flex-direction: column;
+  background: var(--white);
+  border-left: 1px solid var(--border);
+  box-shadow: -12px 0 40px rgba(0, 0, 0, 0.12);
+  animation: pinterestDrawerIn 0.22s ease-out;
+}
+
+@keyframes pinterestDrawerIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0.6;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.pinterest-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.pinterest-picker-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.pinterest-picker-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.pinterest-picker-account {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.pinterest-picker-account strong {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.pinterest-picker-close {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pinterest-picker-close:hover {
+  background: var(--surface-2);
+  color: var(--text-primary);
+}
+
+.pinterest-picker-search {
+  position: relative;
+  margin: 12px 14px 0;
+  flex-shrink: 0;
+}
+
+.pinterest-picker-search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.pinterest-picker-search input {
+  width: 100%;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  padding: 0 14px 0 34px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.pinterest-picker-search input:focus {
+  border-color: #E60023;
+  background: var(--white);
+  box-shadow: 0 0 0 3px rgba(230, 0, 35, 0.1);
+}
+
+.pinterest-picker-boards {
+  display: flex;
+  gap: 6px;
+  padding: 12px 14px 10px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  scrollbar-width: none;
+}
+
+.pinterest-picker-boards::-webkit-scrollbar {
+  display: none;
+}
+
+.pinterest-board-chip {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 999px;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+
+.pinterest-board-chip:hover {
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.pinterest-board-chip.active {
+  background: #111;
+  border-color: #111;
+  color: #fff;
+}
+
+.pinterest-picker-grid {
+  column-count: 2;
+  column-gap: 10px;
+  padding: 0 14px 20px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.pinterest-picker-empty {
+  column-span: all;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  padding: 40px 12px;
+}
+
+.pinterest-pin {
+  display: block;
+  width: 100%;
+  margin: 0 0 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  page-break-inside: avoid;
+  position: relative;
+}
+
+.pinterest-pin img {
+  width: 100%;
+  display: block;
+  object-fit: cover;
+  background: var(--surface);
+  border-radius: 12px;
+  transition: box-shadow 0.15s ease;
+}
+
+.pinterest-pin-short img {
+  aspect-ratio: 1 / 1;
+}
+
+.pinterest-pin-medium img {
+  aspect-ratio: 3 / 4;
+}
+
+.pinterest-pin-tall img {
+  aspect-ratio: 2 / 3;
+}
+
+.pinterest-pin:hover img {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.pinterest-pin-meta {
+  padding: 6px 2px 2px;
+}
+
+.pinterest-pin-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.pinterest-pin-sub {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.pinterest-pin-added {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(26, 23, 20, 0.9);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 5px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+
 /* ── Slide canvas ── */
 .slide-canvas-wrap {
   display: flex;
@@ -875,8 +1213,8 @@ button {
   pointer-events: none;
 }
 
-/* Image vote controls (client thumbs up/down) */
-.image-vote-hover {
+/* Image vote controls (thumbs up/down alignment) */
+.image-vote-controls {
   position: absolute;
   top: 8px;
   right: 8px;
@@ -885,14 +1223,12 @@ button {
   opacity: 0;
   transition: opacity 0.15s;
   pointer-events: auto;
+  z-index: 2;
 }
 
-.canvas-element-image:hover .image-vote-hover {
+.canvas-element-image:hover .image-vote-controls,
+.image-vote-controls.has-vote {
   opacity: 1;
-}
-
-.canvas-element-image.has-vote .image-vote-hover {
-  display: none;
 }
 
 .image-vote-btn {
@@ -903,32 +1239,29 @@ button {
   height: 26px;
   border-radius: 50%;
   border: none;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   color: var(--text-secondary);
   cursor: pointer;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s, color 0.12s, transform 0.12s;
 }
 
 .image-vote-btn:hover {
   background: #fff;
-  color: var(--gold);
+  color: var(--text-primary);
+  transform: scale(1.06);
 }
 
-.image-vote-pinned {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--gold);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
-  pointer-events: none;
+.image-vote-btn.active.up {
+  background: #fff;
+  color: var(--approved-green);
+  box-shadow: 0 0 0 1.5px rgba(58, 122, 80, 0.35), 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+.image-vote-btn.active.down {
+  background: #fff;
+  color: #a05050;
+  box-shadow: 0 0 0 1.5px rgba(160, 80, 80, 0.3), 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 .canvas-text-inner {
@@ -1372,7 +1705,7 @@ button {
 .role-toggle {
   position: fixed;
   bottom: 24px;
-  left: 24px;
+  right: 24px;
   transform: none;
   display: flex;
   align-items: center;

@@ -1,5 +1,105 @@
+import { useEffect, useRef, useState } from 'react';
 import { Plus, Copy, Trash2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
+import type { CanvasElement, Slide } from '../types';
+import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
+import { textFontCss } from '../utils/textFonts';
+
+function MiniElement({
+  element,
+  getImageUrl,
+}: {
+  element: CanvasElement;
+  getImageUrl: (imageId: string) => string | undefined;
+}) {
+  const style = {
+    position: 'absolute' as const,
+    left: element.x,
+    top: element.y,
+    width: element.width,
+    height: element.height,
+    zIndex: element.zIndex,
+    overflow: 'hidden' as const,
+  };
+
+  if (element.type === 'image') {
+    const url = getImageUrl(element.imageId);
+    return (
+      <div className="slide-mini-image" style={style}>
+        {url ? <img src={url} alt="" draggable={false} /> : null}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="slide-mini-text"
+      style={{
+        ...style,
+        fontSize: element.fontSize,
+        fontFamily: textFontCss(element.fontFamily),
+        fontWeight: element.bold ? 700 : 400,
+        fontStyle: element.italic ? 'italic' : 'normal',
+        color: element.color,
+        textAlign: element.align,
+        justifyContent:
+          element.align === 'left'
+            ? 'flex-start'
+            : element.align === 'right'
+              ? 'flex-end'
+              : 'center',
+        whiteSpace: 'pre-wrap',
+      }}
+    >
+      {element.content}
+    </div>
+  );
+}
+
+function SlideMiniPreview({ slide }: { slide: Slide }) {
+  const { getImageById } = useBoard();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(0.12);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const width = el.clientWidth;
+      if (width > 0) setScale(width / SLIDE_WIDTH);
+    };
+
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const sorted = [...slide.elements].sort((a, b) => a.zIndex - b.zIndex);
+
+  return (
+    <div ref={containerRef} className="slide-tab-preview">
+      <div
+        className="slide-tab-mini"
+        style={{
+          width: SLIDE_WIDTH,
+          height: SLIDE_HEIGHT,
+          transform: `scale(${scale})`,
+        }}
+        aria-hidden
+      >
+        {sorted.map((element) => (
+          <MiniElement
+            key={element.id}
+            element={element}
+            getImageUrl={(imageId) => getImageById(imageId)?.url}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) {
   const {
@@ -8,7 +108,6 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
     activeSlideId,
     setActiveSlideId,
     selectElement,
-    getImageById: getImage,
   } = useBoard();
 
   const section = board.sections.find((s) => s.id === activeSectionId);
@@ -16,12 +115,6 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
   const isActive = activeSlideId === slideId;
 
   if (!slide) return null;
-
-  const firstImage = slide.elements.find((el) => el.type === 'image');
-  const thumbUrl =
-    firstImage?.type === 'image'
-      ? getImage(firstImage.imageId)?.url
-      : undefined;
 
   return (
     <button
@@ -37,14 +130,8 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
         }
       }}
     >
-      <div className="slide-tab-preview">
-        {thumbUrl ? (
-          <img src={thumbUrl} alt="" />
-        ) : (
-          <span className="slide-tab-number">{index + 1}</span>
-        )}
-      </div>
-      <span className="slide-tab-label">{slide.name}</span>
+      <span className="slide-tab-index">{index + 1}</span>
+      <SlideMiniPreview slide={slide} />
     </button>
   );
 }
@@ -58,7 +145,7 @@ export function SlideStrip() {
   if (!section) return null;
 
   return (
-    <div className="slide-strip">
+    <aside className="slide-strip" aria-label="Slides">
       <div className="slide-strip-scroll">
         {section.slides.map((slide, index) => (
           <SlideThumbnail key={slide.id} slideId={slide.id} index={index} />
@@ -89,6 +176,6 @@ export function SlideStrip() {
           </button>
         </div>
       )}
-    </div>
+    </aside>
   );
 }

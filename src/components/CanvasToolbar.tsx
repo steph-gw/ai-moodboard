@@ -1,55 +1,7 @@
 import { useRef } from 'react';
-import { Type, ImagePlus, Trash2, RefreshCw, Plus } from 'lucide-react';
+import { Type, ImagePlus, Trash2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { TextFormatBar } from './TextFormatBar';
-
-function SuggestionsDrawer() {
-  const {
-    board,
-    pinSuggestion,
-    refreshSuggestions,
-    showSuggestionsPanel,
-    setShowSuggestionsPanel,
-  } = useBoard();
-
-  if (!showSuggestionsPanel) return null;
-
-  return (
-    <div className="suggestions-drawer">
-      <div className="suggestions-drawer-header">
-        <span className="suggestions-label">
-          Suggested images
-        </span>
-        <button
-          type="button"
-          className="btn-ghost btn-sm"
-          onClick={refreshSuggestions}
-        >
-          <RefreshCw size={12} strokeWidth={1.5} />
-          Refresh
-        </button>
-      </div>
-      <div className="suggestions-drawer-grid">
-        {board.suggestions.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            className="suggestion-drawer-item"
-            onClick={() => {
-              pinSuggestion(s.id);
-              setShowSuggestionsPanel(false);
-            }}
-          >
-            <img src={s.url} alt={s.alt} />
-            <span className="suggestion-drawer-add">
-              <Plus size={12} strokeWidth={2} />
-            </span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export function CanvasToolbar() {
   const {
@@ -84,7 +36,7 @@ export function CanvasToolbar() {
         </button>
         <button
           type="button"
-          className="btn-ghost btn-sm"
+          className={`btn-ghost btn-sm ${showSuggestionsPanel ? 'active' : ''}`}
           onClick={() => setShowSuggestionsPanel(!showSuggestionsPanel)}
         >
           <ImagePlus size={13} strokeWidth={1.5} />
@@ -116,7 +68,6 @@ export function CanvasToolbar() {
         )}
       </div>
       {selectedIsText && <TextFormatBar />}
-      <SuggestionsDrawer />
     </div>
   );
 }

@@ -3,10 +3,12 @@
 import { BoardProvider, useBoard } from '@/context/BoardContext';
 import { TopNav } from '@/components/TopNav';
 import { Sidebar } from '@/components/Sidebar';
+import { SlideStrip } from '@/components/SlideStrip';
 import { MainCanvas } from '@/components/MainCanvas';
 import { CommentWidget } from '@/components/CommentWidget';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { PresentOverlay } from '@/components/PresentOverlay';
+import { PinterestPicker } from '@/components/PinterestPicker';
 
 function RoleToggle() {
   const { role, setRole } = useBoard();
@@ -39,10 +41,12 @@ function MoodboardShell() {
       <TopNav />
       <div className="app-body">
         <Sidebar />
+        {!isPresenting && <SlideStrip />}
         <MainCanvas />
       </div>
       {!isPresenting && <CommentWidget />}
       {!isPresenting && <RoleToggle />}
+      {!isPresenting && <PinterestPicker />}
       {isPresenting && <PresentOverlay />}
     </div>
   );

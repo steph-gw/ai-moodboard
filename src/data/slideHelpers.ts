@@ -1,20 +1,22 @@
-import type { BoardImage, CanvasElement, CommentPin, ImageElement, Slide, TextElement } from '../types';
+import type {
+  BoardImage,
+  CanvasElement,
+  CommentPin,
+  ImageElement,
+  Slide,
+  TextElement,
+  TextFontFamily,
+} from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 
-const COLLAGE_POSITIONS: Array<{ x: number; y: number; width: number; height: number }> = [
-  { x: 20, y: 20, width: 450, height: 250 },
-  { x: 490, y: 20, width: 450, height: 250 },
-  { x: 20, y: 290, width: 450, height: 230 },
-  { x: 490, y: 290, width: 450, height: 230 },
-];
-
 function imageElement(
+  id: string,
   imageId: string,
   position: { x: number; y: number; width: number; height: number },
   zIndex: number
 ): ImageElement {
   return {
-    id: `el-${imageId}`,
+    id,
     type: 'image',
     imageId,
     zIndex,
@@ -29,7 +31,15 @@ function textElement(
   y: number,
   width: number,
   height: number,
-  zIndex: number
+  zIndex: number,
+  options: {
+    fontSize?: number;
+    fontFamily?: TextFontFamily;
+    color?: string;
+    align?: 'left' | 'center' | 'right';
+    bold?: boolean;
+    italic?: boolean;
+  } = {}
 ): TextElement {
   return {
     id,
@@ -40,13 +50,531 @@ function textElement(
     width,
     height,
     zIndex,
-    fontSize: 28,
-    fontFamily: 'serif',
-    color: '#1a1714',
-    align: 'center',
-    bold: false,
-    italic: false,
+    fontSize: options.fontSize ?? 28,
+    fontFamily: options.fontFamily ?? 'serif',
+    color: options.color ?? '#1a1714',
+    align: options.align ?? 'center',
+    bold: options.bold ?? false,
+    italic: options.italic ?? false,
   };
+}
+
+function indexById(images: BoardImage[]) {
+  const byId = Object.fromEntries(images.map((img) => [img.id, img]));
+  return (id: string) => byId[id];
+}
+
+function pushImage(
+  elements: CanvasElement[],
+  img: ReturnType<typeof indexById>,
+  elId: string,
+  imageId: string,
+  position: { x: number; y: number; width: number; height: number },
+  zIndex: number
+) {
+  if (img(imageId)) {
+    elements.push(imageElement(elId, imageId, position, zIndex));
+  }
+}
+
+function buildCeremonySlides(images: BoardImage[]): Slide[] {
+  const img = indexById(images);
+  const moodElements: CanvasElement[] = [];
+
+  pushImage(moodElements, img, 'el-ceremony-mood-1', 'img-1', { x: 28, y: 28, width: 410, height: 360 }, 1);
+  pushImage(moodElements, img, 'el-ceremony-mood-2', 'img-2', { x: 458, y: 28, width: 250, height: 188 }, 2);
+
+  moodElements.push(
+    textElement('el-text-ceremony-title', 'Ceremony', 728, 36, 208, 48, 10, {
+      fontSize: 34,
+      fontFamily: 'display',
+      align: 'left',
+    }),
+    textElement(
+      'el-text-ceremony-sub',
+      'Garden light · open air\nSoft ivory against stone',
+      728,
+      90,
+      208,
+      72,
+      11,
+      { fontSize: 13, fontFamily: 'sans', color: '#6b6460', align: 'left' }
+    )
+  );
+
+  pushImage(moodElements, img, 'el-ceremony-mood-4', 'img-4', { x: 728, y: 178, width: 208, height: 210 }, 3);
+  pushImage(moodElements, img, 'el-ceremony-mood-3', 'img-3', { x: 458, y: 236, width: 250, height: 210 }, 4);
+
+  moodElements.push(
+    textElement(
+      'el-text-ceremony-caption',
+      'Weathered stone · trailing greens · warm ivory',
+      28,
+      408,
+      410,
+      56,
+      12,
+      { fontSize: 15, fontFamily: 'serif', color: '#5c4a3a', align: 'left', italic: true }
+    ),
+    textElement(
+      'el-text-ceremony-note',
+      'Keep the aisle quiet — linen, wood, and light.',
+      458,
+      462,
+      478,
+      40,
+      13,
+      { fontSize: 12, fontFamily: 'sans', color: '#a89f96', align: 'left' }
+    )
+  );
+
+  const guestElements: CanvasElement[] = [
+    textElement('el-text-ceremony-dir-title', 'Guest experience', 40, 36, 440, 48, 1, {
+      fontSize: 32,
+      fontFamily: 'display',
+      align: 'left',
+    }),
+    textElement(
+      'el-text-ceremony-dir-body',
+      'Arrive under trees, find a quiet seat, and look toward something soft and living — not a stage.',
+      40,
+      96,
+      440,
+      90,
+      2,
+      { fontSize: 15, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+    ),
+    textElement(
+      'el-text-ceremony-dir-list',
+      'Do\n• Handwritten welcome sign\n• Petals only at the aisle start\n• Unplugged ceremony note\n\nAvoid\n• Heavy draping or fabric walls\n• Loud processional music',
+      40,
+      200,
+      440,
+      220,
+      3,
+      { fontSize: 14, fontFamily: 'sans', color: '#1a1714', align: 'left' }
+    ),
+  ];
+
+  pushImage(guestElements, img, 'el-ceremony-dir-14', 'img-14', { x: 520, y: 36, width: 400, height: 250 }, 4);
+  pushImage(guestElements, img, 'el-ceremony-dir-15', 'img-15', { x: 520, y: 306, width: 190, height: 160 }, 5);
+  pushImage(guestElements, img, 'el-ceremony-dir-16', 'img-16', { x: 730, y: 306, width: 190, height: 160 }, 6);
+
+  guestElements.push(
+    textElement('el-text-ceremony-dir-footer', 'Tone: quiet joy · no spectacle', 40, 460, 440, 40, 7, {
+      fontSize: 13,
+      fontFamily: 'sans',
+      color: '#c4a35a',
+      align: 'left',
+      bold: true,
+    })
+  );
+
+  return [
+    { id: 'slide-ceremony-1', sectionId: 'ceremony', name: 'Mood', elements: moodElements, commentPins: ceremonySamplePins() },
+    { id: 'slide-ceremony-2', sectionId: 'ceremony', name: 'Guests', elements: guestElements, commentPins: [] },
+  ];
+}
+
+function buildReceptionSlides(images: BoardImage[]): Slide[] {
+  const img = indexById(images);
+  const tablesElements: CanvasElement[] = [];
+
+  pushImage(tablesElements, img, 'el-rec-mood-5', 'img-5', { x: 28, y: 28, width: 460, height: 300 }, 1);
+  pushImage(tablesElements, img, 'el-rec-mood-6', 'img-6', { x: 508, y: 28, width: 220, height: 170 }, 2);
+  pushImage(tablesElements, img, 'el-rec-mood-8', 'img-8', { x: 748, y: 28, width: 184, height: 170 }, 3);
+
+  tablesElements.push(
+    textElement('el-text-rec-title', 'Reception', 508, 220, 424, 44, 10, {
+      fontSize: 34,
+      fontFamily: 'display',
+      align: 'left',
+    }),
+    textElement(
+      'el-text-rec-sub',
+      'Long tables, low florals, candlelight\nthat feels found — not forced.',
+      508,
+      272,
+      424,
+      70,
+      11,
+      { fontSize: 14, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+    ),
+    textElement(
+      'el-text-rec-caption',
+      'Ivory linen · warm wood · glass that catches the evening',
+      28,
+      350,
+      460,
+      48,
+      12,
+      { fontSize: 14, fontFamily: 'serif', color: '#5c4a3a', align: 'left', italic: true }
+    ),
+    textElement(
+      'el-text-rec-note',
+      'Family-style service. No towering centerpieces. Room to lean in.',
+      508,
+      360,
+      424,
+      48,
+      13,
+      { fontSize: 13, fontFamily: 'sans', color: '#a89f96', align: 'left' }
+    ),
+    textElement(
+      'el-text-rec-footer',
+      'Palette: cream · sage · amber glow',
+      28,
+      460,
+      900,
+      40,
+      14,
+      { fontSize: 13, fontFamily: 'sans', color: '#c4a35a', align: 'left', bold: true }
+    )
+  );
+
+  const eveningElements: CanvasElement[] = [
+    textElement('el-text-rec-eve-title', 'After dark', 40, 36, 400, 48, 1, {
+      fontSize: 32,
+      fontFamily: 'display',
+      align: 'left',
+    }),
+    textElement(
+      'el-text-rec-eve-body',
+      'When the sky softens, the room should feel warmer — not louder. Soft string lights, a clear dance pocket, and space for toasts.',
+      40,
+      100,
+      400,
+      110,
+      2,
+      { fontSize: 15, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+    ),
+    textElement(
+      'el-text-rec-eve-list',
+      'Flow\n• Golden-hour portraits wrap\n• Dinner under the tent\n• First dance near the head table\n• Cake + dancing, not a hard cut',
+      40,
+      230,
+      400,
+      180,
+      3,
+      { fontSize: 14, fontFamily: 'sans', color: '#1a1714', align: 'left' }
+    ),
+  ];
+
+  pushImage(eveningElements, img, 'el-rec-eve-7', 'img-7', { x: 480, y: 36, width: 440, height: 260 }, 4);
+  pushImage(eveningElements, img, 'el-rec-eve-17', 'img-17', { x: 480, y: 316, width: 440, height: 160 }, 5);
+
+  eveningElements.push(
+    textElement('el-text-rec-eve-footer', 'Mood: candlelit · unhurried · full of people', 40, 460, 400, 40, 6, {
+      fontSize: 13,
+      fontFamily: 'sans',
+      color: '#c4a35a',
+      align: 'left',
+      bold: true,
+    })
+  );
+
+  return [
+    { id: 'slide-reception-1', sectionId: 'reception', name: 'Tables', elements: tablesElements, commentPins: [] },
+    { id: 'slide-reception-2', sectionId: 'reception', name: 'Evening', elements: eveningElements, commentPins: [] },
+  ];
+}
+
+function buildFloralsSlides(images: BoardImage[]): Slide[] {
+  const img = indexById(images);
+  const bouquetElements: CanvasElement[] = [];
+
+  pushImage(bouquetElements, img, 'el-flo-mood-9', 'img-9', { x: 28, y: 28, width: 340, height: 380 }, 1);
+  pushImage(bouquetElements, img, 'el-flo-mood-10', 'img-10', { x: 388, y: 28, width: 280, height: 210 }, 2);
+  pushImage(bouquetElements, img, 'el-flo-mood-11', 'img-11', { x: 688, y: 28, width: 244, height: 210 }, 3);
+
+  bouquetElements.push(
+    textElement('el-text-flo-title', 'Florals', 388, 260, 280, 44, 10, {
+      fontSize: 34,
+      fontFamily: 'display',
+      align: 'left',
+    }),
+    textElement(
+      'el-text-flo-sub',
+      'Garden roses, eucalyptus,\nloose and a little wild.',
+      388,
+      312,
+      280,
+      70,
+      11,
+      { fontSize: 14, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+    ),
+    textElement(
+      'el-text-flo-note',
+      'Low arrangements for conversation.\nTrailing greens on the arch only.',
+      688,
+      260,
+      244,
+      100,
+      12,
+      { fontSize: 13, fontFamily: 'sans', color: '#5c4a3a', align: 'left' }
+    ),
+    textElement(
+      'el-text-flo-caption',
+      'Blush · cream · sage · a touch of berry',
+      28,
+      430,
+      900,
+      50,
+      13,
+      { fontSize: 14, fontFamily: 'serif', color: '#c4a35a', align: 'left', italic: true }
+    )
+  );
+
+  const paletteElements: CanvasElement[] = [
+    textElement('el-text-flo-pal-title', 'Floral notes', 40, 36, 420, 48, 1, {
+      fontSize: 32,
+      fontFamily: 'display',
+      align: 'left',
+    }),
+    textElement(
+      'el-text-flo-pal-body',
+      'Think gathered from the garden, not flown in for drama. Soft shapes, mixed textures, nothing too polished.',
+      40,
+      100,
+      420,
+      100,
+      2,
+      { fontSize: 15, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+    ),
+    textElement(
+      'el-text-flo-pal-list',
+      'Include\n• Garden roses & spray roses\n• Eucalyptus + olive\n• One unexpected bloom\n\nSkip\n• Neon fillers\n• Rigid sphere centerpieces',
+      40,
+      220,
+      420,
+      220,
+      3,
+      { fontSize: 14, fontFamily: 'sans', color: '#1a1714', align: 'left' }
+    ),
+  ];
+
+  pushImage(paletteElements, img, 'el-flo-pal-19', 'img-19', { x: 500, y: 36, width: 420, height: 250 }, 4);
+  pushImage(paletteElements, img, 'el-flo-pal-20', 'img-20', { x: 500, y: 306, width: 420, height: 170 }, 5);
+
+  paletteElements.push(
+    textElement('el-text-flo-pal-footer', 'Hero flower: ivory garden rose', 40, 460, 420, 40, 6, {
+      fontSize: 13,
+      fontFamily: 'sans',
+      color: '#c4a35a',
+      align: 'left',
+      bold: true,
+    })
+  );
+
+  return [
+    { id: 'slide-florals-1', sectionId: 'florals', name: 'Bouquet', elements: bouquetElements, commentPins: [] },
+    { id: 'slide-florals-2', sectionId: 'florals', name: 'Notes', elements: paletteElements, commentPins: [] },
+  ];
+}
+
+function buildAttireSlides(images: BoardImage[]): Slide[] {
+  const img = indexById(images);
+  const bridalElements: CanvasElement[] = [];
+
+  pushImage(bridalElements, img, 'el-att-bri-12', 'img-12', { x: 28, y: 28, width: 360, height: 380 }, 1);
+  pushImage(bridalElements, img, 'el-att-bri-25', 'img-25', { x: 408, y: 28, width: 300, height: 220 }, 2);
+  pushImage(bridalElements, img, 'el-att-bri-27', 'img-27', { x: 728, y: 28, width: 204, height: 220 }, 3);
+
+  bridalElements.push(
+    textElement('el-text-att-bri-title', 'Bridal', 408, 270, 300, 44, 10, {
+      fontSize: 34,
+      fontFamily: 'display',
+      align: 'left',
+    }),
+    textElement(
+      'el-text-att-bri-sub',
+      'Lace that feels heirloom.\nMovement in the skirt.\nVeil optional, soft if worn.',
+      408,
+      322,
+      300,
+      100,
+      11,
+      { fontSize: 14, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+    ),
+    textElement(
+      'el-text-att-bri-note',
+      'Ivory over stark white.\nNatural waist, no stiff ballgown.',
+      728,
+      270,
+      204,
+      120,
+      12,
+      { fontSize: 13, fontFamily: 'sans', color: '#5c4a3a', align: 'left' }
+    ),
+    textElement(
+      'el-text-att-bri-footer',
+      'Look: classic with air',
+      28,
+      430,
+      360,
+      50,
+      13,
+      { fontSize: 14, fontFamily: 'sans', color: '#c4a35a', align: 'left', bold: true }
+    )
+  );
+
+  const groomElements: CanvasElement[] = [
+    textElement('el-text-att-gr-title', 'Groom', 40, 36, 380, 48, 1, {
+      fontSize: 32,
+      fontFamily: 'display',
+      align: 'left',
+    }),
+    textElement(
+      'el-text-att-gr-body',
+      'Relaxed tailoring that still photographs sharp — linen in the afternoon, a proper jacket for dinner.',
+      40,
+      100,
+      380,
+      100,
+      2,
+      { fontSize: 15, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+    ),
+    textElement(
+      'el-text-att-gr-list',
+      'Direction\n• Neutral or soft sage tones\n• Minimal accessories\n• Comfortable shoes for dancing\n• Pocket square optional',
+      40,
+      220,
+      380,
+      180,
+      3,
+      { fontSize: 14, fontFamily: 'sans', color: '#1a1714', align: 'left' }
+    ),
+  ];
+
+  pushImage(groomElements, img, 'el-att-gr-13', 'img-13', { x: 460, y: 36, width: 230, height: 420 }, 4);
+  pushImage(groomElements, img, 'el-att-gr-26', 'img-26', { x: 710, y: 36, width: 220, height: 420 }, 5);
+
+  groomElements.push(
+    textElement('el-text-att-gr-footer', 'Tone: refined, not stiff', 40, 460, 380, 40, 6, {
+      fontSize: 13,
+      fontFamily: 'sans',
+      color: '#c4a35a',
+      align: 'left',
+      bold: true,
+    })
+  );
+
+  return [
+    { id: 'slide-attire-1', sectionId: 'attire', name: 'Bridal', elements: bridalElements, commentPins: [] },
+    { id: 'slide-attire-2', sectionId: 'attire', name: 'Groom', elements: groomElements, commentPins: [] },
+  ];
+}
+
+function buildStationerySlides(images: BoardImage[]): Slide[] {
+  const img = indexById(images);
+  const suiteElements: CanvasElement[] = [];
+
+  pushImage(suiteElements, img, 'el-sta-mood-21', 'img-21', { x: 28, y: 28, width: 420, height: 280 }, 1);
+  pushImage(suiteElements, img, 'el-sta-mood-22', 'img-22', { x: 468, y: 28, width: 230, height: 180 }, 2);
+  pushImage(suiteElements, img, 'el-sta-mood-23', 'img-23', { x: 718, y: 28, width: 214, height: 180 }, 3);
+
+  suiteElements.push(
+    textElement('el-text-sta-title', 'Stationery', 468, 230, 464, 44, 10, {
+      fontSize: 34,
+      fontFamily: 'display',
+      align: 'left',
+    }),
+    textElement(
+      'el-text-sta-sub',
+      'Letterpress feel, warm paper,\nand type that reads like a letter.',
+      468,
+      284,
+      464,
+      70,
+      11,
+      { fontSize: 15, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+    ),
+    textElement(
+      'el-text-sta-caption',
+      'Cream stock · soft charcoal ink · a single gold accent',
+      28,
+      330,
+      420,
+      50,
+      12,
+      { fontSize: 14, fontFamily: 'serif', color: '#5c4a3a', align: 'left', italic: true }
+    ),
+    textElement(
+      'el-text-sta-note',
+      'Suite: save the date → invite → day-of menu & place cards',
+      468,
+      370,
+      464,
+      50,
+      13,
+      { fontSize: 13, fontFamily: 'sans', color: '#a89f96', align: 'left' }
+    ),
+    textElement(
+      'el-text-sta-footer',
+      'Voice: intimate, handwritten spirit',
+      28,
+      460,
+      900,
+      40,
+      14,
+      { fontSize: 13, fontFamily: 'sans', color: '#c4a35a', align: 'left', bold: true }
+    )
+  );
+
+  const dayOfElements: CanvasElement[] = [
+    textElement('el-text-sta-day-title', 'Day-of paper', 40, 36, 440, 48, 1, {
+      fontSize: 32,
+      fontFamily: 'display',
+      align: 'left',
+    }),
+    textElement(
+      'el-text-sta-day-body',
+      'Small pieces guests actually touch — menus at each setting, a welcome note, and clear place cards.',
+      40,
+      100,
+      440,
+      100,
+      2,
+      { fontSize: 15, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+    ),
+    textElement(
+      'el-text-sta-day-list',
+      'Include\n• Ceremony program (one page)\n• Dinner menu\n• Place cards with first names\n\nKeep light\n• No oversized signage towers\n• No plastic holders',
+      40,
+      220,
+      440,
+      200,
+      3,
+      { fontSize: 14, fontFamily: 'sans', color: '#1a1714', align: 'left' }
+    ),
+  ];
+
+  pushImage(dayOfElements, img, 'el-sta-day-24', 'img-24', { x: 520, y: 36, width: 400, height: 300 }, 4);
+
+  dayOfElements.push(
+    textElement(
+      'el-text-sta-day-caption',
+      'Paper weight: substantial enough to feel intentional.',
+      520,
+      360,
+      400,
+      60,
+      5,
+      { fontSize: 14, fontFamily: 'serif', color: '#5c4a3a', align: 'left', italic: true }
+    ),
+    textElement('el-text-sta-day-footer', 'Finish: letterpress or soft foil', 40, 460, 440, 40, 6, {
+      fontSize: 13,
+      fontFamily: 'sans',
+      color: '#c4a35a',
+      align: 'left',
+      bold: true,
+    })
+  );
+
+  return [
+    { id: 'slide-stationery-1', sectionId: 'stationery', name: 'Suite', elements: suiteElements, commentPins: [] },
+    { id: 'slide-stationery-2', sectionId: 'stationery', name: 'Day-of', elements: dayOfElements, commentPins: [] },
+  ];
 }
 
 export function buildSlidesForSection(
@@ -56,74 +584,40 @@ export function buildSlidesForSection(
 ): Slide[] {
   const sectionImages = images.filter((img) => img.sectionId === sectionId);
 
-  if (sectionImages.length === 0) {
-    return [
-      {
-        id: `slide-${sectionId}-1`,
-        sectionId,
-        name: 'Slide 1',
-        elements: [
-          textElement(
-            `el-text-${sectionId}-1`,
-            `${sectionName} mood`,
-            180,
-            220,
-            600,
-            100,
-            1
-          ),
-        ],
-        commentPins: [],
-      },
-    ];
+  switch (sectionId) {
+    case 'ceremony':
+      return buildCeremonySlides(sectionImages);
+    case 'reception':
+      return buildReceptionSlides(sectionImages);
+    case 'florals':
+      return buildFloralsSlides(sectionImages);
+    case 'attire':
+      return buildAttireSlides(sectionImages);
+    case 'stationery':
+      return buildStationerySlides(sectionImages);
+    default:
+      break;
   }
 
-  const slides: Slide[] = [];
-  const perSlide = 4;
-
-  for (let i = 0; i < sectionImages.length; i += perSlide) {
-    const chunk = sectionImages.slice(i, i + perSlide);
-    const slideIndex = Math.floor(i / perSlide) + 1;
-    const elements: CanvasElement[] = chunk.map((img, idx) =>
-      imageElement(img.id, COLLAGE_POSITIONS[idx], idx + 1)
-    );
-
-    slides.push({
-      id: `slide-${sectionId}-${slideIndex}`,
+  return [
+    {
+      id: `slide-${sectionId}-1`,
       sectionId,
-      name: `Slide ${slideIndex}`,
-      elements,
-      commentPins: slideIndex === 1 && sectionId === 'ceremony' ? ceremonySamplePins() : [],
-    });
-  }
-
-  slides.push({
-    id: `slide-${sectionId}-${slides.length + 1}`,
-    sectionId,
-    name: `Slide ${slides.length + 1}`,
-    elements: [
-      textElement(
-        `el-text-${sectionId}-mood`,
-        `${sectionName} mood`,
-        SLIDE_WIDTH / 2 - 300,
-        SLIDE_HEIGHT / 2 - 50,
-        600,
-        100,
-        1
-      ),
-    ],
-    commentPins: [],
-  });
-
-  return slides;
+      name: 'Slide 1',
+      elements: [
+        textElement(`el-text-${sectionId}-1`, `${sectionName} mood`, 180, 220, 600, 100, 1),
+      ],
+      commentPins: [],
+    },
+  ];
 }
 
 function ceremonySamplePins(): CommentPin[] {
   return [
     {
       id: 'pin-c1',
-      x: 180,
-      y: 120,
+      x: 200,
+      y: 140,
       comments: [
         {
           id: 'c1',
@@ -147,8 +641,8 @@ function ceremonySamplePins(): CommentPin[] {
     },
     {
       id: 'pin-c2',
-      x: 520,
-      y: 340,
+      x: 560,
+      y: 320,
       comments: [
         {
           id: 'c2',
@@ -164,8 +658,8 @@ function ceremonySamplePins(): CommentPin[] {
     },
     {
       id: 'pin-c3',
-      x: 720,
-      y: 180,
+      x: 820,
+      y: 260,
       comments: [
         {
           id: 'c3',
@@ -201,7 +695,7 @@ export function defaultTextElement(): TextElement {
 
 export function defaultImageElement(imageId: string, zIndex: number): ImageElement {
   return {
-    id: `el-${imageId}`,
+    id: `el-${imageId}-${Date.now()}`,
     type: 'image',
     imageId,
     x: 80,

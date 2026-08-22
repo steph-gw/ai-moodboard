@@ -63,7 +63,7 @@ interface BoardContextValue {
   showSuggestionsPanel: boolean;
   setShowSuggestionsPanel: (show: boolean) => void;
   getImageById: (imageId: string) => BoardImage | undefined;
-  addUploadedImage: (url: string) => void;
+  addUploadedImage: (url: string, tags?: string[]) => void;
 }
 
 const BoardContext = createContext<BoardContextValue | null>(null);
@@ -162,9 +162,12 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const voteImage = useCallback((imageId: string, vote: ImageVote) => {
     setBoard((prev) => ({
       ...prev,
-      images: prev.images.map((img) =>
-        img.id === imageId ? { ...img, clientVote: vote } : img
-      ),
+      images: prev.images.map((img) => {
+        if (img.id !== imageId) return img;
+        // Clicking the active vote again clears it
+        const nextVote = img.clientVote === vote ? undefined : vote;
+        return { ...img, clientVote: nextVote };
+      }),
     }));
   }, []);
 
@@ -433,21 +436,21 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       {
         id: `s-${Date.now()}-1`,
         url: 'https://images.unsplash.com/photo-1606216794074-735e91aa2c92?w=300&h=220&fit=crop',
-        alt: 'Elegant table setting',
+        alt: 'Newlywed couple outdoors',
       },
       {
         id: `s-${Date.now()}-2`,
-        url: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=220&fit=crop',
+        url: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=300&h=220&fit=crop',
         alt: 'Outdoor ceremony chairs',
       },
       {
         id: `s-${Date.now()}-3`,
         url: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=300&h=220&fit=crop',
-        alt: 'Reception lighting',
+        alt: 'Reception table setting',
       },
       {
         id: `s-${Date.now()}-4`,
-        url: 'https://images.unsplash.com/photo-1529636798458-921d0896c4ca?w=300&h=220&fit=crop',
+        url: 'https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=300&h=220&fit=crop',
         alt: 'Bridal bouquet close-up',
       },
     ];
@@ -455,7 +458,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addUploadedImage = useCallback(
-    (url: string) => {
+    (url: string, tags: string[] = ['Uploaded']) => {
       if (!activeSlide || !activeSlideId) return;
 
       const imageId = `img-${Date.now()}`;
@@ -463,7 +466,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         id: imageId,
         sectionId: activeSectionId,
         url,
-        tags: ['Uploaded'],
+        tags,
       };
 
       const maxZ = activeSlide.elements.reduce((m, e) => Math.max(m, e.zIndex), 0);

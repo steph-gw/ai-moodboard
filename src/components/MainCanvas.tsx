@@ -1,6 +1,5 @@
 import { useBoard } from '../context/BoardContext';
 import { SlideCanvas } from './SlideCanvas';
-import { SlideStrip } from './SlideStrip';
 import { CanvasToolbar } from './CanvasToolbar';
 import { VisionBrief } from './VisionBrief';
 import { countOpenPinThreads } from '../utils/commentHelpers';
@@ -60,8 +59,6 @@ export function MainCanvas() {
       <VisionBrief />
 
       <SectionHeader section={activeSection} />
-
-      <SlideStrip />
 
       <CanvasToolbar />
 

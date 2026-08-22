@@ -14,51 +14,39 @@ interface CanvasElementViewProps {
 }
 
 function ImageVoteControls({ imageId, readOnly }: { imageId: string; readOnly?: boolean }) {
-  const { role, getImageById, voteImage } = useBoard();
+  const { getImageById, voteImage } = useBoard();
   const image = getImageById(imageId);
   if (!image || readOnly) return null;
 
   const vote = image.clientVote;
 
-  if (vote) {
-    return (
-      <div className="image-vote-pinned">
-        {vote === 'up' ? (
-          <ThumbsUp size={14} strokeWidth={1.6} />
-        ) : (
-          <ThumbsDown size={14} strokeWidth={1.6} />
-        )}
-      </div>
-    );
-  }
-
-  if (role !== 'client') return null;
-
   return (
-    <div className="image-vote-hover">
+    <div className={`image-vote-controls ${vote ? 'has-vote' : ''}`}>
       <button
         type="button"
-        className="image-vote-btn"
+        className={`image-vote-btn ${vote === 'up' ? 'active up' : ''}`}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           voteImage(imageId, 'up');
         }}
-        aria-label="Like image"
+        aria-label="Thumbs up"
+        aria-pressed={vote === 'up'}
       >
-        <ThumbsUp size={13} strokeWidth={1.6} />
+        <ThumbsUp size={13} strokeWidth={1.6} fill={vote === 'up' ? 'currentColor' : 'none'} />
       </button>
       <button
         type="button"
-        className="image-vote-btn"
+        className={`image-vote-btn ${vote === 'down' ? 'active down' : ''}`}
         onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           voteImage(imageId, 'down');
         }}
-        aria-label="Dislike image"
+        aria-label="Thumbs down"
+        aria-pressed={vote === 'down'}
       >
-        <ThumbsDown size={13} strokeWidth={1.6} />
+        <ThumbsDown size={13} strokeWidth={1.6} fill={vote === 'down' ? 'currentColor' : 'none'} />
       </button>
     </div>
   );
@@ -187,6 +175,13 @@ function TextElementView({
           fontStyle: element.italic ? 'italic' : 'normal',
           color: element.color,
           textAlign: element.align,
+          justifyContent:
+            element.align === 'left'
+              ? 'flex-start'
+              : element.align === 'right'
+                ? 'flex-end'
+                : 'center',
+          whiteSpace: 'pre-wrap',
         }}
         onBlur={() => {
           if (ref.current) {

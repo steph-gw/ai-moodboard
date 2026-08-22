@@ -1,0 +1,231 @@
+export type PinterestBoard =
+  | 'all'
+  | 'ceremony'
+  | 'reception'
+  | 'florals'
+  | 'attire'
+  | 'details';
+
+export interface PinterestPin {
+  id: string;
+  url: string;
+  title: string;
+  board: Exclude<PinterestBoard, 'all'>;
+  boardName: string;
+  saves: string;
+  author: string;
+  height: 'short' | 'medium' | 'tall';
+}
+
+/** Demo Pinterest catalog — Unsplash wedding images, not a real integration. */
+export const PINTEREST_PINS: PinterestPin[] = [
+  {
+    id: 'pin-1',
+    url: 'https://images.unsplash.com/photo-1523438885200-e635ba2c371e?w=400&h=500&fit=crop',
+    title: 'Garden gazebo ceremony',
+    board: 'ceremony',
+    boardName: 'Ceremony dreams',
+    saves: '12.4k',
+    author: 'rosewood.events',
+    height: 'tall',
+  },
+  {
+    id: 'pin-2',
+    url: 'https://images.unsplash.com/photo-1519741497674-611481863552?w=400&h=320&fit=crop',
+    title: 'Bouquet in golden light',
+    board: 'florals',
+    boardName: 'Florals & greenery',
+    saves: '8.1k',
+    author: 'petal.and.stem',
+    height: 'short',
+  },
+  {
+    id: 'pin-3',
+    url: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=400&h=420&fit=crop',
+    title: 'Long table with wildflowers',
+    board: 'reception',
+    boardName: 'Reception tables',
+    saves: '19.2k',
+    author: 'tabletop.edit',
+    height: 'medium',
+  },
+  {
+    id: 'pin-4',
+    url: 'https://images.unsplash.com/photo-1521467752200-3bccf80f16ed?w=400&h=480&fit=crop',
+    title: 'Lace back bridal detail',
+    board: 'attire',
+    boardName: 'Bridal looks',
+    saves: '24.6k',
+    author: 'atelier.ivory',
+    height: 'tall',
+  },
+  {
+    id: 'pin-5',
+    url: 'https://images.unsplash.com/photo-1563241527-3004b7be0ffd?w=400&h=360&fit=crop',
+    title: 'Peony & eucalyptus bouquet',
+    board: 'florals',
+    boardName: 'Florals & greenery',
+    saves: '15.0k',
+    author: 'petal.and.stem',
+    height: 'medium',
+  },
+  {
+    id: 'pin-6',
+    url: 'https://images.unsplash.com/photo-1502635385003-ee1e6a1a742d?w=400&h=300&fit=crop',
+    title: 'Tent reception florals',
+    board: 'reception',
+    boardName: 'Reception tables',
+    saves: '9.7k',
+    author: 'canvas.and.candle',
+    height: 'short',
+  },
+  {
+    id: 'pin-7',
+    url: 'https://images.unsplash.com/photo-1522673607200-164d1b6ce486?w=400&h=400&fit=crop',
+    title: 'Forever & Always chairs',
+    board: 'ceremony',
+    boardName: 'Ceremony dreams',
+    saves: '6.3k',
+    author: 'rosewood.events',
+    height: 'medium',
+  },
+  {
+    id: 'pin-8',
+    url: 'https://images.unsplash.com/photo-1460978812857-470ed1c77af0?w=400&h=520&fit=crop',
+    title: 'Veil in the wind',
+    board: 'attire',
+    boardName: 'Bridal looks',
+    saves: '31.8k',
+    author: 'film.and.vow',
+    height: 'tall',
+  },
+  {
+    id: 'pin-9',
+    url: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?w=400&h=340&fit=crop',
+    title: 'Fountain pen on cream paper',
+    board: 'details',
+    boardName: 'Paper & details',
+    saves: '4.2k',
+    author: 'letterpress.lab',
+    height: 'short',
+  },
+  {
+    id: 'pin-10',
+    url: 'https://images.unsplash.com/photo-1487530811176-3780de880c2d?w=400&h=450&fit=crop',
+    title: 'Organic berry bouquet',
+    board: 'florals',
+    boardName: 'Florals & greenery',
+    saves: '11.5k',
+    author: 'petal.and.stem',
+    height: 'medium',
+  },
+  {
+    id: 'pin-11',
+    url: 'https://images.unsplash.com/photo-1583939003579-730e3918a45a?w=400&h=380&fit=crop',
+    title: 'Petal toss celebration',
+    board: 'reception',
+    boardName: 'Reception tables',
+    saves: '17.9k',
+    author: 'canvas.and.candle',
+    height: 'medium',
+  },
+  {
+    id: 'pin-12',
+    url: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?w=400&h=500&fit=crop',
+    title: 'Navy windowpane suit',
+    board: 'attire',
+    boardName: 'Groom style',
+    saves: '7.4k',
+    author: 'tailor.and.co',
+    height: 'tall',
+  },
+  {
+    id: 'pin-13',
+    url: 'https://images.unsplash.com/photo-1507504031003-b417219a0fde?w=400&h=320&fit=crop',
+    title: 'Mr & Mrs wooden sign',
+    board: 'details',
+    boardName: 'Paper & details',
+    saves: '5.8k',
+    author: 'letterpress.lab',
+    height: 'short',
+  },
+  {
+    id: 'pin-14',
+    url: 'https://images.unsplash.com/photo-1532712938310-34cb3982ef74?w=400&h=360&fit=crop',
+    title: 'Golden hour landscape vows',
+    board: 'ceremony',
+    boardName: 'Ceremony dreams',
+    saves: '22.1k',
+    author: 'film.and.vow',
+    height: 'medium',
+  },
+  {
+    id: 'pin-15',
+    url: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=400&h=400&fit=crop',
+    title: 'Banquet florals & glassware',
+    board: 'reception',
+    boardName: 'Reception tables',
+    saves: '13.6k',
+    author: 'tabletop.edit',
+    height: 'medium',
+  },
+  {
+    id: 'pin-16',
+    url: 'https://images.unsplash.com/photo-1495231916356-a86217efff12?w=400&h=420&fit=crop',
+    title: 'Single ivory rose',
+    board: 'florals',
+    boardName: 'Florals & greenery',
+    saves: '9.0k',
+    author: 'petal.and.stem',
+    height: 'medium',
+  },
+  {
+    id: 'pin-17',
+    url: 'https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?w=400&h=480&fit=crop',
+    title: 'Neutral linen groom look',
+    board: 'attire',
+    boardName: 'Groom style',
+    saves: '6.9k',
+    author: 'tailor.and.co',
+    height: 'tall',
+  },
+  {
+    id: 'pin-18',
+    url: 'https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=400&h=340&fit=crop',
+    title: 'Ring detail with florals',
+    board: 'details',
+    boardName: 'Paper & details',
+    saves: '18.3k',
+    author: 'film.and.vow',
+    height: 'short',
+  },
+  {
+    id: 'pin-19',
+    url: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=400&h=360&fit=crop',
+    title: 'Outdoor celebration moment',
+    board: 'reception',
+    boardName: 'Reception tables',
+    saves: '10.2k',
+    author: 'canvas.and.candle',
+    height: 'medium',
+  },
+  {
+    id: 'pin-20',
+    url: 'https://images.unsplash.com/photo-1457089328109-e5d9bd499191?w=400&h=440&fit=crop',
+    title: 'Moody ranunculus mix',
+    board: 'florals',
+    boardName: 'Florals & greenery',
+    saves: '14.7k',
+    author: 'petal.and.stem',
+    height: 'medium',
+  },
+];
+
+export const PINTEREST_BOARDS: { id: PinterestBoard; label: string }[] = [
+  { id: 'all', label: 'All pins' },
+  { id: 'ceremony', label: 'Ceremony' },
+  { id: 'reception', label: 'Reception' },
+  { id: 'florals', label: 'Florals' },
+  { id: 'attire', label: 'Attire' },
+  { id: 'details', label: 'Details' },
+];
