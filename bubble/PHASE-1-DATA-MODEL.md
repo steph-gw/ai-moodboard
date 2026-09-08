@@ -430,3 +430,58 @@ fill the page. An auto-height parent gives the wrapper nothing to resolve agains
 disappears rather than complaining.
 
 The `height` prop on the mount API sets this directly if the Bubble element's own sizing isn't enough.
+
+---
+
+## Appendix E — ⚠️ Privacy rules can only go one level deep (found 2026-09-08)
+
+Tested by building a rule by hand. In the privacy rule expression builder, after `This Moodboard's
+Event` the next dropdown offers **operators only** — `is`, `is not`, `is empty`, `is not empty`. No
+further fields. The chain stops after one hop.
+
+The right-hand side is type-constrained too: with `Current User's Business` on the left, the RHS only
+offers Event fields that are *already* an Event Planner Business, so you can't chain to reach one.
+
+**This invalidates most of the rules in section 4**, all of which walk two or more levels:
+
+- `This Moodboard's Event's Collaborator Accesses's User contains Current User` ✗
+- `This Moodboard Slide's Section's Locked slides doesn't contain This Moodboard Slide` ✗
+- `This Moodboard Slide's Section's Status is not Approved` ✗
+- `...'s Wedding / Event Planner's Business is Current User's Business` ✗
+
+Only single-hop conditions work: `This X's <field> is Current User`, `This X's <field> is Current
+User's <field>`, `This X's <list field> contains Current User`.
+
+### Option A — denormalise onto every row
+
+Add to each of the seven types:
+
+| Field | Type | Set by |
+|---|---|---|
+| `Business` | Event Planner Business | plugin, at creation |
+| `Collaborators` | User — list | plugin, at creation |
+
+Rules become one hop each:
+
+- Planner team: `This X's Business is Current User's Business` **and** `Current User's Business is not empty`
+- Collaborators: `This X's Collaborators contains Current User`
+
+The lock has to come back onto `Moodboard Slide` as a plain `Locked?` yes/no (a section-level list is
+two hops away), which reintroduces the quirk that a client can set the lock but not clear it. The
+approval freeze needs a denormalised `Section approved?` yes/no on the slide too.
+
+Cost: four denormalised fields, and something has to keep `Collaborators` in sync when the event's
+collaborator list changes.
+
+### Option B — writes go through backend API workflows
+
+Leave privacy rules closed for everyone but admins, and route every write through a backend endpoint
+that can run the real multi-level checks in workflow logic. Reads either stay closed and go through a
+`get_moodboard` endpoint too, or use denormalised single-hop read rules as above.
+
+Cost: roughly six endpoints (load board, save slide, add/delete slide, upload image, vote, comment).
+Permissions live in one readable place instead of spread across 24 rules, nothing to keep in sync,
+and it also sidesteps the `401 cannot create` problem entirely.
+
+This is the option we considered and set aside earlier; the one-level constraint is a strong argument
+for revisiting it.
