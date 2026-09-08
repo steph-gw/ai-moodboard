@@ -1,6 +1,6 @@
 # Privacy rules — click by click
 
-Eight types, three rules each — plus one extra rule on `Moodboard Element`. This walks through **`Moodboard`** in full; the other seven are
+Seven types. Three rules each, plus a fourth on the types clients may write. This walks through **`Moodboard`** in full; the others are
 identical except for one expression, listed at the end.
 
 Budget ~10 minutes for the first type once you've got the hang of the expression builder, then
@@ -99,20 +99,38 @@ This Moodboard's Event's Collaborator Accesses's User contains Current User
 
 ---
 
-## Rule 4 — on `Moodboard Element` only
+## Rule 4 — client writing (only on the types clients may write)
 
-This is the one that lets clients add and edit their own text and images.
+Rule 3 gave clients read access. This one gives them write access, gated by the lock — and because
+it's a privacy rule, a client can't get round it by calling the API directly.
 
-29. On `Moodboard Element`, add a fourth rule, named `Own elements`.
-30. **WHEN**: `This Moodboard Element` → `Creator` → `is` → `Current User`
-31. Tick **Find this in searches**, the **ALL** box on **View**, and whichever API-write checkbox
-    appears (see the note at the bottom).
+**On `Moodboard Slide`:**
 
-Bubble grants write access per *thing*, so this gives a client full control of the elements they
-created and none at all over yours. It's enforced by the database, not by the plugin.
+29. Add a fourth rule, named `Client editing`.
+30. **WHEN**, built in three parts joined with `and`:
+    - `This Moodboard Slide` → `Section` → `Moodboard` → `Event` → `Collaborator Accesses` → `User` → `contains` → `Current User`
+    - `and` `This Moodboard Slide` → `Locked?` → `is` → `no`
+    - `and` `This Moodboard Slide` → `Section` → `Status` → `is not` → `Approved`
+31. Tick **Find this in searches**, **ALL** on **View**, and the API-write checkbox.
 
-**Do not add a write rule for clients on `Moodboard Section` or `Moodboard Slide`.** Those are the
-board's structure — a client deleting a section would take its slides and elements with it.
+**On `Moodboard Image`, `Moodboard Image Vote`, `Moodboard Thread`, `Moodboard Comment`:** same as
+rule 3's condition (just the collaborator check) but with the API-write box ticked. Uploading,
+voting and commenting aren't gated by the lock.
+
+**On `Moodboard` and `Moodboard Section`: no client write rule at all.** Those are the board's
+identity and structure — a client deleting a section would take its slides with it, locked ones
+included.
+
+### Two quirks of this, both harmless
+
+**Clients can lock a slide but never unlock it.** Bubble grants write access per *thing*, not per
+field, so a client editing an unlocked slide can also flip its `Locked?`. They can't undo that,
+because a locked slide stops matching rule 4 entirely. Your own rule has no lock condition, so you
+can always unlock.
+
+**Approving a section freezes it for clients only.** Rule 4 excludes approved sections; the planner
+rule never mentions status. So you keep refining after sign-off while the couple sees something
+stable. Set it back to Open and they can edit again.
 
 ---
 
@@ -127,7 +145,7 @@ it, so until this one is closed, nothing else matters.
 
 ---
 
-## Repeat for the other seven types
+## Repeat for the other six types
 
 Everything is identical except the path from the thing to its event, which gets one segment longer
 for the nested types. In rules 2 and 3, substitute:
@@ -136,13 +154,12 @@ for the nested types. In rules 2 and 3, substitute:
 |---|---|
 | `Moodboard Section` | `This Moodboard Section's Moodboard's Event` |
 | `Moodboard Slide` | `This Moodboard Slide's Section's Moodboard's Event` |
-| `Moodboard Element` | `This Moodboard Element's Slide's Section's Moodboard's Event` |
 | `Moodboard Image` | `This Moodboard Image's Moodboard's Event` |
 | `Moodboard Image Vote` | `This Moodboard Image Vote's Moodboard image's Moodboard's Event` |
 | `Moodboard Thread` | `This Moodboard Thread's Moodboard's Event` |
 | `Moodboard Comment` | `This Moodboard Comment's Thread's Moodboard's Event` |
 
-Rule 1 (Admin) is character-for-character the same on all eight. Rule 4 exists only on `Moodboard Element`.
+Rule 1 (Admin) is character-for-character the same on all seven. Rule 4 exists only on `Moodboard Slide`, `Moodboard Image`, `Moodboard Image Vote`, `Moodboard Thread` and `Moodboard Comment`.
 
 ---
 
@@ -156,9 +173,9 @@ I've only seen the panel on the `User` type, which isn't API-exposed, so I don't
 appears here. **Screenshot that section on the first rule you create** and I'll tell you precisely
 which to tick on which rule. I'd rather ask than have you tick a box I'm guessing at.
 
-Rough expectation, to be confirmed: the **planner team** rule needs write on all eight types. Clients
-need write on `Moodboard Element` (via rule 4 only), `Moodboard Image`, `Moodboard Image Vote`,
-`Moodboard Thread` and `Moodboard Comment` — and on nothing else.
+Rough expectation, to be confirmed: the **planner team** rule needs write on all seven types.
+Clients need write only via rule 4, on `Moodboard Slide`, `Moodboard Image`, `Moodboard Image Vote`,
+`Moodboard Thread` and `Moodboard Comment`.
 
 ---
 
@@ -166,7 +183,7 @@ need write on `Moodboard Element` (via rule 4 only), `Moodboard Image`, `Moodboa
 
 Tell me when it's done and I'll run:
 
-1. **Anonymous fetch of all eight** — every one must come back `count: 0`. If any still returns rows,
+1. **Anonymous fetch of all seven** — every one must come back `count: 0`. If any still returns rows,
    I'll name which and which rule is loose.
 2. **Authenticated fetch** — must return your data. This is also the first real proof the session
    cookie identifies you as `Current User`; the current wide-open state makes that untestable.

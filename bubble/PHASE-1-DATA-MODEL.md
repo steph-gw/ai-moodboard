@@ -85,55 +85,41 @@ list in Bubble would just drift out of sync. The icon is stored as a plain text 
 
 ### `Moodboard Slide`
 
-| Field name | Type |
-|---|---|
-| `Section` | Moodboard Section |
-| `Slide name` | text |
-| `Order` | number |
-
-### `Moodboard Element`
-
-One row per text box or image placed on a slide.
-
 | Field name | Type | Notes |
 |---|---|---|
-| `Slide` | Moodboard Slide | |
-| `Element type` | text | `image` or `text` |
-| `X` | number | artboard coords, 0–960 |
-| `Y` | number | 0–540 |
-| `Width` | number | |
-| `Height` | number | |
-| `Rotation` | number | degrees |
-| `Z index` | number | paint order |
-| `Moodboard image` | Moodboard Image | image elements only |
-| `Content` | text | text elements only |
-| `Font size` | number | text only |
-| `Font family` | text | `sans` or `display` |
-| `Colour` | text | hex |
-| `Align` | text | `left` / `center` / `right` |
-| `Bold?` | yes / no | |
-| `Italic?` | yes / no | |
+| `Section` | Moodboard Section | |
+| `Slide name` | text | |
+| `Order` | number | |
+| `Elements JSON` | text | every text box and image placed on this slide |
+| `Locked?` | yes / no | planner-set; makes the slide read-only to clients |
 
-The author is the built-in **`Creator`** — that's what the client-edit rule keys on.
+`Elements JSON` shape:
 
-> ### Why elements became rows
+```json
+[
+  {"id":"el-1","type":"image","imageId":"1788893251620x170603871777754720",
+   "x":80,"y":60,"width":400,"height":300,"rotation":0,"zIndex":1},
+  {"id":"el-2","type":"text","content":"Ceremony","x":330,"y":240,"width":300,"height":60,
+   "zIndex":10,"fontSize":28,"fontFamily":"display","color":"#1a1714","align":"center",
+   "bold":false,"italic":false}
+]
+```
+
+> ### Why the JSON lives on the slide, not the section
 >
-> Earlier drafts kept the whole canvas in one `Slides JSON` text field on the section, because only
-> the planner wrote it. Clients adding their own text and images changes that: a text field has no
-> partial write, so *"a client may add an image"* and *"a client may delete everything you made"*
-> would be the same permission.
+> The lock is per slide, and a text field has no partial write. If the canvas stayed in one
+> `Slides JSON` on the section, a client editing an unlocked slide would rewrite the section's whole
+> blob — locked slides included — and the lock would be unenforceable. One level down, the privacy
+> rule and the unit of writing line up exactly.
 >
-> As rows, the rule is exactly the requirement and Bubble enforces it server-side:
-> **planner and team → write anything; client → write only rows where `Creator is Current User`.**
-> Bubble grants write access per *thing*, which is precisely the granularity this needs.
->
-> It also removes the concurrent-edit problem. With one JSON blob per section, you and the couple
-> both having the board open means every save rewrites the whole thing and whoever saved first
-> silently loses their work. With rows, two people editing different elements never touch the same
-> record.
->
-> The reason this is affordable now and wasn't during planning: the phase 4 fix means edits commit
-> **once per pointer gesture** rather than once per animation frame, so a drag is one write, not sixty.
+> This also replaces the per-element rows an earlier draft proposed. The lock does that job better:
+> instead of "clients may only touch what they made", it's "clients may touch whatever the planner
+> has left open", which is closer to how the work actually goes.
+
+**Concurrency:** two people editing *the same unlocked slide* still overwrite each other, because
+the slide's JSON is one field. Different slides never collide. The plugin keeps each slide's
+`Modified Date` from the last read and re-checks before writing, so a collision warns and reloads
+rather than silently losing work.
 
 ### `Moodboard Image`
 
@@ -165,7 +151,7 @@ collaborator's thumbs-up can't silently overwrite another's thumbs-down.
 |---|---|---|
 | `Moodboard` | Moodboard | |
 | `Moodboard section` | Moodboard Section | |
-| `Slide id` | text | *(becomes a `Moodboard Slide` reference now that slides are rows)* |
+| `Moodboard slide` | Moodboard Slide | replaces the old `Slide id` text field |
 | `X-axis` | number | 0–960 |
 | `Y-axis` | number | 0–540 |
 | `Resolved?` | yes / no | |
@@ -188,33 +174,28 @@ Author is `Creator`, timestamp is `Created Date` — both server-set and unspoof
 
 ## 3. What this costs
 
-Eight types instead of six, and a board now loads in four reads rather than two: sections, slides,
-elements, images (plus threads and comments when the drawer opens). A five-section board with two
-slides each and eight elements per slide is ~80 element rows — one page of the Data API's default
-100, so no pagination yet, but it's worth knowing where that limit sits.
-
-In exchange, everything on the board is queryable from Bubble, permissions are enforced by the
-database rather than by the UI, and simultaneous editing stops destroying work.
+Seven types, and a board loads in three reads — sections, slides, images — plus threads and comments
+when the drawer opens. Element geometry rides along inside each slide, so there's no fourth query and
+no per-element row count to worry about.
 
 ---
 
 ## 4. Privacy rules — the important part
 
-For **each** of the eight new types (`Moodboard`, `Moodboard Section`, `Moodboard Slide`,
-`Moodboard Element`, `Moodboard Image`, `Moodboard Image Vote`, `Moodboard Thread`,
-`Moodboard Comment`), go to **Data → Privacy** and make sure:
+For **each** of the seven new types (`Moodboard`, `Moodboard Section`, `Moodboard Slide`,
+`Moodboard Image`, `Moodboard Image Vote`, `Moodboard Thread`, `Moodboard Comment`), go to
+**Data → Privacy** and make sure:
 
 **The default "Everyone else" rule has _Find this in searches_ UNCHECKED, and no field ticked under View.**
 This is the rule that's currently wide open. Everything else is additive on top of it.
 
-Then add **three rules** to each type. `PATH` below is the walk from the thing to its event:
+Then add **three or four rules** to each type (rule 4 only where clients write). `PATH` below is the walk from the thing to its event:
 
 | Type | `PATH` |
 |---|---|
 | `Moodboard` | `This Moodboard's Event` |
 | `Moodboard Section` | `This Moodboard Section's Moodboard's Event` |
 | `Moodboard Slide` | `This Moodboard Slide's Section's Moodboard's Event` |
-| `Moodboard Element` | `This Moodboard Element's Slide's Section's Moodboard's Event` |
 | `Moodboard Image` | `This Moodboard Image's Moodboard's Event` |
 | `Moodboard Image Vote` | `This Moodboard Image Vote's Image's Moodboard's Event` |
 | `Moodboard Thread` | `This Moodboard Thread's Moodboard's Event` |
@@ -233,18 +214,41 @@ Then add **three rules** to each type. `PATH` below is the walk from the thing t
 > is empty matches any event whose planner's `Business` is empty, and gets full planner access to
 > someone else's board. Worth checking whether your existing rules elsewhere have the same hole.
 
-**Rule 3 — Clients and collaborators**
+**Rule 3 — Clients and collaborators, reading** (all seven types)
 `PATH's Collaborator Accesses's User contains Current User`
 
-**Rule 4 — Clients editing their own work** (`Moodboard Element` only)
-`This Moodboard Element's Creator is Current User`
+Read only: tick *Find this in searches* and *View*, and **no** API-write box.
 
-That one rule is the entire client-edit model. Bubble grants write access per *thing*, so a client
-can change the elements they created and nothing else — enforced by the database, not by the UI.
-Rule 3 already gives them read access to the rest of the board.
+**Rule 4 — Clients and collaborators, writing**
 
-**Never give clients write access to `Moodboard Section` or `Moodboard Slide`** — those govern the
-board's structure, and a client deleting a section would take its slides and elements with it.
+This is the lock, and it is a real boundary rather than a UI convention — a client cannot get past it
+by calling the API directly.
+
+On `Moodboard Slide`:
+```
+This Moodboard Slide's Section's Moodboard's Event's Collaborator Accesses's User contains Current User
+and This Moodboard Slide's Locked? is "no"
+and This Moodboard Slide's Section's Status is not Approved
+```
+
+On `Moodboard Image`, `Moodboard Image Vote`, `Moodboard Thread`, `Moodboard Comment`: the plain
+collaborator condition is enough — uploading an image, voting and commenting aren't gated by the lock.
+
+Tick the API-write box on these.
+
+**No client write rule at all on `Moodboard` or `Moodboard Section`.** Those are the board's identity
+and structure. A client deleting a section would take its slides with it, locked ones included.
+
+### Two consequences worth knowing
+
+**Clients can lock, but never unlock.** Bubble grants write access per *thing*, not per field, so a
+client editing an unlocked slide can also set its `Locked?`. They can't clear it afterwards, because a
+locked slide no longer matches rule 4 at all. Mildly annoying, never dangerous — and the planner rule
+has no lock condition, so you can always unlock.
+
+**Approving a section freezes it for clients only.** Rule 4 excludes approved sections; the planner
+rule doesn't mention status. So you keep refining after sign-off while the couple sees a stable board.
+Set it back to Open and they can edit again.
 
 Under each rule, tick **Find this in searches** and tick **View** for all fields.
 
@@ -288,7 +292,6 @@ notes, that's a privacy-rule change, not a schema change — but decide before w
 - `Moodboard` *(already ticked)*
 - `Moodboard Section`
 - `Moodboard Slide`
-- `Moodboard Element`
 - `Moodboard Image`
 - `Moodboard Image Vote`
 - `Moodboard Thread`
@@ -302,7 +305,7 @@ Nothing else. In particular **do not** expose `T-Thread` or `T-Message` — they
 
 Tell me when it's done and I'll run, from a logged-in page:
 
-1. An **anonymous** fetch of all eight types — every one must come back `count: 0` or 403. If any still
+1. An **anonymous** fetch of all seven types — every one must come back `count: 0` or 403. If any still
    returns rows without a cookie, a privacy rule is missing and I'll say which.
 2. An **authenticated** fetch — must return your data. This is also the first real proof that the
    session cookie identifies you as `Current User` rather than just letting everyone through, which
