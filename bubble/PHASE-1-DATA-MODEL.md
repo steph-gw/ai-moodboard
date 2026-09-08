@@ -59,115 +59,120 @@ list in Bubble would just drift out of sync. The icon is stored as a plain text 
 
 ## 2. Data types
 
-### `Moodboard` (already created — add the remaining fields)
+### `Moodboard` (already created)
 
 | Field name | Type |
 |---|---|
-| `Name` | text *(exists)* |
+| `Name` | text |
 | `Event` | `1 Project / Event` |
 | `Vision brief` | text |
-| `Palette` | text — **tick "This field is a list"** |
+| `Palette` | text — **list** |
 
-That's the whole type. Three fields that earlier drafts had are gone:
-
-- **No `Client view enabled?` / `Shared with clients?`.** Your `Collaborator Access` type already has
-  `Tabs with View Access` and `Tabs with Hidden Access` (lists of `Tab Project OS`), so adding a
-  `Moodboard` option to that set gates per-collaborator visibility with machinery your users already
-  understand. A board-level flag on top of that is duplicate state that can disagree with it.
-  *(Different question if you want a draft/published distinction — "the planner is still building
-  this" is not the same as "this person may see it". Say so and it comes back.)*
-- **No `Viewers` field.** The avatar stack reads the event's `Collaborator Accesses`'s Users. A second
-  list on the moodboard would drift the moment someone is added to the event.
-
-### `Moodboard Section` (new type, private by default)
+### `Moodboard Section`
 
 | Field name | Type | Notes |
 |---|---|---|
 | `Moodboard` | Moodboard | |
-| `Name` | text | |
+| `Section name` | text | |
 | `Icon` | text | one of the 32 icon keys |
-| `Status` | Moodboard Status | |
+| `Status` | Moodboard Status OS | |
 | `Approved date` | date | set when the planner flips Status to Approved |
-| `Vision brief` | text | empty ⇒ inherits the board's |
+| `Section vision brief` | text | empty ⇒ inherits the board's |
 | `Order` | number | explicit sort index |
-| `Slides JSON` | text | the entire canvas for this section |
 | `Archived?` | yes / no | |
 
-### `Moodboard Image` (new type, private by default)
+**`Slides JSON` is gone** — see the note below.
+
+### `Moodboard Slide`
+
+| Field name | Type |
+|---|---|
+| `Section` | Moodboard Section |
+| `Slide name` | text |
+| `Order` | number |
+
+### `Moodboard Element`
+
+One row per text box or image placed on a slide.
+
+| Field name | Type | Notes |
+|---|---|---|
+| `Slide` | Moodboard Slide | |
+| `Element type` | text | `image` or `text` |
+| `X` | number | artboard coords, 0–960 |
+| `Y` | number | 0–540 |
+| `Width` | number | |
+| `Height` | number | |
+| `Rotation` | number | degrees |
+| `Z index` | number | paint order |
+| `Moodboard image` | Moodboard Image | image elements only |
+| `Content` | text | text elements only |
+| `Font size` | number | text only |
+| `Font family` | text | `sans` or `display` |
+| `Colour` | text | hex |
+| `Align` | text | `left` / `center` / `right` |
+| `Bold?` | yes / no | |
+| `Italic?` | yes / no | |
+
+The author is the built-in **`Creator`** — that's what the client-edit rule keys on.
+
+> ### Why elements became rows
+>
+> Earlier drafts kept the whole canvas in one `Slides JSON` text field on the section, because only
+> the planner wrote it. Clients adding their own text and images changes that: a text field has no
+> partial write, so *"a client may add an image"* and *"a client may delete everything you made"*
+> would be the same permission.
+>
+> As rows, the rule is exactly the requirement and Bubble enforces it server-side:
+> **planner and team → write anything; client → write only rows where `Creator is Current User`.**
+> Bubble grants write access per *thing*, which is precisely the granularity this needs.
+>
+> It also removes the concurrent-edit problem. With one JSON blob per section, you and the couple
+> both having the board open means every save rewrites the whole thing and whoever saved first
+> silently loses their work. With rows, two people editing different elements never touch the same
+> record.
+>
+> The reason this is affordable now and wasn't during planning: the phase 4 fix means edits commit
+> **once per pointer gesture** rather than once per animation frame, so a drag is one write, not sixty.
+
+### `Moodboard Image`
 
 | Field name | Type | Notes |
 |---|---|---|
 | `Moodboard` | Moodboard | |
-| `Section` | Moodboard Section | for grouping in exports and filenames |
-| `Image` | image | the file in Bubble storage — its Data API value *is* the URL |
-| `In use?` | yes / no | on the board right now, vs removed from the canvas |
+| `Moodboard Section` | Moodboard Section | grouping for exports and filenames |
+| `Image` | image | its Data API value *is* the URL |
+| `In use?` | yes / no | on the board now, vs removed from the canvas |
 
-Elements in `Slides JSON` reference these by Bubble unique id:
+Still an asset separate from its placement: one image can be placed on two slides, and votes point at
+the image rather than at any particular placement. Deleting an element never deletes the file — it
+sets `In use?` to no, because undo restores up to 60 steps and would otherwise resurrect an element
+pointing at a file that no longer exists.
 
-```json
-{ "id": "el-1", "type": "image", "imageId": "1788893251620x170603871777754720",
-  "x": 80, "y": 60, "width": 400, "height": 300, "zIndex": 1 }
-```
+### `Moodboard Image Vote`
 
-So the plugin loads a board with two reads — the sections, and all the images for that moodboard —
-and no image data is duplicated into the JSON.
+| Field name | Type |
+|---|---|
+| `Moodboard image` | Moodboard Image |
+| `Moodboard vote` | Moodboard Vote OS |
 
-> This type was dropped from an earlier draft and is back because you want moodboard images usable
-> **from Bubble** — listed in the file manager, shown in repeating groups, bulk-exported. None of
-> that is workable against URLs buried in a JSON text field. The test for "should this be a type" is
-> whether Bubble itself needs to query, join or enforce it, and Bubble-side export is exactly that.
->
-> It also settles the votes question properly: `Moodboard Image Vote` can point at a real row, so
-> *"which images did clients like most"* is a normal Bubble query that can render the actual picture
-> in a repeating group. Keyed by a text id it could only ever have counted.
->
-> And it removes the open risk from the earlier draft: the file is now attached to a database record,
-> so there's no question of Bubble garbage-collecting an unreferenced upload.
+Voter is `Creator`; clearing your vote deletes the row. One row per person per image, so one
+collaborator's thumbs-up can't silently overwrite another's thumbs-down.
 
-Still deliberately absent: no `URL` text field (an `image` field's Data API value already *is* the
-URL) and no `Tags` (present on the current `BoardImage` type, read by zero components).
-
-**Deleting an image never deletes the file.** Removing an image from the canvas sets `In use?` to no;
-the row and the file stay. Permanent deletion is a separate, explicit action.
-
-> The reason is undo. ⌘Z restores up to 60 steps, so if deleting an element also deleted the file,
-> undo would bring back an element pointing at a file that no longer exists — permanently broken,
-> with no way back. Removing something from a canvas is a casual, high-frequency gesture; deleting a
-> file isn't. They shouldn't be the same action.
->
-> So filter your Bubble-side lists and exports on `In use? = yes` for "what's on the board", and drop
-> the constraint for "everything we ever considered". Two useful views instead of one lossy one.
-
-**Downloads.** "Download all" gets built twice, cheaply: in the plugin as a zip (the URLs are already
-in memory, and [`downloadImage.ts`](../src/utils/downloadImage.ts) already does fetch-blob-save for the
-single-image case), and in Bubble as an ordinary search over `Moodboard Image` (constrained to `In use? = yes`).
-
----
-
-## 3. Comments — two more new types
-
-**Your existing `T-Thread` / `T-Message` are not touched.** We looked at reusing them and decided
-against it: they're an *email* system (`Subject line`, `Text (HTML)`, `Header (with reply to ids)`,
-`Guest recipients`, `Sender (when via email)`), and grafting pin geometry onto them would mean every
-existing query over those tables becomes a place where a private moodboard note can leak into a guest
-email send. Separate types, no blast radius.
-
-### `Moodboard Thread` (new type, private by default)
-
-One thread = one pin dropped on a slide.
+### `Moodboard Thread` — one thread = one pin
 
 | Field name | Type | Notes |
 |---|---|---|
-| `Moodboard` | Moodboard | lets us load every thread for a board in one query |
-| `Section` | Moodboard Section | |
-| `Slide id` | text | the slide's id inside `Slides JSON` |
-| `X` | number | 0–960, artboard coordinates — not a percentage |
-| `Y` | number | 0–540 |
+| `Moodboard` | Moodboard | |
+| `Moodboard section` | Moodboard Section | |
+| `Slide id` | text | *(becomes a `Moodboard Slide` reference now that slides are rows)* |
+| `X-axis` | number | 0–960 |
+| `Y-axis` | number | 0–540 |
 | `Resolved?` | yes / no | |
 | `Resolved by` | User | |
 | `Resolved date` | date | |
 
-### `Moodboard Comment` (new type, private by default)
+### `Moodboard Comment`
 
 | Field name | Type | Notes |
 |---|---|---|
@@ -176,29 +181,28 @@ One thread = one pin dropped on a slide.
 | `Text` | text | |
 | `Edited?` | yes / no | |
 
-**No author field.** The author is the built-in **`Creator`**, which Bubble sets server-side and the
-client cannot spoof. Likewise the timestamp is the built-in **`Created Date`** — the current app has
-no real time model at all (comments literally carry the string `'Just now'`), and this fixes it.
+Author is `Creator`, timestamp is `Created Date` — both server-set and unspoofable. Your existing
+`T-Thread` / `T-Message` are untouched and stay off the Data API.
 
-> One deliberate simplification: in the local app `resolved` is stored per comment, but the UI only
-> ever offers resolve on a thread's first comment and treats the pin as resolved when all of them are.
-> So resolution lives on the **thread**, which is what the interface already means. I'll adapt
-> `isPinResolved` in the client to match. This also fixes a real bug: today `resolveComment` credits
-> `resolvedBy` to a hardcoded name regardless of who clicked it.
+---
 
-### Optional, later: surfacing activity in the inbox
+## 3. What this costs
 
-If you do want moodboard activity in your communications list, the clean way is to create a `T-Thread`
-deliberately as a **notification** — one thread per moodboard, a message when there's new activity —
-rather than as storage. That gets you the inbox integration in the shape you want, on purpose, without
-every email query having to defend itself. Not part of v1; noting it so the door stays open.
+Eight types instead of six, and a board now loads in four reads rather than two: sections, slides,
+elements, images (plus threads and comments when the drawer opens). A five-section board with two
+slides each and eight elements per slide is ~80 element rows — one page of the Data API's default
+100, so no pagination yet, but it's worth knowing where that limit sits.
+
+In exchange, everything on the board is queryable from Bubble, permissions are enforced by the
+database rather than by the UI, and simultaneous editing stops destroying work.
 
 ---
 
 ## 4. Privacy rules — the important part
 
-For **each** of the six new types (`Moodboard`, `Moodboard Section`, `Moodboard Image`,
-`Moodboard Image Vote`, `Moodboard Thread`, `Moodboard Comment`), go to **Data → Privacy** and make sure:
+For **each** of the eight new types (`Moodboard`, `Moodboard Section`, `Moodboard Slide`,
+`Moodboard Element`, `Moodboard Image`, `Moodboard Image Vote`, `Moodboard Thread`,
+`Moodboard Comment`), go to **Data → Privacy** and make sure:
 
 **The default "Everyone else" rule has _Find this in searches_ UNCHECKED, and no field ticked under View.**
 This is the rule that's currently wide open. Everything else is additive on top of it.
@@ -209,6 +213,8 @@ Then add **three rules** to each type. `PATH` below is the walk from the thing t
 |---|---|
 | `Moodboard` | `This Moodboard's Event` |
 | `Moodboard Section` | `This Moodboard Section's Moodboard's Event` |
+| `Moodboard Slide` | `This Moodboard Slide's Section's Moodboard's Event` |
+| `Moodboard Element` | `This Moodboard Element's Slide's Section's Moodboard's Event` |
 | `Moodboard Image` | `This Moodboard Image's Moodboard's Event` |
 | `Moodboard Image Vote` | `This Moodboard Image Vote's Image's Moodboard's Event` |
 | `Moodboard Thread` | `This Moodboard Thread's Moodboard's Event` |
@@ -229,6 +235,16 @@ Then add **three rules** to each type. `PATH` below is the walk from the thing t
 
 **Rule 3 — Clients and collaborators**
 `PATH's Collaborator Accesses's User contains Current User`
+
+**Rule 4 — Clients editing their own work** (`Moodboard Element` only)
+`This Moodboard Element's Creator is Current User`
+
+That one rule is the entire client-edit model. Bubble grants write access per *thing*, so a client
+can change the elements they created and nothing else — enforced by the database, not by the UI.
+Rule 3 already gives them read access to the rest of the board.
+
+**Never give clients write access to `Moodboard Section` or `Moodboard Slide`** — those govern the
+board's structure, and a client deleting a section would take its slides and elements with it.
 
 Under each rule, tick **Find this in searches** and tick **View** for all fields.
 
@@ -271,6 +287,8 @@ notes, that's a privacy-rule change, not a schema change — but decide before w
 
 - `Moodboard` *(already ticked)*
 - `Moodboard Section`
+- `Moodboard Slide`
+- `Moodboard Element`
 - `Moodboard Image`
 - `Moodboard Image Vote`
 - `Moodboard Thread`
@@ -284,7 +302,7 @@ Nothing else. In particular **do not** expose `T-Thread` or `T-Message` — they
 
 Tell me when it's done and I'll run, from a logged-in page:
 
-1. An **anonymous** fetch of all six types — every one must come back `count: 0` or 403. If any still
+1. An **anonymous** fetch of all eight types — every one must come back `count: 0` or 403. If any still
    returns rows without a cookie, a privacy rule is missing and I'll say which.
 2. An **authenticated** fetch — must return your data. This is also the first real proof that the
    session cookie identifies you as `Current User` rather than just letting everyone through, which

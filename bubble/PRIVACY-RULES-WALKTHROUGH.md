@@ -1,6 +1,6 @@
 # Privacy rules — click by click
 
-Six types, three rules each. This walks through **`Moodboard`** in full; the other five are
+Eight types, three rules each — plus one extra rule on `Moodboard Element`. This walks through **`Moodboard`** in full; the other seven are
 identical except for one expression, listed at the end.
 
 Budget ~10 minutes for the first type once you've got the hang of the expression builder, then
@@ -99,18 +99,35 @@ This Moodboard's Event's Collaborator Accesses's User contains Current User
 
 ---
 
-## The important last step: close the public read
+## Rule 4 — on `Moodboard Element` only
 
-29. Below your three rules there's a final one — **Everyone else** (it may be greyed out or unnamed).
-30. Make sure **Find this in searches** is **UNTICKED**.
-31. Make sure **no fields** are ticked under **View**.
+This is the one that lets clients add and edit their own text and images.
 
-This is the rule that currently makes the type world-readable. The three rules above are additive on
-top of it, so until this one is closed, nothing else matters.
+29. On `Moodboard Element`, add a fourth rule, named `Own elements`.
+30. **WHEN**: `This Moodboard Element` → `Creator` → `is` → `Current User`
+31. Tick **Find this in searches**, the **ALL** box on **View**, and whichever API-write checkbox
+    appears (see the note at the bottom).
+
+Bubble grants write access per *thing*, so this gives a client full control of the elements they
+created and none at all over yours. It's enforced by the database, not by the plugin.
+
+**Do not add a write rule for clients on `Moodboard Section` or `Moodboard Slide`.** Those are the
+board's structure — a client deleting a section would take its slides and elements with it.
 
 ---
 
-## Repeat for the other five types
+## The important last step: close the public read
+
+32. Below your rules there's a final one — **Everyone else** (it may be greyed out or unnamed).
+33. Make sure **Find this in searches** is **UNTICKED**.
+34. Make sure **no fields** are ticked under **View**.
+
+This is the rule that currently makes the type world-readable. Every rule above is additive on top of
+it, so until this one is closed, nothing else matters.
+
+---
+
+## Repeat for the other seven types
 
 Everything is identical except the path from the thing to its event, which gets one segment longer
 for the nested types. In rules 2 and 3, substitute:
@@ -118,12 +135,14 @@ for the nested types. In rules 2 and 3, substitute:
 | Type | Replace `This Moodboard's Event` with |
 |---|---|
 | `Moodboard Section` | `This Moodboard Section's Moodboard's Event` |
+| `Moodboard Slide` | `This Moodboard Slide's Section's Moodboard's Event` |
+| `Moodboard Element` | `This Moodboard Element's Slide's Section's Moodboard's Event` |
 | `Moodboard Image` | `This Moodboard Image's Moodboard's Event` |
 | `Moodboard Image Vote` | `This Moodboard Image Vote's Moodboard image's Moodboard's Event` |
 | `Moodboard Thread` | `This Moodboard Thread's Moodboard's Event` |
 | `Moodboard Comment` | `This Moodboard Comment's Thread's Moodboard's Event` |
 
-Rule 1 (Admin) is character-for-character the same on all six.
+Rule 1 (Admin) is character-for-character the same on all eight. Rule 4 exists only on `Moodboard Element`.
 
 ---
 
@@ -137,13 +156,9 @@ I've only seen the panel on the `User` type, which isn't API-exposed, so I don't
 appears here. **Screenshot that section on the first rule you create** and I'll tell you precisely
 which to tick on which rule. I'd rather ask than have you tick a box I'm guessing at.
 
-Rough expectation, to be confirmed: writes need to be allowed on `Moodboard Section` (autosave),
-`Moodboard Image` (uploads) for the **planner team** rule, and on `Moodboard Image Vote`,
-`Moodboard Thread`, `Moodboard Comment` for **both** the planner and collaborator rules.
-
-**Deliberately never writable by clients: `Moodboard Section`.** Its `Slides JSON` is a single text
-field, so write access there is write access to the entire canvas — a client could move or delete
-every element on the board. That's the whole reason votes and comments are separate types.
+Rough expectation, to be confirmed: the **planner team** rule needs write on all eight types. Clients
+need write on `Moodboard Element` (via rule 4 only), `Moodboard Image`, `Moodboard Image Vote`,
+`Moodboard Thread` and `Moodboard Comment` — and on nothing else.
 
 ---
 
@@ -151,7 +166,7 @@ every element on the board. That's the whole reason votes and comments are separ
 
 Tell me when it's done and I'll run:
 
-1. **Anonymous fetch of all six** — every one must come back `count: 0`. If any still returns rows,
+1. **Anonymous fetch of all eight** — every one must come back `count: 0`. If any still returns rows,
    I'll name which and which rule is loose.
 2. **Authenticated fetch** — must return your data. This is also the first real proof the session
    cookie identifies you as `Current User`; the current wide-open state makes that untestable.
