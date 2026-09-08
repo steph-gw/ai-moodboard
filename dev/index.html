@@ -10,9 +10,74 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300;1,400;1,500&family=Playfair+Display:ital,wght@0,400;0,500;1,400;1,500&display=swap"
     />
     <link rel="stylesheet" href="./gw-moodboard.css" />
+    <style>
+      /*
+        Deliberately plain host-page styling, using the same generic class names
+        the app uses internally (.app, .canvas, button). If the moodboard's CSS
+        escapes its .gw-mb scope, it lands here and is obvious.
+      */
+      body {
+        margin: 0;
+        font-family: Georgia, serif;
+        background: #e8eaf0;
+        color: #223;
+      }
+      .host-header {
+        padding: 12px 20px;
+        background: #223055;
+        color: #fff;
+        font-size: 18px;
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .host-header button {
+        font: inherit;
+        font-size: 13px;
+        padding: 4px 10px;
+        border: 1px solid #7c88ad;
+        background: transparent;
+        color: #fff;
+        border-radius: 3px;
+      }
+      .host-header button.on {
+        background: #fff;
+        color: #223055;
+      }
+      .canvas,
+      .app {
+        padding: 14px 20px;
+        font-size: 15px;
+      }
+      /* The element is given a fixed height, as a Bubble element would be. */
+      #board {
+        height: 760px;
+        border: 3px dashed #9aa5c4;
+        margin: 12px 20px;
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div class="host-header">
+      <span>Host page chrome — should stay Georgia on blue</span>
+      <span id="role-switch">
+        <button data-role="planner" class="on">Planner</button>
+        <button data-role="client">Client</button>
+      </span>
+    </div>
+
+    <div class="canvas">
+      A host paragraph using <code>.canvas</code>, one of the app's own class names.
+      If this changes appearance, the stylesheet has leaked out of <code>.gw-mb</code>.
+    </div>
+
+    <div id="board"></div>
+
+    <div class="app">
+      Another host block, using <code>.app</code>. Same test.
+    </div>
+
     <script src="./gw-moodboard.js"></script>
   </body>
 </html>

@@ -2,6 +2,7 @@ import { Sparkles, Presentation, Download, MessageSquare } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { requestFullscreen } from '../utils/fullscreen';
 import { formatEventDate } from '../utils/formatDate';
+import { useHost } from '../embed/HostProvider';
 
 export function TopNav() {
   const {
@@ -13,6 +14,7 @@ export function TopNav() {
     isCommentsOpen,
     setCommentsOpen,
   } = useBoard();
+  const { features, logoUrl } = useHost();
   const isPlanner = role === 'planner';
 
   return (
@@ -20,7 +22,7 @@ export function TopNav() {
       <div className="topnav-left">
         <img
           className="topnav-logo"
-          src="./gatherwise-logo.png"
+          src={logoUrl}
           alt="GatherWise"
           />
         <span className="topnav-sep">/</span>
@@ -45,7 +47,7 @@ export function TopNav() {
         >
           <MessageSquare size={13} strokeWidth={1.5} />
         </button>
-        {isPlanner && (
+        {isPlanner && features.present && (
           <>
             <button
               type="button"
@@ -59,25 +61,29 @@ export function TopNav() {
               <Presentation size={13} strokeWidth={1.5} />
               Present
             </button>
-            <button
-              type="button"
-              className="btn-ghost btn-sm"
-              onClick={() => window.print()}
-            >
-              <Download size={13} strokeWidth={1.5} />
-              Export PDF
-            </button>
           </>
         )}
-        <button
-          type="button"
-          className="btn-primary btn-sm"
-          onClick={summarizeVision}
-          disabled={isSummarizing}
-        >
-          <Sparkles size={13} strokeWidth={1.5} />
-          {isSummarizing ? 'Summarizing…' : 'Summarize vision'}
-        </button>
+        {isPlanner && features.exportPdf && (
+          <button
+            type="button"
+            className="btn-ghost btn-sm"
+            onClick={() => window.print()}
+          >
+            <Download size={13} strokeWidth={1.5} />
+            Export PDF
+          </button>
+        )}
+        {features.summarizeVision && (
+          <button
+            type="button"
+            className="btn-primary btn-sm"
+            onClick={summarizeVision}
+            disabled={isSummarizing}
+          >
+            <Sparkles size={13} strokeWidth={1.5} />
+            {isSummarizing ? 'Summarizing…' : 'Summarize vision'}
+          </button>
+        )}
       </div>
     </header>
   );

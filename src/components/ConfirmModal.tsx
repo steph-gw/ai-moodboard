@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { useHost } from '../embed/HostProvider';
 
 interface ConfirmModalProps {
   eyebrow: string;
@@ -19,6 +20,8 @@ export function ConfirmModal({
   onConfirm,
   onClose,
 }: ConfirmModalProps) {
+  const { portalHost } = useHost();
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -69,6 +72,6 @@ export function ConfirmModal({
         </div>
       </div>
     </div>,
-    document.body
+    portalHost
   );
 }

@@ -4,6 +4,7 @@ import { useBoard } from '../context/BoardContext';
 import type { CanvasElement } from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 import { textFontCss } from '../utils/textFonts';
+import { useHost } from '../embed/HostProvider';
 
 /**
  * One slide element, rendered flat at full size — no selection chrome, comment
@@ -65,6 +66,7 @@ function StaticElement({
  */
 export function ExportSheet() {
   const { board, getImageById } = useBoard();
+  const { portalHost } = useHost();
   // Portals need a DOM, and this one renders on every page load, so wait for
   // the client rather than reaching for document during SSR.
   const [mounted, setMounted] = useState(false);
@@ -101,6 +103,6 @@ export function ExportSheet() {
         </div>
       ))}
     </div>,
-    document.body
+    portalHost
   );
 }

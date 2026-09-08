@@ -1,0 +1,62 @@
+/*
+ * Wrapper styles for the embedded app. Concatenated verbatim ahead of the
+ * prefixed stylesheet by build.mjs, so it is NOT run through the prefixer —
+ * these selectors already carry .gw-mb themselves.
+ *
+ * This replaces the global reset app.css used to carry (`*`, `html, body`,
+ * `body`, `button`), scoped so it can't touch the host page.
+ */
+
+.gw-mb {
+  /* The two bottom-anchored widgets position against this. */
+  position: relative;
+  /* Contains every internal z-index so the app can't fight the host page's
+     stacking order, and the host page can't paint into the middle of ours. */
+  isolation: isolate;
+  height: 100%;
+  min-height: 320px;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  background: var(--content-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+.gw-mb,
+.gw-mb *,
+.gw-mb *::before,
+.gw-mb *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+.gw-mb button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/*
+ * Menus, modals and the export sheet portal here rather than to document.body,
+ * so they keep their styling (every rule needs a .gw-mb ancestor) while
+ * escaping the element's overflow and stacking context.
+ */
+.gw-mb-portals {
+  position: relative;
+  /* Above Bubble's own popups and floating groups. */
+  z-index: 2147483000;
+  /* The host is only a positioning root; it must not swallow page clicks. */
+  height: 0;
+  overflow: visible;
+  background: none;
+  isolation: auto;
+}
+
+.gw-mb-portals:empty {
+  display: none;
+}
+
+/* Focused only so keyboard shortcuts have somewhere to land. */
+.gw-mb:focus {
+  outline: none;
+}

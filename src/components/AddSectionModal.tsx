@@ -7,6 +7,7 @@ import {
   sectionIcon,
 } from '../utils/sectionIcons';
 import type { Section } from '../types';
+import { useHost } from '../embed/HostProvider';
 
 interface AddSectionModalProps {
   onClose: () => void;
@@ -16,6 +17,7 @@ interface AddSectionModalProps {
 
 export function AddSectionModal({ onClose, section }: AddSectionModalProps) {
   const { addSection, updateSection, visionBrief, activeSectionId } = useBoard();
+  const { portalHost } = useHost();
   const isEditing = !!section;
   const [name, setName] = useState(section?.name ?? '');
   const [brief, setBrief] = useState(
@@ -163,6 +165,6 @@ export function AddSectionModal({ onClose, section }: AddSectionModalProps) {
         </div>
       </div>
     </div>,
-    document.body
+    portalHost
   );
 }

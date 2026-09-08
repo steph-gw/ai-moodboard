@@ -1,5 +1,3 @@
-'use client';
-
 import {
   createContext,
   useContext,
@@ -31,6 +29,7 @@ import {
   updatePinComments,
 } from '../utils/commentHelpers';
 import { inferSectionIcon } from '../utils/sectionIcons';
+import { useHost } from '../embed/HostProvider';
 
 const HISTORY_LIMIT = 60;
 /** Offset a pasted element so it does not land exactly on top of the original. */
@@ -47,7 +46,6 @@ function isTypingTarget(target: EventTarget | null): boolean {
 interface BoardContextValue {
   board: Board;
   role: UserRole;
-  setRole: (role: UserRole) => void;
   activeSectionId: string;
   setActiveSectionId: (id: string) => void;
   activeSlideId: string;
@@ -135,7 +133,6 @@ function updateSlidePins(
 export function BoardProvider({ children }: { children: ReactNode }) {
   const [board, setBoard] = useState<Board>(mockBoard);
   const [past, setPast] = useState<Board[]>([]);
-  const [role, setRole] = useState<UserRole>('planner');
   const [activeSectionId, setActiveSectionIdState] = useState('ceremony');
   const [activeSlideId, setActiveSlideId] = useState('slide-ceremony-1');
   const [selectedElementId, setSelectedElementId] = useState<string | null>('el-img-1');
@@ -179,7 +176,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const activeSlide = activeSection?.slides.find((s) => s.id === activeSlideId) ?? null;
   const activeSectionName = activeSection?.name ?? '';
   const visionBrief = activeSection?.visionBrief ?? board.visionBrief;
-  const currentUserId = role === 'planner' ? '1' : '2';
+  const { role, currentUserId, currentUserName, currentUserInitials, rootEl } = useHost();
 
   const selectedCommentPin = useMemo(() => {
     if (!selectedCommentPinId) return null;
@@ -589,21 +586,21 @@ export function BoardProvider({ children }: { children: ReactNode }) {
             comments: updatePinComments(pin.comments, commentId, (c) => ({
               ...c,
               resolved: true,
-              resolvedBy: 'Stephanie Chang',
+              resolvedBy: currentUserName,
             })),
           };
         })
       );
     });
-  }, [commit]);
+  }, [commit, currentUserName]);
 
   const addComment = useCallback(
     (pinId: string, text: string) => {
       const newComment: Comment = {
         id: `c-${Date.now()}`,
-        authorId: role === 'planner' ? '1' : '2',
-        authorName: role === 'planner' ? 'Stephanie Chang' : 'Alexander Lee',
-        authorInitials: role === 'planner' ? 'SC' : 'AL',
+        authorId: currentUserId,
+        authorName: currentUserName,
+        authorInitials: currentUserInitials,
         text,
         timestamp: 'Just now',
       };
@@ -620,7 +617,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         );
       });
     },
-    [role, commit]
+    [currentUserId, currentUserName, currentUserInitials, commit]
   );
 
   const editComment = useCallback((pinId: string, commentId: string, text: string) => {
@@ -814,9 +811,13 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       const did = cutSelection((text) => e.clipboardData?.setData('text/plain', text));
       if (did) e.preventDefault();
     };
-    window.addEventListener('cut', onCut);
-    return () => window.removeEventListener('cut', onCut);
-  }, [cutSelection]);
+    const onCutScoped = (e: ClipboardEvent) => {
+      if (!rootEl.contains(document.activeElement)) return;
+      onCut(e);
+    };
+    document.addEventListener('cut', onCutScoped);
+    return () => document.removeEventListener('cut', onCutScoped);
+  }, [cutSelection, rootEl]);
 
   const insertElement = useCallback(
     (element: CanvasElement) => {
@@ -884,9 +885,13 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         addTextElement(text);
       }
     };
-    window.addEventListener('paste', onPaste);
-    return () => window.removeEventListener('paste', onPaste);
-  }, [addUploadedImage, addTextElement, insertElement]);
+    const onPasteScoped = (e: ClipboardEvent) => {
+      if (!rootEl.contains(document.activeElement)) return;
+      onPaste(e);
+    };
+    document.addEventListener('paste', onPasteScoped);
+    return () => document.removeEventListener('paste', onPasteScoped);
+  }, [addUploadedImage, addTextElement, insertElement, rootEl]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -921,16 +926,15 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         deleteElement(activeSlideId, selectedElementId);
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedElementId, activeSlideId, deleteElement, undo, cutSelection]);
+    rootEl.addEventListener('keydown', handleKeyDown);
+    return () => rootEl.removeEventListener('keydown', handleKeyDown);
+  }, [selectedElementId, activeSlideId, deleteElement, undo, cutSelection, rootEl]);
 
   return (
     <BoardContext.Provider
       value={{
         board,
         role,
-        setRole,
         activeSectionId,
         setActiveSectionId,
         activeSlideId,

@@ -1,33 +1,13 @@
 @import './tokens.css';
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html, body {
-  height: 100%;
-  overflow: hidden;
-}
-
-body {
-  font-family: var(--font-sans);
-  color: var(--text-primary);
-  -webkit-font-smoothing: antialiased;
-  background: var(--content-bg);
-}
-
-button {
-  font-family: inherit;
-  cursor: pointer;
-}
+/* Every selector below is scoped under .gw-mb at build time; see postcss.config.mjs. */
 
 /* ── App shell ── */
 .app {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -1484,7 +1464,7 @@ button {
 
 /* Floating comment widget (bottom bar) */
 .comment-widget {
-  position: fixed;
+  position: absolute;
   bottom: 24px;
   left: 50%;
   z-index: 90;
@@ -2080,7 +2060,7 @@ button {
 
 /* ── Animations ── */
 .role-toggle {
-  position: fixed;
+  position: absolute;
   bottom: 24px;
   right: 24px;
   transform: none;
@@ -2545,39 +2525,4 @@ button {
   white-space: pre-wrap;
   word-break: break-word;
   overflow: hidden;
-}
-
-@media print {
-  @page {
-    size: 960px 540px;
-    margin: 0;
-  }
-
-  html,
-  body {
-    height: auto;
-    overflow: visible;
-    background: #fff;
-  }
-
-  /* Hide the app (and any portalled menus / dev overlays); show only slides. */
-  body > *:not(.export-sheet) {
-    display: none !important;
-  }
-
-  .export-sheet {
-    display: block !important;
-  }
-
-  .export-page {
-    break-after: page;
-    page-break-after: always;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
-  }
-
-  .export-page:last-child {
-    break-after: auto;
-    page-break-after: auto;
-  }
 }

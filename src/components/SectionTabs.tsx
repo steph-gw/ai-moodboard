@@ -6,6 +6,7 @@ import { sectionIcon } from '../utils/sectionIcons';
 import { AddSectionModal } from './AddSectionModal';
 import { ConfirmModal } from './ConfirmModal';
 import type { Section } from '../types';
+import { useHost } from '../embed/HostProvider';
 
 function TabMenu({
   section,
@@ -16,6 +17,7 @@ function TabMenu({
   onEdit: () => void;
   onDelete: () => void;
 }) {
+  const { portalHost } = useHost();
   const [anchor, setAnchor] = useState<{ top: number; right: number } | null>(null);
   const btnRef = useRef<HTMLSpanElement>(null);
 
@@ -110,7 +112,7 @@ function TabMenu({
               Delete section
             </button>
           </div>,
-          document.body
+          portalHost
         )}
     </>
   );

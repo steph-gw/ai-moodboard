@@ -8,9 +8,7 @@
   },
   "scripts": {
     "dev": "node build.mjs --dev",
-    "build": "npm run typecheck && npm run build:css && npm run build:js",
-    "build:js": "node build.mjs",
-    "build:css": "postcss src/styles/app.css -o dist/gw-moodboard.css",
+    "build": "npm run typecheck && node build.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint src build.mjs"
   },

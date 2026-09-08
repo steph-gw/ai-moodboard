@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Check, ChevronDown, MessageCircle } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import type { Section } from '../types';
+import { useHost } from '../embed/HostProvider';
 
 type Choice = 'approved' | 'open';
 
@@ -25,6 +26,7 @@ function today(): string {
 
 export function SectionStatusSelect({ section }: { section: Section }) {
   const { updateSection, role } = useBoard();
+  const { portalHost } = useHost();
   const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   const isPlanner = role === 'planner';
@@ -134,7 +136,7 @@ export function SectionStatusSelect({ section }: { section: Section }) {
               </button>
             ))}
           </div>,
-          document.body
+          portalHost
         )}
     </>
   );

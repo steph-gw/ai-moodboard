@@ -1,42 +1,20 @@
-'use client';
-
-import { BoardProvider, useBoard } from '@/context/BoardContext';
-import { TopNav } from '@/components/TopNav';
-import { SectionTabs } from '@/components/SectionTabs';
-import { SlideStrip } from '@/components/SlideStrip';
-import { MainCanvas } from '@/components/MainCanvas';
-import { CommentWidget } from '@/components/CommentWidget';
-import { ErrorBoundary } from '@/components/ErrorBoundary';
-import { PresentOverlay } from '@/components/PresentOverlay';
-import { PinterestPicker } from '@/components/PinterestPicker';
-import { CommentDrawer } from '@/components/CommentDrawer';
-import { ExportSheet } from '@/components/ExportSheet';
-
-function RoleToggle() {
-  const { role, setRole } = useBoard();
-  return (
-    <div className="role-toggle">
-      <span className="role-toggle-label">View as</span>
-      <button
-        type="button"
-        className={role === 'planner' ? 'active' : ''}
-        onClick={() => setRole('planner')}
-      >
-        Planner
-      </button>
-      <button
-        type="button"
-        className={role === 'client' ? 'active' : ''}
-        onClick={() => setRole('client')}
-      >
-        Client
-      </button>
-    </div>
-  );
-}
+import { BoardProvider, useBoard } from '../context/BoardContext';
+import { TopNav } from './TopNav';
+import { SectionTabs } from './SectionTabs';
+import { SlideStrip } from './SlideStrip';
+import { MainCanvas } from './MainCanvas';
+import { CommentWidget } from './CommentWidget';
+import { ErrorBoundary } from './ErrorBoundary';
+import { PresentOverlay } from './PresentOverlay';
+import { PinterestPicker } from './PinterestPicker';
+import { CommentDrawer } from './CommentDrawer';
+import { ExportSheet } from './ExportSheet';
+import { HostProvider, useHost } from '../embed/HostProvider';
+import type { GWMoodboardProps } from '../embed/types';
 
 function MoodboardShell() {
   const { isPresenting } = useBoard();
+  const { features } = useHost();
 
   return (
     <div className="app">
@@ -45,23 +23,29 @@ function MoodboardShell() {
       <div className="app-body">
         {!isPresenting && <SlideStrip />}
         <MainCanvas />
-        {!isPresenting && <CommentDrawer />}
-        {!isPresenting && <PinterestPicker />}
+        {!isPresenting && features.comments && <CommentDrawer />}
+        {!isPresenting && features.pinterest && <PinterestPicker />}
       </div>
-      {!isPresenting && <CommentWidget />}
-      {!isPresenting && <RoleToggle />}
+      {!isPresenting && features.comments && <CommentWidget />}
       {isPresenting && <PresentOverlay />}
       <ExportSheet />
     </div>
   );
 }
 
-export function MoodboardApp() {
+interface Props extends GWMoodboardProps {
+  rootEl: HTMLElement;
+  portalHost: HTMLElement;
+}
+
+export function MoodboardApp(props: Props) {
   return (
     <ErrorBoundary>
-      <BoardProvider>
-        <MoodboardShell />
-      </BoardProvider>
+      <HostProvider {...props}>
+        <BoardProvider>
+          <MoodboardShell />
+        </BoardProvider>
+      </HostProvider>
     </ErrorBoundary>
   );
 }

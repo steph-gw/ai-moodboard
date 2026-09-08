@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ArrowDownToLine, ArrowUpToLine, Download, Trash2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { downloadImage, imageFilename } from '../utils/downloadImage';
+import { useHost } from '../embed/HostProvider';
 
 interface ElementContextMenuProps {
   slideId: string;
@@ -25,6 +26,7 @@ export function ElementContextMenu({
   onClose,
 }: ElementContextMenuProps) {
   const { bringToFront, sendToBack, deleteElement, activeSectionName } = useBoard();
+  const { portalHost } = useHost();
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -99,6 +101,6 @@ export function ElementContextMenu({
         Delete
       </button>
     </div>,
-    document.body
+    portalHost
   );
 }

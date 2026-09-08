@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Type, ImagePlus, Undo2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
+import { useHost } from '../embed/HostProvider';
 
 export function CanvasToolbar() {
   const {
@@ -12,6 +13,7 @@ export function CanvasToolbar() {
     canUndo,
   } = useBoard();
 
+  const { features } = useHost();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,14 +39,16 @@ export function CanvasToolbar() {
           <Type size={13} strokeWidth={1.5} />
           Add text
         </button>
-        <button
-          type="button"
-          className={`btn-ghost btn-sm ${showSuggestionsPanel ? 'active' : ''}`}
-          onClick={() => setShowSuggestionsPanel(!showSuggestionsPanel)}
-        >
-          <ImagePlus size={13} strokeWidth={1.5} />
-          Add image
-        </button>
+        {features.pinterest && (
+          <button
+            type="button"
+            className={`btn-ghost btn-sm ${showSuggestionsPanel ? 'active' : ''}`}
+            onClick={() => setShowSuggestionsPanel(!showSuggestionsPanel)}
+          >
+            <ImagePlus size={13} strokeWidth={1.5} />
+            Add image
+          </button>
+        )}
         <button
           type="button"
           className="btn-ghost btn-sm"
