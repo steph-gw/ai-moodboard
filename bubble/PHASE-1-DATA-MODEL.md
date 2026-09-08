@@ -102,44 +102,61 @@ list in Bubble would just drift out of sync. The icon is stored as a plain text 
 
 ---
 
-## 3. Fields on your existing types
+## 3. Comments — two more new types
 
-### `T-Thread` — one thread becomes one comment pin
+**Your existing `T-Thread` / `T-Message` are not touched.** We looked at reusing them and decided
+against it: they're an *email* system (`Subject line`, `Text (HTML)`, `Header (with reply to ids)`,
+`Guest recipients`, `Sender (when via email)`), and grafting pin geometry onto them would mean every
+existing query over those tables becomes a place where a private moodboard note can leak into a guest
+email send. Separate types, no blast radius.
 
-| Field name | Type |
-|---|---|
-| `Moodboard section` | Moodboard Section |
-| `Moodboard slide id` | text |
-| `Pin x` | number |
-| `Pin y` | number |
-| `Resolved?` | yes / no |
-| `Resolved by` | User |
-| `Resolved date` | date |
-| `Kind` | text |
+### `Moodboard Thread` (new type, private by default)
 
-`Kind` is set to `moodboard-pin` on every thread the plugin creates. Your existing inbox queries can
-filter these in or out with one constraint — **worth checking before we go live**, since without it
-moodboard pins will start appearing in the communications list.
+One thread = one pin dropped on a slide.
 
-`Pin x` / `Pin y` are coordinates on the 960×540 artboard, not percentages.
+| Field name | Type | Notes |
+|---|---|---|
+| `Moodboard` | Moodboard | lets us load every thread for a board in one query |
+| `Section` | Moodboard Section | |
+| `Slide id` | text | the slide's id inside `Slides JSON` |
+| `X` | number | 0–960, artboard coordinates — not a percentage |
+| `Y` | number | 0–540 |
+| `Resolved?` | yes / no | |
+| `Resolved by` | User | |
+| `Resolved date` | date | |
 
-### `T-Message` — one message becomes one comment
+### `Moodboard Comment` (new type, private by default)
 
-| Field name | Type |
-|---|---|
-| `Parent message` | T-Message |
-| `Edited?` | yes / no |
+| Field name | Type | Notes |
+|---|---|---|
+| `Thread` | Moodboard Thread | |
+| `Parent comment` | Moodboard Comment | empty = top level, set = a reply |
+| `Text` | text | |
+| `Edited?` | yes / no | |
 
-Empty `Parent message` = a thread root; set = a reply. The comment body reuses your existing
-`Text (plain text)`, and the author is the built-in **`Creator`** — no new author field, because
-`Creator` is already exactly that and can't be spoofed from the client.
+**No author field.** The author is the built-in **`Creator`**, which Bubble sets server-side and the
+client cannot spoof. Likewise the timestamp is the built-in **`Created Date`** — the current app has
+no real time model at all (comments literally carry the string `'Just now'`), and this fixes it.
+
+> One deliberate simplification: in the local app `resolved` is stored per comment, but the UI only
+> ever offers resolve on a thread's first comment and treats the pin as resolved when all of them are.
+> So resolution lives on the **thread**, which is what the interface already means. I'll adapt
+> `isPinResolved` in the client to match. This also fixes a real bug: today `resolveComment` credits
+> `resolvedBy` to a hardcoded name regardless of who clicked it.
+
+### Optional, later: surfacing activity in the inbox
+
+If you do want moodboard activity in your communications list, the clean way is to create a `T-Thread`
+deliberately as a **notification** — one thread per moodboard, a message when there's new activity —
+rather than as storage. That gets you the inbox integration in the shape you want, on purpose, without
+every email query having to defend itself. Not part of v1; noting it so the door stays open.
 
 ---
 
 ## 4. Privacy rules — the important part
 
-For **each** of the five types (`Moodboard`, `Moodboard Section`, `Moodboard Image`, and the moodboard
-fields on `T-Thread` / `T-Message`), go to **Data → Privacy** and make sure:
+For **each** of the five new types (`Moodboard`, `Moodboard Section`, `Moodboard Image`,
+`Moodboard Thread`, `Moodboard Comment`), go to **Data → Privacy** and make sure:
 
 **The default "Everyone else" rule has _Find this in searches_ UNCHECKED, and no field ticked under View.**
 This is the rule that's currently wide open. Everything else is additive on top of it.
@@ -155,6 +172,8 @@ can see its moodboard and nothing more:
 | `Moodboard` | `This Moodboard's Event's Creator is Current User` (+ whatever collaborator/client condition `1 Project / Event` uses) |
 | `Moodboard Section` | `This Moodboard Section's Moodboard's Event's Creator is Current User` (+ same) |
 | `Moodboard Image` | `This Moodboard Image's Moodboard's Event's Creator is Current User` (+ same) |
+| `Moodboard Thread` | `This Moodboard Thread's Moodboard's Event's Creator is Current User` (+ same) |
+| `Moodboard Comment` | `This Moodboard Comment's Thread's Moodboard's Event's Creator is Current User` (+ same) |
 
 Plus the `Current User's Role is App admin` rule on each, so you keep admin visibility.
 
@@ -174,10 +193,10 @@ Under each rule, tick **Find this in searches** and tick **View** for all fields
 - `Moodboard` *(already ticked)*
 - `Moodboard Section`
 - `Moodboard Image`
-- `T-Thread`
-- `T-Message`
+- `Moodboard Thread`
+- `Moodboard Comment`
 
-Nothing else needs to be added.
+Nothing else. In particular **do not** expose `T-Thread` or `T-Message` — they stay off the API.
 
 ---
 
