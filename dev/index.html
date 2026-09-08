@@ -56,10 +56,30 @@
         border: 3px dashed #9aa5c4;
         margin: 12px 20px;
       }
+
+      /*
+        ?bare drops the test scaffolding and gives the element the whole viewport,
+        so the board can be compared like-for-like against how it used to look.
+        The scaffolding is what proves the CSS stays scoped; this is for eyeballing.
+      */
+      body.bare .host-chrome {
+        display: none;
+      }
+      body.bare {
+        overflow: hidden;
+      }
+      body.bare #board {
+        height: 100vh;
+        border: 0;
+        margin: 0;
+      }
     </style>
   </head>
   <body>
-    <div class="host-header">
+    <script>
+      if (location.search.includes('bare')) document.body.classList.add('bare');
+    </script>
+    <div class="host-header host-chrome">
       <span>Host page chrome — should stay Georgia on blue</span>
       <span id="role-switch">
         <button data-role="planner" class="on">Planner</button>
@@ -67,14 +87,14 @@
       </span>
     </div>
 
-    <div class="canvas">
+    <div class="canvas host-chrome">
       A host paragraph using <code>.canvas</code>, one of the app's own class names.
       If this changes appearance, the stylesheet has leaked out of <code>.gw-mb</code>.
     </div>
 
     <div id="board"></div>
 
-    <div class="app">
+    <div class="app host-chrome">
       Another host block, using <code>.app</code>. Same test.
     </div>
 
