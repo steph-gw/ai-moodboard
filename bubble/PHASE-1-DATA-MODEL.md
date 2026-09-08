@@ -67,15 +67,17 @@ list in Bubble would just drift out of sync. The icon is stored as a plain text 
 | `Event` | `1 Project / Event` |
 | `Vision brief` | text |
 | `Palette` | text — **tick "This field is a list"** |
-| `Shared with clients?` | yes / no |
 
-> Renamed from `Client view enabled?` now that an event can have several client-side collaborators:
-> this is a board-level publish switch ("this board is ready to be seen"), not per-person access.
-> Per-person access stays where it already lives, on the event's collaborators.
->
-> There is deliberately **no `Viewers` field**. The avatar stack in the top nav should read the
-> event's existing collaborators, not a second list maintained on the moodboard that would drift the
-> moment someone is added to the event.
+That's the whole type. Three fields that earlier drafts had are gone:
+
+- **No `Client view enabled?` / `Shared with clients?`.** Your `Collaborator Access` type already has
+  `Tabs with View Access` and `Tabs with Hidden Access` (lists of `Tab Project OS`), so adding a
+  `Moodboard` option to that set gates per-collaborator visibility with machinery your users already
+  understand. A board-level flag on top of that is duplicate state that can disagree with it.
+  *(Different question if you want a draft/published distinction — "the planner is still building
+  this" is not the same as "this person may see it". Say so and it comes back.)*
+- **No `Viewers` field.** The avatar stack reads the event's `Collaborator Accesses`'s Users. A second
+  list on the moodboard would drift the moment someone is added to the event.
 
 ### `Moodboard Section` (new type, private by default)
 
@@ -85,8 +87,7 @@ list in Bubble would just drift out of sync. The icon is stored as a plain text 
 | `Name` | text | |
 | `Icon` | text | one of the 32 icon keys |
 | `Status` | Moodboard Status | |
-| `Approved date` | date | |
-| `Approved by` | User | |
+| `Approved date` | date | set when the planner flips Status to Approved |
 | `Vision brief` | text | empty ⇒ inherits the board's |
 | `Order` | number | explicit sort index |
 | `Slides JSON` | text | the entire canvas for this section |
@@ -205,38 +206,48 @@ can see its moodboard and nothing more:
 
 | Type | Rule condition |
 |---|---|
-| `Moodboard` | `This Moodboard's Event's Creator is Current User` (+ whatever collaborator/client condition `1 Project / Event` uses) |
-| `Moodboard Section` | `This Moodboard Section's Moodboard's Event's Creator is Current User` (+ same) |
-| `Moodboard Image` | `This Moodboard Image's Moodboard's Event's Creator is Current User` (+ same) |
-| `Moodboard Image Vote` | `This Moodboard Image Vote's Image's Moodboard's Event's Creator is Current User` (+ same) |
-| `Moodboard Thread` | `This Moodboard Thread's Moodboard's Event's Creator is Current User` (+ same) |
-| `Moodboard Comment` | `This Moodboard Comment's Thread's Moodboard's Event's Creator is Current User` (+ same) |
+| `Moodboard` | `This Moodboard's Event's Collaborator Accesses's User contains Current User` |
+| `Moodboard Section` | `This Moodboard Section's Moodboard's Event's Collaborator Accesses's User contains Current User` |
+| `Moodboard Image` | `This Moodboard Image's Moodboard's Event's Collaborator Accesses's User contains Current User` |
+| `Moodboard Image Vote` | `This Moodboard Image Vote's Image's Moodboard's Event's Collaborator Accesses's User contains Current User` |
+| `Moodboard Thread` | `This Moodboard Thread's Moodboard's Event's Collaborator Accesses's User contains Current User` |
+| `Moodboard Comment` | `This Moodboard Comment's Thread's Moodboard's Event's Collaborator Accesses's User contains Current User` |
+
+Add a second rule on each for the planner — `This ...'s Event's Creator is Current User` — since the
+event's creator may not have a `Collaborator Access` row of their own.
 
 Plus the `Current User's Role is App admin` rule on each, so you keep admin visibility.
 
-**I don't know your collaborator/client access model well enough to write that half for you**, and
-guessing at privacy rules is the one place I'd rather be slow than wrong. The rule of thumb: *if a
-user can open the event, they can read its moodboard.* Copy whichever conditions `1 Project / Event`
-already uses for that and point them through `Moodboard's Event`.
+These route through `Collaborator Access`, which is your existing per-event access model — see 4b.
+The rule of thumb is *if a user can open the event, they can read its moodboard*. Sanity-check them
+against whatever `1 Project / Event` already does; privacy rules are the one place I'd rather you
+double-check me than take my word.
 
 Under each rule, tick **Find this in searches** and tick **View** for all fields.
 
 ---
 
-## 4b. Who is a "client"?
+## 4b. Reusing `Collaborator Access`
 
-The plugin takes `role` as a plain `planner` | `client` prop, so multiple client-side collaborators
-need no schema of their own — you derive the role in Bubble from your existing `Collaborator Access`
-model and feed it in. Everything downstream (read-only gating, who can approve a section) keys off
-that one prop.
+`Collaborator Access` is `{ User, Project/Event, Invitation date, Invited by, Tabs with View Access,
+Tabs with Hidden Access }`, and `1 Project / Event` already holds `Collaborator Accesses`. It does
+three jobs here, so the moodboard needs no access schema of its own:
 
-Two consequences worth deciding now:
+1. **Privacy rules.** Every rule condition above can be
+   `This Moodboard's Event's Collaborator Accesses's User contains Current User`
+   (chained through `Moodboard` / `Thread` for the deeper types). No searches needed, which is the
+   constraint privacy rules impose.
+2. **Visibility.** Add a `Moodboard` option to `Tab Project OS` and the existing
+   `Tabs with View Access` / `Tabs with Hidden Access` gate it — same as every other tab.
+3. **The avatar stack.** Reads `Event's Collaborator Accesses's User`.
 
-- **Approval.** `Moodboard Section` has a single `Status` + `Approved by`, so approval is one action
-  by one person. If two clients need to sign off independently, that wants the same treatment votes
-  just got — a `Moodboard Section Approval` row per person. Fine as one action for v1; flag it if not.
-- **Comment visibility.** All collaborators see all comments. If clients should not see each other's
-  notes, say so now — it changes the privacy rules, not the schema.
+**One gap:** `Collaborator Access` has no role field, so planner-vs-client isn't expressible on it.
+The plugin takes `role` as a plain `planner` | `client` prop, so you derive it — presumably
+*planner = Current User is the Event's Creator (or a member of its Event Planner Business), client =
+everyone else with access*. Confirm that's right; it decides who can edit the canvas.
+
+**Still open:** all collaborators currently see all comments. If clients shouldn't see each other's
+notes, that's a privacy-rule change, not a schema change — but decide before writing the rules.
 
 ---
 
