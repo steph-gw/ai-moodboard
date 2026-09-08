@@ -93,49 +93,42 @@ That's the whole type. Three fields that earlier drafts had are gone:
 | `Slides JSON` | text | the entire canvas for this section |
 | `Archived?` | yes / no | |
 
-### `Moodboard Image` (new type, private by default)
+### Images — no type at all
 
-| Field name | Type | Notes |
-|---|---|---|
-| `Moodboard` | Moodboard | |
-| `Section` | Moodboard Section | |
-| `Image` | image | the file in Bubble storage — its Data API value *is* the URL |
+Images live inside the section's `Slides JSON`, alongside the elements that place them:
 
-**No `URL` field and no `Tags` field**, both of which earlier drafts had:
+```json
+{
+  "images": [{ "id": "img-abc", "url": "https://s3.amazonaws.com/appforest_uf/f17.../photo.jpg" }],
+  "slides":  [{ "id": "slide-1", "name": "Mood", "elements": [
+      { "id": "el-1", "type": "image", "imageId": "img-abc", "x": 80, "y": 60, "width": 400, "height": 300, "zIndex": 1 }
+  ]}]
+}
+```
 
-- A Bubble `image` field already returns its URL as a plain string over the Data API, so a separate
-  `URL` text column would be the same value stored twice and free to drift. The one case that would
-  justify it is an externally-hosted image (Unsplash via the Pinterest picker) that has no Bubble
-  file — and Pinterest is flagged off in v1, so every image is an upload. If we turn Pinterest on
-  later and Bubble won't accept a foreign URL into an `image` field, adding `URL` then is a
-  30-second change with nothing to migrate.
-- `Tags` exists on the current `BoardImage` type but is **read by nothing** — written on upload
-  (`['Uploaded']`, `['Pasted']`) and rendered in zero components. Being in the old type isn't a
-  reason to put a column in the database. If image filtering or search becomes a feature, it's one
-  field away.
+Earlier drafts had a `Moodboard Image` type. It doesn't earn its place: the rule for what becomes a
+real Bubble thing is *does it carry state Bubble needs to query or enforce* — sections do (status,
+approval, order), and images did only because votes hung off them. Now that votes are their own type,
+an image is just a URL and a size, which is exactly what the JSON is for. Keeping the indirection
+(`images[]` + `imageId`) rather than inlining the URL matches the current code, so one image used on
+two slides stays one image.
 
-Votes are also **not** fields here — see the next type.
+**`Attachment` and `Upload` are also not the answer**, in case they looked like candidates:
 
-### `Moodboard Image Vote` (new type, private by default)
+- `Attachment` is your client-facing file browser — `Is folder?`, `Is root folder?`, `Parent Folder`,
+  `Associated Vendor`, `Invoice`, `Document`. Every moodboard image would show up as a loose file in
+  the planner's document tree.
+- `Upload` is `{ Files, JSONs, Errors, Debugger text, Project }` — a bulk-import staging type.
 
-One row per person per image.
+### ⚠️ One thing to verify in phase 6
 
-| Field name | Type |
-|---|---|
-| `Image` | Moodboard Image |
-| `Vote` | Moodboard Vote |
+With no thing holding the file, does Bubble keep it? Files uploaded via `context.uploadContent` land
+in your file storage, but Bubble is known to clean up files that aren't attached to a database record,
+and **I don't know for certain how that applies here.** First upload we do, I'll check the URL still
+resolves after a reload and again the next day.
 
-The voter is the built-in **`Creator`**; removing your vote deletes the row.
-
-> **Why this isn't just a field on the image.** The current app stores one tri-state `clientVote` per
-> image, toggled by whoever clicks last. That assumed a single client. With several collaborators,
-> one person's thumbs-up silently overwrites another's thumbs-down and the record shows only the
-> last voter — so the board looks unanimous when it wasn't. Since the whole point of the votes is to
-> read the room, that's a correctness bug, not a polish item.
->
-> Cost: the canvas shows a count (👍 2 / 👎 1) with *your* vote highlighted, instead of a single
-> binary state. Small change in `CanvasElementView.tsx`, and better product — the planner can see
-> who wanted what rather than just a verdict.
+If it doesn't survive, the fallback is a minimal `Moodboard File` type whose only job is to own the
+file — the JSON still holds the URL, nothing else changes. Cheap to add later, nothing to migrate.
 
 ---
 
@@ -192,8 +185,8 @@ every email query having to defend itself. Not part of v1; noting it so the door
 
 ## 4. Privacy rules — the important part
 
-For **each** of the six new types (`Moodboard`, `Moodboard Section`, `Moodboard Image`,
-`Moodboard Image Vote`, `Moodboard Thread`, `Moodboard Comment`), go to **Data → Privacy** and make sure:
+For **each** of the five new types (`Moodboard`, `Moodboard Section`, `Moodboard Image Vote`,
+`Moodboard Thread`, `Moodboard Comment`), go to **Data → Privacy** and make sure:
 
 **The default "Everyone else" rule has _Find this in searches_ UNCHECKED, and no field ticked under View.**
 This is the rule that's currently wide open. Everything else is additive on top of it.
@@ -204,8 +197,7 @@ Then add **three rules** to each type. `PATH` below is the walk from the thing t
 |---|---|
 | `Moodboard` | `This Moodboard's Event` |
 | `Moodboard Section` | `This Moodboard Section's Moodboard's Event` |
-| `Moodboard Image` | `This Moodboard Image's Moodboard's Event` |
-| `Moodboard Image Vote` | `This Moodboard Image Vote's Image's Moodboard's Event` |
+| `Moodboard Image Vote` | `This Moodboard Image Vote's Moodboard's Event` |
 | `Moodboard Thread` | `This Moodboard Thread's Moodboard's Event` |
 | `Moodboard Comment` | `This Moodboard Comment's Thread's Moodboard's Event` |
 
@@ -266,7 +258,6 @@ notes, that's a privacy-rule change, not a schema change — but decide before w
 
 - `Moodboard` *(already ticked)*
 - `Moodboard Section`
-- `Moodboard Image`
 - `Moodboard Image Vote`
 - `Moodboard Thread`
 - `Moodboard Comment`
@@ -279,7 +270,7 @@ Nothing else. In particular **do not** expose `T-Thread` or `T-Message` — they
 
 Tell me when it's done and I'll run, from a logged-in page:
 
-1. An **anonymous** fetch of all six types — every one must come back `count: 0` or 403. If any still
+1. An **anonymous** fetch of all five types — every one must come back `count: 0` or 403. If any still
    returns rows without a cookie, a privacy rule is missing and I'll say which.
 2. An **authenticated** fetch — must return your data. This is also the first real proof that the
    session cookie identifies you as `Current User` rather than just letting everyone through, which
