@@ -304,3 +304,80 @@ against those keys.
   Calling the bare path from a `/version-test/` page hits **live** and returns a misleading
   `404 "This application does not expose a Data API"`. The client derives the base from `location.pathname`.
 - Same-origin `fetch` with `credentials: 'include'` returns `200`, so no auth-token plugin field is needed.
+
+---
+
+## Appendix B — Field names as actually built (read 2026-09-08)
+
+Several differ from the names proposed above. **The real names win**; the client is written against
+these. `✓` = key observed over the Data API. Everything else is derived from the observed pattern
+(lowercase, spaces → `_`, `?` dropped leaving its underscore, then a type suffix) and must be
+confirmed by a successful write before the client relies on it.
+
+| Type | Field | Data API key |
+|---|---|---|
+| `Moodboard` | Name | `name_text` ✓ |
+| | Vision brief | `vision_brief_text` |
+| | Palette | `palette_list_text` ✓ |
+| | Event | `event_custom_wedding` — note `1 Project / Event`'s internal id is `wedding` |
+| `Moodboard Section` | Section name | `section_name_text` ✓ |
+| | Section vision brief | `section_vision_brief_text` |
+| | Icon | `icon_text` |
+| | Slides JSON | `slides_json_text` |
+| | Order | `order_number` |
+| | Status | `status_option_moodboard_status_os` |
+| | Approved date | `approved_date_date` |
+| | Archived? | `archived__boolean` |
+| | Moodboard | `moodboard_custom_moodboard` |
+| `Moodboard Image` | Image | `image_image` |
+| | In use? | `in_use__boolean` ✓ |
+| | Moodboard | `moodboard_custom_moodboard` |
+| | Moodboard Section | `moodboard_section_custom_moodboard_section` |
+| `Moodboard Image Vote` | Moodboard image | `moodboard_image_custom_moodboard_image` |
+| | Moodboard vote | `moodboard_vote_option_moodboard_vote_os` ✓ |
+| `Moodboard Thread` | Slide id | `slide_id_text` |
+| | X-axis | `x_axis_number` |
+| | Y-axis | `y_axis_number` |
+| | Resolved? | `resolved__boolean` |
+| | Resolved by | `resolved_by_custom_user` |
+| | Resolved date | `resolved_date_date` ✓ |
+| | Moodboard | `moodboard_custom_moodboard` |
+| | Moodboard section | `moodboard_section_custom_moodboard_section` |
+| `Moodboard Comment` | Text | `text_text` ✓ |
+| | Parent comment | `parent_comment_custom_moodboard_comment` |
+| | Edited? | `edited__boolean` |
+| | Thread | `thread_custom_moodboard_thread` |
+
+Two things worth knowing about the Data API generally:
+
+- **Empty fields are omitted from responses entirely** — not returned as null. The client must treat
+  every field as possibly absent rather than assuming the key is present.
+- List-of-text fields take `_list_text`, not `_text`. `palette_text` is rejected as an unrecognised
+  field; `palette_list_text` is accepted.
+
+---
+
+## Appendix C — ⚠️ Writes are currently blocked
+
+`POST /version-test/api/1.1/obj/moodboard` with a valid body returns:
+
+```
+401 {"error_class":"Unauthorized","translation":"Permission denied: cannot create ..."}
+```
+
+All six types currently show **"publicly visible"** in Data → Privacy — no rules at all. Reads work
+(that's what "publicly visible" means, to everyone, including logged-out); writes do not.
+
+**This reframes the privacy work.** It isn't only about locking down reads — privacy rules are what
+*authorise the plugin to write at all*. Autosave, uploads, votes and comments are all blocked until
+they exist, so section 4 has to happen before phase 5 rather than after.
+
+**One thing I got wrong earlier and should correct:** I reported from phase 0 that "session cookie
+auth works". What I actually proved is that the endpoint responds `200` — and since the type is
+publicly visible, an anonymous request gets the same `200`. My authenticated and anonymous fetches
+returned *identical* results, which is equally consistent with the browser session not being logged
+in as a User at all. So user identity over the Data API is **unverified**, not confirmed.
+
+Both possibilities are testable together once privacy rules exist: if reads then return data for a
+logged-in planner and nothing for a logged-out request, identity works. If they return nothing
+either way, the plugin needs the user's auth token passed in as a plugin field after all.
