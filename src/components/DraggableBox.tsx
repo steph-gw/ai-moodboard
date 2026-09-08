@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react';
+import { RotateCw } from 'lucide-react';
 
 type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 type DragMode = 'move' | 'rotate' | ResizeHandle;
@@ -228,12 +229,7 @@ export function DraggableBox({
             title="Drag to rotate · hold Shift to snap"
             onPointerDown={(e) => startDrag(e, 'rotate')}
           >
-            <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden>
-              <path
-                d="M8 3.2V1L4.8 3.4 8 5.8V3.9a4.1 4.1 0 1 1-4.1 4.1H2.4A5.6 5.6 0 1 0 8 3.2z"
-                fill="currentColor"
-              />
-            </svg>
+            <RotateCw size={11} strokeWidth={2} aria-hidden />
           </div>
           {HANDLES.map(({ handle, className: handleClass }) => (
             <div
