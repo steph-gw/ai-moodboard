@@ -1,179 +1,189 @@
-# Privacy rules — every rule written out
+# Privacy rules — as you build them in Bubble
 
-For each type: **Data → Privacy →** search the type → click it → **Add a rule** / **+ New rule**.
+Every `→` below is **one dropdown selection** in the expression builder, in order. Click the empty
+**WHEN** box, then work left to right.
 
-Each rule has a **WHEN** box (built from dropdowns) and, under it, tick boxes. Where this says
-**read**, tick *Find this in searches*, *View files attached to this*, and the **ALL** box on the
-**View** column. Where it says **read + write**, tick those plus the API-write box.
+For each type: **Data → Privacy →** search the type → click it → **Add a rule** (first) or
+**+ New rule** (after that).
 
-Most types need **3 rules**. Only `Moodboard Slide` needs 4.
+**Tick boxes**, under each rule:
+- **read** = *Find this in searches* ✓, *View files attached to this* ✓, **ALL** on the **View** column ✓
+- **read + write** = the above, plus the API-write box
 
----
-
-## Rule 1 is the same on all seven types
-
-**WHEN:** `Current User's ⚙️ Role is App admin` → **read + write**
-
-Build it: `Current User` → `⚙️ Role` → `is` → `App admin`
-
-That one never changes. Everything below is rules 2, 3 and (for slides) 4.
+Most types need **3 rules**. `Moodboard Slide` needs 4.
 
 ---
 
-## `Moodboard` — done already, listed for reference
+## Rule 1 — identical on all seven types · read + write
 
-**2. Planner team** — read + write
 ```
-Current User's Business is not empty
-and Current User's Business is This Moodboard's Event's Wedding / Event Planner's Business
+Current User → ⚙️ Role → is → App admin
 ```
 
-**3. Collaborators** — **read only**
+---
+
+## `Moodboard` — already done, for reference
+
+**Rule 2 · Planner team · read + write**
 ```
-This Moodboard's Event's Collaborator Accesses's User contains Current User
+Current User → Business → is not empty
+→ and
+Current User → Business → is
+   → This Moodboard → Event → Wedding / Event Planner → Business
+```
+
+**Rule 3 · Collaborators · read ONLY**
+```
+This Moodboard → Event → Collaborator Accesses → User → contains → Current User
 ```
 
 ---
 
 ## `Moodboard Section`
 
-**2. Planner team** — read + write
+**Rule 2 · Planner team · read + write**
 ```
-Current User's Business is not empty
-and Current User's Business is This Moodboard Section's Moodboard's Event's Wedding / Event Planner's Business
-```
-
-**3. Collaborators** — **read only**
-```
-This Moodboard Section's Moodboard's Event's Collaborator Accesses's User contains Current User
+Current User → Business → is not empty
+→ and
+Current User → Business → is
+   → This Moodboard Section → Moodboard → Event → Wedding / Event Planner → Business
 ```
 
-> Clients never write sections. Deleting one would take its slides with it, locked ones included.
+**Rule 3 · Collaborators · read ONLY**
+```
+This Moodboard Section → Moodboard → Event → Collaborator Accesses → User → contains → Current User
+```
 
 ---
 
-## `Moodboard Slide` — the only type with 4 rules
+## `Moodboard Slide` — 4 rules
 
-**2. Planner team** — read + write
+**Rule 2 · Planner team · read + write**
 ```
-Current User's Business is not empty
-and Current User's Business is This Moodboard Slide's Section's Moodboard's Event's Wedding / Event Planner's Business
-```
-
-**3. Collaborators reading** — **read only**
-```
-This Moodboard Slide's Section's Moodboard's Event's Collaborator Accesses's User contains Current User
+Current User → Business → is not empty
+→ and
+Current User → Business → is
+   → This Moodboard Slide → Section → Moodboard → Event → Wedding / Event Planner → Business
 ```
 
-**4. Collaborators editing** — read + write
+**Rule 3 · Collaborators reading · read ONLY**
 ```
-This Moodboard Slide's Section's Moodboard's Event's Collaborator Accesses's User contains Current User
-and This Moodboard Slide's Section's Locked slides doesn't contain This Moodboard Slide
-and This Moodboard Slide's Section's Status is not Approved
+This Moodboard Slide → Section → Moodboard → Event → Collaborator Accesses → User → contains → Current User
 ```
 
-> This is the lock, and it's enforced by the database — a client can't get past it by calling the API
-> directly. Rule 3 keeps locked slides readable; rule 4 is what makes them editable while they're
-> open. Since `Locked slides` lives on the section, which clients never write, only you can lock and
-> unlock.
+**Rule 4 · Collaborators editing · read + write**
+```
+This Moodboard Slide → Section → Moodboard → Event → Collaborator Accesses → User → contains → Current User
+→ and
+This Moodboard Slide → Section → Locked slides → doesn't contain → This Moodboard Slide
+→ and
+This Moodboard Slide → Section → Status → is not → Approved
+```
 
 ---
 
 ## `Moodboard Image`
 
-**2. Planner team** — read + write
+**Rule 2 · Planner team · read + write**
 ```
-Current User's Business is not empty
-and Current User's Business is This Moodboard Image's Moodboard's Event's Wedding / Event Planner's Business
+Current User → Business → is not empty
+→ and
+Current User → Business → is
+   → This Moodboard Image → Moodboard → Event → Wedding / Event Planner → Business
 ```
 
-**3. Collaborators** — **read + write** (clients upload images)
+**Rule 3 · Collaborators · read + WRITE**
 ```
-This Moodboard Image's Moodboard's Event's Collaborator Accesses's User contains Current User
+This Moodboard Image → Moodboard → Event → Collaborator Accesses → User → contains → Current User
 ```
 
 ---
 
 ## `Moodboard Image Vote`
 
-**2. Planner team** — read + write
+**Rule 2 · Planner team · read + write**
 ```
-Current User's Business is not empty
-and Current User's Business is This Moodboard Image Vote's Moodboard image's Moodboard's Event's Wedding / Event Planner's Business
+Current User → Business → is not empty
+→ and
+Current User → Business → is
+   → This Moodboard Image Vote → Moodboard image → Moodboard → Event → Wedding / Event Planner → Business
 ```
 
-**3. Collaborators** — **read + write** (clients vote)
+**Rule 3 · Collaborators · read + WRITE**
 ```
-This Moodboard Image Vote's Moodboard image's Moodboard's Event's Collaborator Accesses's User contains Current User
+This Moodboard Image Vote → Moodboard image → Moodboard → Event → Collaborator Accesses → User → contains → Current User
 ```
 
 ---
 
 ## `Moodboard Thread`
 
-**2. Planner team** — read + write
+**Rule 2 · Planner team · read + write**
 ```
-Current User's Business is not empty
-and Current User's Business is This Moodboard Thread's Moodboard's Event's Wedding / Event Planner's Business
+Current User → Business → is not empty
+→ and
+Current User → Business → is
+   → This Moodboard Thread → Moodboard → Event → Wedding / Event Planner → Business
 ```
 
-**3. Collaborators** — **read + write** (clients drop pins)
+**Rule 3 · Collaborators · read + WRITE**
 ```
-This Moodboard Thread's Moodboard's Event's Collaborator Accesses's User contains Current User
+This Moodboard Thread → Moodboard → Event → Collaborator Accesses → User → contains → Current User
 ```
 
 ---
 
 ## `Moodboard Comment`
 
-**2. Planner team** — read + write
+**Rule 2 · Planner team · read + write**
 ```
-Current User's Business is not empty
-and Current User's Business is This Moodboard Comment's Thread's Moodboard's Event's Wedding / Event Planner's Business
+Current User → Business → is not empty
+→ and
+Current User → Business → is
+   → This Moodboard Comment → Thread → Moodboard → Event → Wedding / Event Planner → Business
 ```
 
-**3. Collaborators** — **read + write** (clients comment)
+**Rule 3 · Collaborators · read + WRITE**
 ```
-This Moodboard Comment's Thread's Moodboard's Event's Collaborator Accesses's User contains Current User
+This Moodboard Comment → Thread → Moodboard → Event → Collaborator Accesses → User → contains → Current User
 ```
 
 ---
 
-## Last step on every type — the one that actually closes the hole
+## Notes on the builder
+
+- **`→ and`** — after a complete condition, click to the right of it; an `and` / `or` dropdown
+  appears. Pick `and`, then build the next part the same way.
+- **`is not empty`** is in the same dropdown as `is` and `is not`, after you've picked a field.
+- **`contains` / `doesn't contain`** appear instead of `is` when the field on the left is a **list**
+  (`Collaborator Accesses`, `Locked slides`).
+- The indented line under `→ and` in rule 2 is the **right-hand side** of `is` — you click the value
+  box after the operator and build the chain there.
+
+---
+
+## Last step on every type
 
 Below your rules is a final **Everyone else** rule.
 
 - **Untick *Find this in searches***
 - Leave **no fields** ticked under **View**
 
-Right now five of your seven types return data to a completely anonymous request. This is the rule
-that stops that. The rules above are additive on top of it — until this one is closed, nothing else
-matters.
+Five of your seven types currently return data to a completely anonymous request. This is the rule
+that stops that. Everything above is additive on top of it — until this is closed, none of it matters.
 
 ---
 
-## Two things that are easy to get wrong
+## Two that are easy to get wrong
 
 **`Current User's Business is not empty` is load-bearing.** Bubble evaluates `empty is empty` as
-**true**. Without that clause, any client whose `Business` is empty matches any event whose planner's
-`Business` is empty, and gets planner access to a stranger's board. It fails open, silently, and only
-for accounts with incomplete data.
+**true**. Drop that clause and any client whose `Business` is empty matches any event whose planner's
+`Business` is empty — planner access to a stranger's board. Fails open, silently, only for accounts
+with incomplete data.
 
-**It's `Wedding / Event Planner's Business`, not `Creator`.** `Wedding / Event Planner` is a User and
-`User` has a `Business` field, so going through `Business` covers your whole team. `Creator` would
-only cover whoever happened to create the event.
-
----
-
-## Building the long expressions
-
-They look long written out, but each is one chain of dropdowns. For rule 3 on `Moodboard Comment`:
-
-`This Moodboard Comment` → `Thread` → `Moodboard` → `Event` → `Collaborator Accesses` → `User` →
-`contains` → `Current User`
-
-For the two-part rule 2, build `Current User's Business is not empty` first, then click to the right
-of it, pick **`and`**, and build the second half.
+**It's `Wedding / Event Planner → Business`, not `Creator`.** `Wedding / Event Planner` is a User and
+`User` has a `Business` field, so this covers your whole team. `Creator` would only cover whoever
+happened to create the event.
 
 ---
 
@@ -183,10 +193,10 @@ of it, pick **`and`**, and build the second half.
 2. **Authenticated fetch** — must return your data.
 3. **A write** — today's `401 Permission denied: cannot create` has to succeed.
 
-For 2 and 3 to mean anything, the test `Moodboard` record needs an `Event` set to one of your real
-events — otherwise every rule walks to an empty Event, matches nothing, and a pass looks identical to
+For 2 and 3 to mean anything, the test `Moodboard` record needs its `Event` set to one of your real
+events. Otherwise every rule walks to an empty Event, matches nothing, and a pass looks identical to
 a failure.
 
-**Send me a screenshot of the tick boxes on your first rule.** Which one authorises API writes is the
-last thing I'm guessing at, and it now matters in both directions — rule 3 on `Moodboard Section` must
+**Send me a screenshot of the tick boxes on your first rule.** Which box authorises API writes is the
+last thing I'm guessing at, and it matters in both directions — rule 3 on `Moodboard Section` must
 *not* have it, rule 3 on `Moodboard Comment` must.
