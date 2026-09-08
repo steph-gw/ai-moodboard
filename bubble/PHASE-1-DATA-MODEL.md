@@ -67,7 +67,15 @@ list in Bubble would just drift out of sync. The icon is stored as a plain text 
 | `Event` | `1 Project / Event` |
 | `Vision brief` | text |
 | `Palette` | text — **tick "This field is a list"** |
-| `Client view enabled?` | yes / no |
+| `Shared with clients?` | yes / no |
+
+> Renamed from `Client view enabled?` now that an event can have several client-side collaborators:
+> this is a board-level publish switch ("this board is ready to be seen"), not per-person access.
+> Per-person access stays where it already lives, on the event's collaborators.
+>
+> There is deliberately **no `Viewers` field**. The avatar stack in the top nav should read the
+> event's existing collaborators, not a second list maintained on the moodboard that would drift the
+> moment someone is added to the event.
 
 ### `Moodboard Section` (new type, private by default)
 
@@ -91,9 +99,6 @@ list in Bubble would just drift out of sync. The icon is stored as a plain text 
 | `Moodboard` | Moodboard | |
 | `Section` | Moodboard Section | |
 | `Image` | image | the file in Bubble storage — its Data API value *is* the URL |
-| `Client vote` | Moodboard Vote | empty = no vote |
-| `Voted by` | User | |
-| `Voted date` | date | |
 
 **No `URL` field and no `Tags` field**, both of which earlier drafts had:
 
@@ -107,6 +112,29 @@ list in Bubble would just drift out of sync. The icon is stored as a plain text 
   (`['Uploaded']`, `['Pasted']`) and rendered in zero components. Being in the old type isn't a
   reason to put a column in the database. If image filtering or search becomes a feature, it's one
   field away.
+
+Votes are also **not** fields here — see the next type.
+
+### `Moodboard Image Vote` (new type, private by default)
+
+One row per person per image.
+
+| Field name | Type |
+|---|---|
+| `Image` | Moodboard Image |
+| `Vote` | Moodboard Vote |
+
+The voter is the built-in **`Creator`**; removing your vote deletes the row.
+
+> **Why this isn't just a field on the image.** The current app stores one tri-state `clientVote` per
+> image, toggled by whoever clicks last. That assumed a single client. With several collaborators,
+> one person's thumbs-up silently overwrites another's thumbs-down and the record shows only the
+> last voter — so the board looks unanimous when it wasn't. Since the whole point of the votes is to
+> read the room, that's a correctness bug, not a polish item.
+>
+> Cost: the canvas shows a count (👍 2 / 👎 1) with *your* vote highlighted, instead of a single
+> binary state. Small change in `CanvasElementView.tsx`, and better product — the planner can see
+> who wanted what rather than just a verdict.
 
 ---
 
@@ -163,8 +191,8 @@ every email query having to defend itself. Not part of v1; noting it so the door
 
 ## 4. Privacy rules — the important part
 
-For **each** of the five new types (`Moodboard`, `Moodboard Section`, `Moodboard Image`,
-`Moodboard Thread`, `Moodboard Comment`), go to **Data → Privacy** and make sure:
+For **each** of the six new types (`Moodboard`, `Moodboard Section`, `Moodboard Image`,
+`Moodboard Image Vote`, `Moodboard Thread`, `Moodboard Comment`), go to **Data → Privacy** and make sure:
 
 **The default "Everyone else" rule has _Find this in searches_ UNCHECKED, and no field ticked under View.**
 This is the rule that's currently wide open. Everything else is additive on top of it.
@@ -180,6 +208,7 @@ can see its moodboard and nothing more:
 | `Moodboard` | `This Moodboard's Event's Creator is Current User` (+ whatever collaborator/client condition `1 Project / Event` uses) |
 | `Moodboard Section` | `This Moodboard Section's Moodboard's Event's Creator is Current User` (+ same) |
 | `Moodboard Image` | `This Moodboard Image's Moodboard's Event's Creator is Current User` (+ same) |
+| `Moodboard Image Vote` | `This Moodboard Image Vote's Image's Moodboard's Event's Creator is Current User` (+ same) |
 | `Moodboard Thread` | `This Moodboard Thread's Moodboard's Event's Creator is Current User` (+ same) |
 | `Moodboard Comment` | `This Moodboard Comment's Thread's Moodboard's Event's Creator is Current User` (+ same) |
 
@@ -194,6 +223,23 @@ Under each rule, tick **Find this in searches** and tick **View** for all fields
 
 ---
 
+## 4b. Who is a "client"?
+
+The plugin takes `role` as a plain `planner` | `client` prop, so multiple client-side collaborators
+need no schema of their own — you derive the role in Bubble from your existing `Collaborator Access`
+model and feed it in. Everything downstream (read-only gating, who can approve a section) keys off
+that one prop.
+
+Two consequences worth deciding now:
+
+- **Approval.** `Moodboard Section` has a single `Status` + `Approved by`, so approval is one action
+  by one person. If two clients need to sign off independently, that wants the same treatment votes
+  just got — a `Moodboard Section Approval` row per person. Fine as one action for v1; flag it if not.
+- **Comment visibility.** All collaborators see all comments. If clients should not see each other's
+  notes, say so now — it changes the privacy rules, not the schema.
+
+---
+
 ## 5. Expose to the Data API
 
 **Settings → API** — `Enable Data API` is already on. Tick these types:
@@ -201,6 +247,7 @@ Under each rule, tick **Find this in searches** and tick **View** for all fields
 - `Moodboard` *(already ticked)*
 - `Moodboard Section`
 - `Moodboard Image`
+- `Moodboard Image Vote`
 - `Moodboard Thread`
 - `Moodboard Comment`
 
@@ -212,7 +259,7 @@ Nothing else. In particular **do not** expose `T-Thread` or `T-Message` — they
 
 Tell me when it's done and I'll run, from a logged-in page:
 
-1. An **anonymous** fetch of all five types — every one must come back `count: 0` or 403. If any still
+1. An **anonymous** fetch of all six types — every one must come back `count: 0` or 403. If any still
    returns rows without a cookie, a privacy rule is missing and I'll say which.
 2. An **authenticated** fetch — must return your data. This is also the first real proof that the
    session cookie identifies you as `Current User` rather than just letting everyone through, which
