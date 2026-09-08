@@ -180,13 +180,13 @@ const sectionDefs = [
 
 export const mockBoard: Board = {
   weddingName: 'The Ashworth–Linden Wedding',
-  weddingDate: '14 Jun 2025',
+  weddingDate: '2025-06-14',
   visionBrief:
     'An intimate garden celebration rooted in organic elegance — soft ivory linens, trailing greenery, and warm candlelight against weathered stone. The palette leans warm neutrals with touches of sage and blush.',
   palette: ['#f2ede6', '#c4a35a', '#8a9a7b', '#d4b5a0', '#5c4a3a'],
   viewers: [
-    { id: '1', initials: 'SC', name: 'Sophie Clarke' },
-    { id: '2', initials: 'AL', name: 'Anna Linden' },
+    { id: '1', initials: 'SC', name: 'Stephanie Chang' },
+    { id: '2', initials: 'AL', name: 'Alexander Lee' },
   ],
   sections: sectionDefs.map((s) => ({
     ...s,

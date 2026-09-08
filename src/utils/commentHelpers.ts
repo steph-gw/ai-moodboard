@@ -49,3 +49,12 @@ export function updatePinComments(
     return c;
   });
 }
+
+/** Removes a comment (or reply) anywhere in a thread. */
+export function removePinComment(comments: Comment[], commentId: string): Comment[] {
+  return comments
+    .filter((c) => c.id !== commentId)
+    .map((c) =>
+      c.replies ? { ...c, replies: removePinComment(c.replies, commentId) } : c
+    );
+}

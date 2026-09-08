@@ -1,36 +1,51 @@
-import { X } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useBoard } from '../context/BoardContext';
 import { SlideCanvas } from './SlideCanvas';
+import { exitFullscreen, isFullscreen } from '../utils/fullscreen';
+
+const HINT_DURATION_MS = 3200;
 
 export function PresentOverlay() {
   const {
     setPresenting,
-    activeSectionName,
-    activeSlide,
-    board,
-    activeSectionId,
     goToNextSlide,
     goToPrevSlide,
     selectCommentPin,
     selectElement,
   } = useBoard();
 
-  const section = board.sections.find((s) => s.id === activeSectionId);
-  const slideIndex = section?.slides.findIndex((s) => s.id === activeSlide?.id) ?? 0;
+  const [showHint, setShowHint] = useState(true);
 
   useEffect(() => {
     selectCommentPin(null);
     selectElement(null);
   }, [selectCommentPin, selectElement]);
 
+  // "To exit full screen, press ESC", Google-Slides style: shows on entry, then fades.
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowHint(false), HINT_DURATION_MS);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  // Leaving browser fullscreen (Esc, F11, the OS chrome) also leaves the deck.
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      if (!isFullscreen()) setPresenting(false);
+    };
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', onFullscreenChange);
+  }, [setPresenting]);
+
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      // In real fullscreen the browser consumes Escape itself and we exit via
+      // fullscreenchange; this covers the case where fullscreen was refused.
       if (e.key === 'Escape') {
+        void exitFullscreen();
         setPresenting(false);
         return;
       }
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
         e.preventDefault();
         goToNextSlide();
       }
@@ -45,30 +60,12 @@ export function PresentOverlay() {
 
   return (
     <div className="present-overlay">
-      <div className="present-chrome">
-        <span className="present-title">
-          {board.weddingName} · {activeSectionName}
-          {activeSlide && ` · ${activeSlide.name}`}
-        </span>
-        <button
-          type="button"
-          className="present-exit"
-          onClick={() => setPresenting(false)}
-          aria-label="Exit presentation"
-        >
-          <X size={16} strokeWidth={1.5} />
-          Exit
-        </button>
+      <div className={`present-hint-toast ${showHint ? '' : 'hidden'}`} role="status">
+        To exit full screen, press ESC
       </div>
       <div className="present-slide-area">
         <SlideCanvas fullWidth readOnly fitMode="contain" />
       </div>
-      {section && section.slides.length > 1 && (
-        <div className="present-slide-count">
-          Slide {slideIndex + 1} of {section.slides.length}
-          <span className="present-hint"> · ← → to navigate</span>
-        </div>
-      )}
     </div>
   );
 }

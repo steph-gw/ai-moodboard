@@ -1,22 +1,16 @@
 import { useRef } from 'react';
-import { Type, ImagePlus, Trash2 } from 'lucide-react';
+import { Type, ImagePlus, Undo2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
-import { TextFormatBar } from './TextFormatBar';
 
 export function CanvasToolbar() {
   const {
     addTextElement,
-    selectedElementId,
-    activeSlideId,
-    activeSlide,
-    deleteElement,
     setShowSuggestionsPanel,
     showSuggestionsPanel,
     addUploadedImage,
+    undo,
+    canUndo,
   } = useBoard();
-
-  const selectedIsText =
-    activeSlide?.elements.find((el) => el.id === selectedElementId)?.type === 'text';
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -28,9 +22,18 @@ export function CanvasToolbar() {
   };
 
   return (
-    <div className="canvas-toolbar-wrap">
-      <div className="canvas-toolbar">
-        <button type="button" className="btn-ghost btn-sm" onClick={addTextElement}>
+    <div className="canvas-toolbar">
+        <button
+          type="button"
+          className="btn-ghost btn-sm btn-icon"
+          onClick={undo}
+          disabled={!canUndo}
+          data-tooltip="Undo ⌘Z"
+          aria-label="Undo"
+        >
+          <Undo2 size={13} strokeWidth={1.5} />
+        </button>
+        <button type="button" className="btn-ghost btn-sm" onClick={() => addTextElement()}>
           <Type size={13} strokeWidth={1.5} />
           Add text
         </button>
@@ -56,18 +59,6 @@ export function CanvasToolbar() {
           hidden
           onChange={handleUpload}
         />
-        {selectedElementId && activeSlideId && (
-          <button
-            type="button"
-            className="btn-ghost btn-sm canvas-toolbar-delete"
-            onClick={() => deleteElement(activeSlideId, selectedElementId)}
-          >
-            <Trash2 size={13} strokeWidth={1.5} />
-            Delete
-          </button>
-        )}
-      </div>
-      {selectedIsText && <TextFormatBar />}
     </div>
   );
 }

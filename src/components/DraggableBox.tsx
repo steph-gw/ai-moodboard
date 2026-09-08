@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useRef, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react';
 
 type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
+type DragMode = 'move' | 'rotate' | ResizeHandle;
+
+interface BoxPatch {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  rotation?: number;
+}
 
 interface DraggableBoxProps {
   x: number;
   y: number;
   width: number;
   height: number;
+  rotation?: number;
   scale: number;
   selected: boolean;
   readOnly?: boolean;
@@ -17,8 +27,9 @@ interface DraggableBoxProps {
   className?: string;
   style?: React.CSSProperties;
   onSelect: () => void;
-  onChange: (patch: { x: number; y: number; width: number; height: number }) => void;
+  onChange: (patch: BoxPatch) => void;
   onDoubleClick?: () => void;
+  onContextMenu?: (e: React.MouseEvent) => void;
   children: ReactNode;
 }
 
@@ -33,11 +44,15 @@ const HANDLES: { handle: ResizeHandle; className: string }[] = [
   { handle: 'w', className: 'resize-w' },
 ];
 
+/** Snap increment (degrees) while rotating with Shift held. */
+const ROTATE_SNAP = 15;
+
 export function DraggableBox({
   x,
   y,
   width,
   height,
+  rotation = 0,
   scale,
   selected,
   readOnly = false,
@@ -50,16 +65,21 @@ export function DraggableBox({
   onSelect,
   onChange,
   onDoubleClick,
+  onContextMenu,
   children,
 }: DraggableBoxProps) {
   const dragRef = useRef<{
-    mode: 'move' | ResizeHandle;
+    mode: DragMode;
     startX: number;
     startY: number;
     origX: number;
     origY: number;
     origW: number;
     origH: number;
+    origRotation: number;
+    centerX: number;
+    centerY: number;
+    startAngle: number;
   } | null>(null);
 
   const clamp = useCallback(
@@ -100,16 +120,35 @@ export function DraggableBox({
     const onPointerMove = (e: PointerEvent) => {
       const drag = dragRef.current;
       if (!drag) return;
+
+      if (drag.mode === 'rotate') {
+        const angle =
+          (Math.atan2(e.clientY - drag.centerY, e.clientX - drag.centerX) * 180) / Math.PI;
+        let next = drag.origRotation + (angle - drag.startAngle);
+        if (e.shiftKey) next = Math.round(next / ROTATE_SNAP) * ROTATE_SNAP;
+        // Keep it in (-180, 180] so the readout stays legible.
+        next = ((((next + 180) % 360) + 360) % 360) - 180;
+        onChange({ rotation: Math.round(next) });
+        return;
+      }
+
       const dx = (e.clientX - drag.startX) / scale;
       const dy = (e.clientY - drag.startY) / scale;
 
       if (drag.mode === 'move') {
         onChange(clamp(drag.origX + dx, drag.origY + dy, drag.origW, drag.origH));
-      } else {
-        onChange(
-          applyResize(drag.mode, dx, dy, drag.origX, drag.origY, drag.origW, drag.origH)
-        );
+        return;
       }
+
+      // Handles rotate with the box, so bring the pointer delta back into the
+      // element's own axes before resizing.
+      const rad = (-drag.origRotation * Math.PI) / 180;
+      const localDx = dx * Math.cos(rad) - dy * Math.sin(rad);
+      const localDy = dx * Math.sin(rad) + dy * Math.cos(rad);
+
+      onChange(
+        applyResize(drag.mode, localDx, localDy, drag.origX, drag.origY, drag.origW, drag.origH)
+      );
     };
 
     const onPointerUp = () => {
@@ -124,11 +163,17 @@ export function DraggableBox({
     };
   }, [scale, clamp, applyResize, onChange]);
 
-  const startDrag = (e: ReactPointerEvent, mode: 'move' | ResizeHandle) => {
+  const startDrag = (e: ReactPointerEvent, mode: DragMode) => {
     if (readOnly) return;
     e.stopPropagation();
     e.preventDefault();
     onSelect();
+
+    const box = (e.currentTarget as HTMLElement).closest('.canvas-element');
+    const rect = box?.getBoundingClientRect();
+    const centerX = rect ? rect.left + rect.width / 2 : e.clientX;
+    const centerY = rect ? rect.top + rect.height / 2 : e.clientY;
+
     dragRef.current = {
       mode,
       startX: e.clientX,
@@ -137,6 +182,10 @@ export function DraggableBox({
       origY: y,
       origW: width,
       origH: height,
+      origRotation: rotation,
+      centerX,
+      centerY,
+      startAngle: (Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180) / Math.PI,
     };
   };
 
@@ -150,19 +199,42 @@ export function DraggableBox({
         width: width * scale,
         height: height * scale,
         zIndex: style?.zIndex,
+        transform: rotation ? `rotate(${rotation}deg)` : undefined,
       }}
       onPointerDown={(e) => !readOnly && startDrag(e, 'move')}
       onDoubleClick={onDoubleClick}
+      onContextMenu={onContextMenu}
     >
       {children}
-      {selected && !readOnly &&
-        HANDLES.map(({ handle, className: handleClass }) => (
+      {selected && !readOnly && (
+        <>
+          <div className="rotate-handle-arm" aria-hidden />
           <div
-            key={handle}
-            className={`resize-handle ${handleClass}`}
-            onPointerDown={(e) => startDrag(e, handle)}
-          />
-        ))}
+            className="rotate-handle"
+            role="slider"
+            aria-label="Rotate"
+            aria-valuenow={rotation}
+            aria-valuemin={-180}
+            aria-valuemax={180}
+            title="Drag to rotate · hold Shift to snap"
+            onPointerDown={(e) => startDrag(e, 'rotate')}
+          >
+            <svg viewBox="0 0 16 16" width="11" height="11" aria-hidden>
+              <path
+                d="M8 3.2V1L4.8 3.4 8 5.8V3.9a4.1 4.1 0 1 1-4.1 4.1H2.4A5.6 5.6 0 1 0 8 3.2z"
+                fill="currentColor"
+              />
+            </svg>
+          </div>
+          {HANDLES.map(({ handle, className: handleClass }) => (
+            <div
+              key={handle}
+              className={`resize-handle ${handleClass}`}
+              onPointerDown={(e) => startDrag(e, handle)}
+            />
+          ))}
+        </>
+      )}
     </div>
   );
 }

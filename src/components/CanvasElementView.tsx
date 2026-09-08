@@ -5,6 +5,7 @@ import { DraggableBox } from './DraggableBox';
 import type { CanvasElement, ImageElement, TextElement } from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 import { textFontCss } from '../utils/textFonts';
+import { ElementContextMenu } from './ElementContextMenu';
 
 interface CanvasElementViewProps {
   element: CanvasElement;
@@ -69,6 +70,7 @@ function ImageElementView({
   const isSelected = selectedElementId === element.id;
   const image = getImageById(element.imageId);
   const hasVote = !!image?.clientVote;
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
 
   const handleSelect = () => {
     selectElement(element.id);
@@ -92,13 +94,29 @@ function ImageElementView({
       minHeight={45}
       className={`canvas-element-image ${hasVote ? 'has-vote' : ''}`}
       style={{ zIndex: element.zIndex }}
+      rotation={element.rotation}
       onSelect={handleSelect}
       onChange={(patch) => updateElement(slideId, element.id, patch)}
+      onContextMenu={(e) => {
+        if (readOnly) return;
+        e.preventDefault();
+        selectElement(element.id);
+        setMenu({ x: e.clientX, y: e.clientY });
+      }}
     >
       <div className="canvas-image-inner">
         <img src={imageUrl} alt="" draggable={false} />
         {!readOnly && <ImageVoteControls imageId={element.imageId} readOnly={readOnly} />}
       </div>
+      {menu && (
+        <ElementContextMenu
+          slideId={slideId}
+          elementId={element.id}
+          imageUrl={imageUrl}
+          at={menu}
+          onClose={() => setMenu(null)}
+        />
+      )}
     </DraggableBox>
   );
 }
@@ -116,6 +134,7 @@ function TextElementView({
 }) {
   const { selectedElementId, selectElement, updateElement } = useBoard();
   const [editing, setEditing] = useState(false);
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const isSelected = selectedElementId === element.id;
   const ref = useRef<HTMLDivElement>(null);
   const didAutoFocus = useRef(false);
@@ -159,9 +178,16 @@ function TextElementView({
       minHeight={30}
       className="canvas-element-text"
       style={{ zIndex: element.zIndex }}
+      rotation={element.rotation}
       onSelect={handleSelect}
       onChange={(patch) => updateElement(slideId, element.id, patch)}
       onDoubleClick={() => !readOnly && setEditing(true)}
+      onContextMenu={(e) => {
+        if (readOnly) return;
+        e.preventDefault();
+        selectElement(element.id);
+        setMenu({ x: e.clientX, y: e.clientY });
+      }}
     >
       <div
         ref={ref}
@@ -196,6 +222,14 @@ function TextElementView({
       >
         {element.content}
       </div>
+      {menu && (
+        <ElementContextMenu
+          slideId={slideId}
+          elementId={element.id}
+          at={menu}
+          onClose={() => setMenu(null)}
+        />
+      )}
     </DraggableBox>
   );
 }

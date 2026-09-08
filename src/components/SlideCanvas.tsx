@@ -2,7 +2,6 @@ import { useEffect, useRef, useState, type MouseEvent } from 'react';
 import { useBoard } from '../context/BoardContext';
 import { CanvasElementView } from './CanvasElementView';
 import { CommentPinMarker } from './CommentPinMarker';
-import { CommentPopover } from './CommentPopover';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 
 interface SlideCanvasProps {
@@ -23,7 +22,6 @@ export function SlideCanvas({
     selectCommentPin,
     isPlacingComment,
     placeCommentPin,
-    selectedCommentPinId,
   } = useBoard();
   const containerRef = useRef<HTMLDivElement>(null);
   const artboardRef = useRef<HTMLDivElement>(null);
@@ -121,14 +119,6 @@ export function SlideCanvas({
               scale={scale}
             />
           ))}
-        {!readOnly && selectedCommentPinId && (
-          <CommentPopover
-            scale={scale}
-            pinIndex={
-              activeSlide.commentPins.findIndex((p) => p.id === selectedCommentPinId) + 1
-            }
-          />
-        )}
       </div>
     </div>
   );

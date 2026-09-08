@@ -84,14 +84,7 @@ export function PinterestPicker() {
   };
 
   return (
-    <>
-      <button
-        type="button"
-        className="pinterest-drawer-backdrop"
-        aria-label="Close Pinterest"
-        onClick={() => setShowSuggestionsPanel(false)}
-      />
-      <aside className="pinterest-drawer" role="dialog" aria-label="Pinterest">
+    <aside className="pinterest-drawer" aria-label="Pinterest">
         <div className="pinterest-picker-header">
           <div className="pinterest-picker-brand">
             <PinterestLogo size={28} />
@@ -152,7 +145,6 @@ export function PinterestPicker() {
             ))
           )}
         </div>
-      </aside>
-    </>
+    </aside>
   );
 }

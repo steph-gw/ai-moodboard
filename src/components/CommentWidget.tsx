@@ -18,8 +18,8 @@ export function CommentWidget() {
 
   const summary =
     totalComments === 0
-      ? `${activeSlide.name} · No comments yet`
-      : `${activeSlide.name} · ${totalComments} comment${totalComments !== 1 ? 's' : ''} on this slide`;
+      ? 'No comments yet'
+      : `${totalComments} comment${totalComments !== 1 ? 's' : ''} on this slide`;
 
   return (
     <div className="comment-widget">

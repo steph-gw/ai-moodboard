@@ -51,7 +51,7 @@ function textElement(
     height,
     zIndex,
     fontSize: options.fontSize ?? 28,
-    fontFamily: options.fontFamily ?? 'serif',
+    fontFamily: options.fontFamily ?? 'sans',
     color: options.color ?? '#1a1714',
     align: options.align ?? 'center',
     bold: options.bold ?? false,
@@ -114,7 +114,7 @@ function buildCeremonySlides(images: BoardImage[]): Slide[] {
       410,
       56,
       12,
-      { fontSize: 15, fontFamily: 'serif', color: '#5c4a3a', align: 'left', italic: true }
+      { fontSize: 15, fontFamily: 'sans', color: '#5c4a3a', align: 'left', italic: true }
     ),
     textElement(
       'el-text-ceremony-note',
@@ -142,7 +142,7 @@ function buildCeremonySlides(images: BoardImage[]): Slide[] {
       440,
       90,
       2,
-      { fontSize: 15, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+      { fontSize: 15, fontFamily: 'sans', color: '#6b6460', align: 'left', italic: true }
     ),
     textElement(
       'el-text-ceremony-dir-list',
@@ -198,7 +198,7 @@ function buildReceptionSlides(images: BoardImage[]): Slide[] {
       424,
       70,
       11,
-      { fontSize: 14, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+      { fontSize: 14, fontFamily: 'sans', color: '#6b6460', align: 'left', italic: true }
     ),
     textElement(
       'el-text-rec-caption',
@@ -208,7 +208,7 @@ function buildReceptionSlides(images: BoardImage[]): Slide[] {
       460,
       48,
       12,
-      { fontSize: 14, fontFamily: 'serif', color: '#5c4a3a', align: 'left', italic: true }
+      { fontSize: 14, fontFamily: 'sans', color: '#5c4a3a', align: 'left', italic: true }
     ),
     textElement(
       'el-text-rec-note',
@@ -246,7 +246,7 @@ function buildReceptionSlides(images: BoardImage[]): Slide[] {
       400,
       110,
       2,
-      { fontSize: 15, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+      { fontSize: 15, fontFamily: 'sans', color: '#6b6460', align: 'left', italic: true }
     ),
     textElement(
       'el-text-rec-eve-list',
@@ -301,7 +301,7 @@ function buildFloralsSlides(images: BoardImage[]): Slide[] {
       280,
       70,
       11,
-      { fontSize: 14, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+      { fontSize: 14, fontFamily: 'sans', color: '#6b6460', align: 'left', italic: true }
     ),
     textElement(
       'el-text-flo-note',
@@ -321,7 +321,7 @@ function buildFloralsSlides(images: BoardImage[]): Slide[] {
       900,
       50,
       13,
-      { fontSize: 14, fontFamily: 'serif', color: '#c4a35a', align: 'left', italic: true }
+      { fontSize: 14, fontFamily: 'sans', color: '#c4a35a', align: 'left', italic: true }
     )
   );
 
@@ -339,7 +339,7 @@ function buildFloralsSlides(images: BoardImage[]): Slide[] {
       420,
       100,
       2,
-      { fontSize: 15, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+      { fontSize: 15, fontFamily: 'sans', color: '#6b6460', align: 'left', italic: true }
     ),
     textElement(
       'el-text-flo-pal-list',
@@ -394,7 +394,7 @@ function buildAttireSlides(images: BoardImage[]): Slide[] {
       300,
       100,
       11,
-      { fontSize: 14, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+      { fontSize: 14, fontFamily: 'sans', color: '#6b6460', align: 'left', italic: true }
     ),
     textElement(
       'el-text-att-bri-note',
@@ -432,7 +432,7 @@ function buildAttireSlides(images: BoardImage[]): Slide[] {
       380,
       100,
       2,
-      { fontSize: 15, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+      { fontSize: 15, fontFamily: 'sans', color: '#6b6460', align: 'left', italic: true }
     ),
     textElement(
       'el-text-att-gr-list',
@@ -487,7 +487,7 @@ function buildStationerySlides(images: BoardImage[]): Slide[] {
       464,
       70,
       11,
-      { fontSize: 15, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+      { fontSize: 15, fontFamily: 'sans', color: '#6b6460', align: 'left', italic: true }
     ),
     textElement(
       'el-text-sta-caption',
@@ -497,7 +497,7 @@ function buildStationerySlides(images: BoardImage[]): Slide[] {
       420,
       50,
       12,
-      { fontSize: 14, fontFamily: 'serif', color: '#5c4a3a', align: 'left', italic: true }
+      { fontSize: 14, fontFamily: 'sans', color: '#5c4a3a', align: 'left', italic: true }
     ),
     textElement(
       'el-text-sta-note',
@@ -535,7 +535,7 @@ function buildStationerySlides(images: BoardImage[]): Slide[] {
       440,
       100,
       2,
-      { fontSize: 15, fontFamily: 'serif', color: '#6b6460', align: 'left', italic: true }
+      { fontSize: 15, fontFamily: 'sans', color: '#6b6460', align: 'left', italic: true }
     ),
     textElement(
       'el-text-sta-day-list',
@@ -560,7 +560,7 @@ function buildStationerySlides(images: BoardImage[]): Slide[] {
       400,
       60,
       5,
-      { fontSize: 14, fontFamily: 'serif', color: '#5c4a3a', align: 'left', italic: true }
+      { fontSize: 14, fontFamily: 'sans', color: '#5c4a3a', align: 'left', italic: true }
     ),
     textElement('el-text-sta-day-footer', 'Finish: letterpress or soft foil', 40, 460, 440, 40, 6, {
       fontSize: 13,
@@ -622,7 +622,7 @@ function ceremonySamplePins(): CommentPin[] {
         {
           id: 'c1',
           authorId: '2',
-          authorName: 'Anna Linden',
+          authorName: 'Alexander Lee',
           authorInitials: 'AL',
           text: 'Love this arch style — can we do something similar with more trailing greenery?',
           timestamp: '2 days ago',
@@ -630,7 +630,7 @@ function ceremonySamplePins(): CommentPin[] {
             {
               id: 'c1r1',
               authorId: '1',
-              authorName: 'Sophie Clarke',
+              authorName: 'Stephanie Chang',
               authorInitials: 'SC',
               text: "Absolutely — I'll source some options with fuller cascading florals.",
               timestamp: '1 day ago',
@@ -647,12 +647,12 @@ function ceremonySamplePins(): CommentPin[] {
         {
           id: 'c2',
           authorId: '1',
-          authorName: 'Sophie Clarke',
+          authorName: 'Stephanie Chang',
           authorInitials: 'SC',
           text: 'The stone backdrop here matches Rosewood Estate perfectly.',
           timestamp: '3 days ago',
           resolved: true,
-          resolvedBy: 'Sophie Clarke',
+          resolvedBy: 'Stephanie Chang',
         },
       ],
     },
@@ -664,7 +664,7 @@ function ceremonySamplePins(): CommentPin[] {
         {
           id: 'c3',
           authorId: '2',
-          authorName: 'Anna Linden',
+          authorName: 'Alexander Lee',
           authorInitials: 'AL',
           text: 'These cross-back chairs are exactly what I had in mind.',
           timestamp: '4 days ago',
@@ -685,7 +685,7 @@ export function defaultTextElement(): TextElement {
     height: 60,
     zIndex: 10,
     fontSize: 28,
-    fontFamily: 'serif',
+    fontFamily: 'display',
     color: '#1a1714',
     align: 'center',
     bold: false,

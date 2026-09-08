@@ -19,6 +19,7 @@ export interface Comment {
   timestamp: string;
   resolved?: boolean;
   resolvedBy?: string;
+  edited?: boolean;
   replies?: Comment[];
 }
 
@@ -52,7 +53,7 @@ export interface ImageElement extends CanvasElementBase {
   imageId: string;
 }
 
-export type TextFontFamily = 'sans' | 'serif' | 'display';
+export type TextFontFamily = 'sans' | 'display';
 
 export interface TextElement extends CanvasElementBase {
   type: 'text';
@@ -79,6 +80,8 @@ export interface Section {
   id: string;
   name: string;
   icon: string;
+  /** Per-section brief; falls back to the board brief when unset. */
+  visionBrief?: string;
   status: SectionStatus;
   threadCount?: number;
   approvedDate?: string;
@@ -94,6 +97,7 @@ export interface Suggestion {
 
 export interface Board {
   weddingName: string;
+  /** ISO date (YYYY-MM-DD); formatted for display by formatEventDate. */
   weddingDate: string;
   visionBrief: string;
   palette: string[];

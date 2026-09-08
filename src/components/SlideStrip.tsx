@@ -108,37 +108,86 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
     activeSlideId,
     setActiveSlideId,
     selectElement,
+    role,
+    deleteSlide,
+    duplicateSlide,
   } = useBoard();
 
   const section = board.sections.find((s) => s.id === activeSectionId);
   const slide = section?.slides.find((s) => s.id === slideId);
   const isActive = activeSlideId === slideId;
+  const isPlanner = role === 'planner';
+  const canDelete = isPlanner && (section?.slides.length ?? 0) > 1;
 
   if (!slide) return null;
 
+  const select = () => {
+    setActiveSlideId(slideId);
+    const imgEl = slide.elements.find((el) => el.type === 'image');
+    selectElement(imgEl ? imgEl.id : null);
+  };
+
   return (
-    <button
-      type="button"
+    <div
       className={`slide-tab ${isActive ? 'active' : ''}`}
-      onClick={() => {
-        setActiveSlideId(slideId);
-        const imgEl = slide.elements.find((el) => el.type === 'image');
-        if (imgEl) {
-          selectElement(imgEl.id);
-        } else {
-          selectElement(null);
-        }
+      onKeyDown={(e) => {
+        // Focus is inside the filmstrip, so Delete/Backspace removes the whole
+        // slide rather than the element selected on the canvas.
+        if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+        if (!canDelete || !isActive) return;
+        e.preventDefault();
+        e.stopPropagation();
+        deleteSlide(slideId);
       }}
     >
       <span className="slide-tab-index">{index + 1}</span>
-      <SlideMiniPreview slide={slide} />
-    </button>
+      <div className="slide-tab-body">
+        <button
+          type="button"
+          className="slide-tab-hit"
+          aria-current={isActive}
+          aria-label={`Slide ${index + 1}`}
+          onClick={select}
+        >
+          <SlideMiniPreview slide={slide} />
+        </button>
+        {isPlanner && (
+          <div className="slide-tab-actions">
+            <button
+              type="button"
+              className="slide-hover-btn"
+              data-tooltip="Duplicate"
+              aria-label="Duplicate slide"
+              onClick={(e) => {
+                e.stopPropagation();
+                duplicateSlide(slideId);
+              }}
+            >
+              <Copy size={12} strokeWidth={1.75} />
+            </button>
+            {canDelete && (
+              <button
+                type="button"
+                className="slide-hover-btn"
+                data-tooltip="Delete"
+                aria-label="Delete slide"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteSlide(slideId);
+                }}
+              >
+                <Trash2 size={12} strokeWidth={1.75} />
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
 export function SlideStrip() {
-  const { board, activeSectionId, role, addSlide, deleteSlide, duplicateSlide, activeSlideId } =
-    useBoard();
+  const { board, activeSectionId, role, addSlide } = useBoard();
   const isPlanner = role === 'planner';
 
   const section = board.sections.find((s) => s.id === activeSectionId);
@@ -151,31 +200,11 @@ export function SlideStrip() {
           <SlideThumbnail key={slide.id} slideId={slide.id} index={index} />
         ))}
         {isPlanner && (
-          <button type="button" className="slide-tab slide-tab-add" onClick={addSlide}>
+          <button type="button" className="slide-tab-add" onClick={addSlide}>
             <Plus size={16} strokeWidth={1.5} />
           </button>
         )}
       </div>
-      {isPlanner && activeSlideId && section.slides.length > 1 && (
-        <div className="slide-strip-actions">
-          <button
-            type="button"
-            className="slide-action-btn"
-            onClick={() => duplicateSlide(activeSlideId)}
-            title="Duplicate slide"
-          >
-            <Copy size={13} strokeWidth={1.5} />
-          </button>
-          <button
-            type="button"
-            className="slide-action-btn"
-            onClick={() => deleteSlide(activeSlideId)}
-            title="Delete slide"
-          >
-            <Trash2 size={13} strokeWidth={1.5} />
-          </button>
-        </div>
-      )}
     </aside>
   );
 }
