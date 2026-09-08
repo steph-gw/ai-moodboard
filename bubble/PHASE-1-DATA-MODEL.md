@@ -198,30 +198,32 @@ For **each** of the six new types (`Moodboard`, `Moodboard Section`, `Moodboard 
 **The default "Everyone else" rule has _Find this in searches_ UNCHECKED, and no field ticked under View.**
 This is the rule that's currently wide open. Everything else is additive on top of it.
 
-Then add rules mirroring the pattern you already use on `1 Project / Event`, which has:
-`Current User's Role is App admin` → `Current User is logged in` → `This Event's Creator is Current User`.
+Then add **three rules** to each type. `PATH` below is the walk from the thing to its event:
 
-For the moodboard types the condition should route through the event, so anyone who can see the event
-can see its moodboard and nothing more:
-
-| Type | Rule condition |
+| Type | `PATH` |
 |---|---|
-| `Moodboard` | `This Moodboard's Event's Collaborator Accesses's User contains Current User` |
-| `Moodboard Section` | `This Moodboard Section's Moodboard's Event's Collaborator Accesses's User contains Current User` |
-| `Moodboard Image` | `This Moodboard Image's Moodboard's Event's Collaborator Accesses's User contains Current User` |
-| `Moodboard Image Vote` | `This Moodboard Image Vote's Image's Moodboard's Event's Collaborator Accesses's User contains Current User` |
-| `Moodboard Thread` | `This Moodboard Thread's Moodboard's Event's Collaborator Accesses's User contains Current User` |
-| `Moodboard Comment` | `This Moodboard Comment's Thread's Moodboard's Event's Collaborator Accesses's User contains Current User` |
+| `Moodboard` | `This Moodboard's Event` |
+| `Moodboard Section` | `This Moodboard Section's Moodboard's Event` |
+| `Moodboard Image` | `This Moodboard Image's Moodboard's Event` |
+| `Moodboard Image Vote` | `This Moodboard Image Vote's Image's Moodboard's Event` |
+| `Moodboard Thread` | `This Moodboard Thread's Moodboard's Event` |
+| `Moodboard Comment` | `This Moodboard Comment's Thread's Moodboard's Event` |
 
-Add a second rule on each for the planner — `This ...'s Event's Creator is Current User` — since the
-event's creator may not have a `Collaborator Access` row of their own.
+**Rule 1 — Admin** (matches what `1 Project / Event` already does)
+`Current User's ⚙️ Role is App admin`
 
-Plus the `Current User's Role is App admin` rule on each, so you keep admin visibility.
+**Rule 2 — The planner's team**
+`PATH's Wedding / Event Planner's Business is Current User's Business`
+**and** `Current User's Business is not empty`
 
-These route through `Collaborator Access`, which is your existing per-event access model — see 4b.
-The rule of thumb is *if a user can open the event, they can read its moodboard*. Sanity-check them
-against whatever `1 Project / Event` already does; privacy rules are the one place I'd rather you
-double-check me than take my word.
+> ⚠️ **That second clause is not optional.** `Wedding / Event Planner` is a User, and `User` has a
+> `Business` field, so this correctly covers team members and not just the event's creator. But in
+> Bubble `empty is empty` evaluates to **true** — so without the guard, any client whose `Business`
+> is empty matches any event whose planner's `Business` is empty, and gets full planner access to
+> someone else's board. Worth checking whether your existing rules elsewhere have the same hole.
+
+**Rule 3 — Clients and collaborators**
+`PATH's Collaborator Accesses's User contains Current User`
 
 Under each rule, tick **Find this in searches** and tick **View** for all fields.
 
@@ -241,10 +243,17 @@ three jobs here, so the moodboard needs no access schema of its own:
    `Tabs with View Access` / `Tabs with Hidden Access` gate it — same as every other tab.
 3. **The avatar stack.** Reads `Event's Collaborator Accesses's User`.
 
-**One gap:** `Collaborator Access` has no role field, so planner-vs-client isn't expressible on it.
-The plugin takes `role` as a plain `planner` | `client` prop, so you derive it — presumably
-*planner = Current User is the Event's Creator (or a member of its Event Planner Business), client =
-everyone else with access*. Confirm that's right; it decides who can edit the canvas.
+**Role** isn't on `Collaborator Access`, so the plugin takes it as a plain `planner` | `client` prop
+that you derive. Confirmed rule:
+
+```
+planner  =  Current User's Business is not empty
+            AND Current User's Business is Event's Wedding / Event Planner's Business
+client   =  everyone else with access
+```
+
+This covers team members, not just the event's creator, because `Wedding / Event Planner` is a User
+and `User` has a `Business` field. The `is not empty` guard matters for the same reason as in rule 2.
 
 **Still open:** all collaborators currently see all comments. If clients shouldn't see each other's
 notes, that's a privacy-rule change, not a schema change — but decide before writing the rules.
