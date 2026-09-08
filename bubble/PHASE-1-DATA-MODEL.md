@@ -93,42 +93,42 @@ That's the whole type. Three fields that earlier drafts had are gone:
 | `Slides JSON` | text | the entire canvas for this section |
 | `Archived?` | yes / no | |
 
-### Images — no type at all
+### `Moodboard Image` (new type, private by default)
 
-Images live inside the section's `Slides JSON`, alongside the elements that place them:
+| Field name | Type | Notes |
+|---|---|---|
+| `Moodboard` | Moodboard | |
+| `Section` | Moodboard Section | for grouping in exports and filenames |
+| `Image` | image | the file in Bubble storage — its Data API value *is* the URL |
+
+Elements in `Slides JSON` reference these by Bubble unique id:
 
 ```json
-{
-  "images": [{ "id": "img-abc", "url": "https://s3.amazonaws.com/appforest_uf/f17.../photo.jpg" }],
-  "slides":  [{ "id": "slide-1", "name": "Mood", "elements": [
-      { "id": "el-1", "type": "image", "imageId": "img-abc", "x": 80, "y": 60, "width": 400, "height": 300, "zIndex": 1 }
-  ]}]
-}
+{ "id": "el-1", "type": "image", "imageId": "1788893251620x170603871777754720",
+  "x": 80, "y": 60, "width": 400, "height": 300, "zIndex": 1 }
 ```
 
-Earlier drafts had a `Moodboard Image` type. It doesn't earn its place: the rule for what becomes a
-real Bubble thing is *does it carry state Bubble needs to query or enforce* — sections do (status,
-approval, order), and images did only because votes hung off them. Now that votes are their own type,
-an image is just a URL and a size, which is exactly what the JSON is for. Keeping the indirection
-(`images[]` + `imageId`) rather than inlining the URL matches the current code, so one image used on
-two slides stays one image.
+So the plugin loads a board with two reads — the sections, and all the images for that moodboard —
+and no image data is duplicated into the JSON.
 
-**`Attachment` and `Upload` are also not the answer**, in case they looked like candidates:
+> This type was dropped from an earlier draft and is back because you want moodboard images usable
+> **from Bubble** — listed in the file manager, shown in repeating groups, bulk-exported. None of
+> that is workable against URLs buried in a JSON text field. The test for "should this be a type" is
+> whether Bubble itself needs to query, join or enforce it, and Bubble-side export is exactly that.
+>
+> It also settles the votes question properly: `Moodboard Image Vote` can point at a real row, so
+> *"which images did clients like most"* is a normal Bubble query that can render the actual picture
+> in a repeating group. Keyed by a text id it could only ever have counted.
+>
+> And it removes the open risk from the earlier draft: the file is now attached to a database record,
+> so there's no question of Bubble garbage-collecting an unreferenced upload.
 
-- `Attachment` is your client-facing file browser — `Is folder?`, `Is root folder?`, `Parent Folder`,
-  `Associated Vendor`, `Invoice`, `Document`. Every moodboard image would show up as a loose file in
-  the planner's document tree.
-- `Upload` is `{ Files, JSONs, Errors, Debugger text, Project }` — a bulk-import staging type.
+Still deliberately absent: no `URL` text field (an `image` field's Data API value already *is* the
+URL) and no `Tags` (present on the current `BoardImage` type, read by zero components).
 
-### ⚠️ One thing to verify in phase 6
-
-With no thing holding the file, does Bubble keep it? Files uploaded via `context.uploadContent` land
-in your file storage, but Bubble is known to clean up files that aren't attached to a database record,
-and **I don't know for certain how that applies here.** First upload we do, I'll check the URL still
-resolves after a reload and again the next day.
-
-If it doesn't survive, the fallback is a minimal `Moodboard File` type whose only job is to own the
-file — the JSON still holds the URL, nothing else changes. Cheap to add later, nothing to migrate.
+**Downloads.** "Download all" gets built twice, cheaply: in the plugin as a zip (the URLs are already
+in memory, and [`downloadImage.ts`](../src/utils/downloadImage.ts) already does fetch-blob-save for the
+single-image case), and in Bubble as an ordinary search over `Moodboard Image`.
 
 ---
 
@@ -185,8 +185,8 @@ every email query having to defend itself. Not part of v1; noting it so the door
 
 ## 4. Privacy rules — the important part
 
-For **each** of the five new types (`Moodboard`, `Moodboard Section`, `Moodboard Image Vote`,
-`Moodboard Thread`, `Moodboard Comment`), go to **Data → Privacy** and make sure:
+For **each** of the six new types (`Moodboard`, `Moodboard Section`, `Moodboard Image`,
+`Moodboard Image Vote`, `Moodboard Thread`, `Moodboard Comment`), go to **Data → Privacy** and make sure:
 
 **The default "Everyone else" rule has _Find this in searches_ UNCHECKED, and no field ticked under View.**
 This is the rule that's currently wide open. Everything else is additive on top of it.
@@ -197,7 +197,8 @@ Then add **three rules** to each type. `PATH` below is the walk from the thing t
 |---|---|
 | `Moodboard` | `This Moodboard's Event` |
 | `Moodboard Section` | `This Moodboard Section's Moodboard's Event` |
-| `Moodboard Image Vote` | `This Moodboard Image Vote's Moodboard's Event` |
+| `Moodboard Image` | `This Moodboard Image's Moodboard's Event` |
+| `Moodboard Image Vote` | `This Moodboard Image Vote's Image's Moodboard's Event` |
 | `Moodboard Thread` | `This Moodboard Thread's Moodboard's Event` |
 | `Moodboard Comment` | `This Moodboard Comment's Thread's Moodboard's Event` |
 
@@ -258,6 +259,7 @@ notes, that's a privacy-rule change, not a schema change — but decide before w
 
 - `Moodboard` *(already ticked)*
 - `Moodboard Section`
+- `Moodboard Image`
 - `Moodboard Image Vote`
 - `Moodboard Thread`
 - `Moodboard Comment`
@@ -270,7 +272,7 @@ Nothing else. In particular **do not** expose `T-Thread` or `T-Message` — they
 
 Tell me when it's done and I'll run, from a logged-in page:
 
-1. An **anonymous** fetch of all five types — every one must come back `count: 0` or 403. If any still
+1. An **anonymous** fetch of all six types — every one must come back `count: 0` or 403. If any still
    returns rows without a cookie, a privacy rule is missing and I'll say which.
 2. An **authenticated** fetch — must return your data. This is also the first real proof that the
    session cookie identifies you as `Current User` rather than just letting everyone through, which
