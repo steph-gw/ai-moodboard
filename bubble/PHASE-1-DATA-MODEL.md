@@ -381,3 +381,25 @@ in as a User at all. So user identity over the Data API is **unverified**, not c
 Both possibilities are testable together once privacy rules exist: if reads then return data for a
 logged-in planner and nothing for a logged-out request, identity works. If they return nothing
 either way, the plugin needs the user's auth token passed in as a plugin field after all.
+
+---
+
+## Appendix D — Placing the element (measured 2026-09-08)
+
+The app is `height: 100%`, so it resolves against whatever height the Bubble element has.
+The artboard takes the height left over after the top nav, section tabs and canvas bar — and
+it degrades silently, with no error, if there isn't enough:
+
+| Element height | Artboard rendered |
+|---|---|
+| 900px | 523px tall |
+| 760px | 383px tall |
+| 600px | 223px tall |
+| 400px | 23px tall |
+| 200px | **0px — invisible** |
+
+So when placing it: give the element a **fixed height of ~800px or more**, or set it to stretch and
+fill the page. An auto-height parent gives the wrapper nothing to resolve against and the canvas
+disappears rather than complaining.
+
+The `height` prop on the mount API sets this directly if the Bubble element's own sizing isn't enough.
