@@ -456,3 +456,77 @@ field `Event` of type `1 Project / Event`.
 > `Moodboard Comment`, where `This Moodboard Comment's Thread` offers a full field list and chains
 > several levels deep. The multi-level rules in section 4 are all buildable once the `Event` field is
 > the right type.
+
+
+---
+
+## Appendix F — the real constraint: multi-hop rules can't grant *search* (2026-09-08)
+
+Bubble shows this under any rule whose condition walks more than one level:
+
+> \* Rules that use "This Moodboard's X's Y" can't grant search access right now
+
+So the constraint is neither of the two things I claimed earlier. Precisely:
+
+| | one hop (`This X's Field`) | multi-hop (`This X's A's B`) |
+|---|---|---|
+| Find this in searches | ✅ grantable | ❌ **greyed out** |
+| Create / Modify / Delete via API | ✅ | ✅ |
+
+**This matters because the plugin reads with `GET /obj/<type>?constraints=[...]`, which is a search.**
+A read rule that can't grant search grants nothing useful.
+
+### How the rest of your app handles it
+
+Every existing rule on `1 Project / Event` is one hop or Current-User-only:
+
+- `Current User's ⚙️ Role is App admin`
+- `Current User is logged in`
+- `This 1 Project / Event's Sample event (for onboarding demo) is not empty`
+- `This 1 Project / Event's Creator is Current User`
+
+Nothing in the app walks `This X's A's B`, so it never hits this limit. That's the pattern to follow.
+
+### The design that falls out
+
+**Read rules must be one hop → denormalise. Write rules may stay multi-hop → leave them alone.**
+
+Add two fields to each of the seven types, set by the plugin when it creates the row (copied from the
+`Moodboard`):
+
+| Field | Type | Purpose |
+|---|---|---|
+| `Business` | Event Planner Business | one-hop planner-team check |
+| `Collaborators` | User — **list** | one-hop collaborator check |
+
+Then:
+
+**Rule 2 · Planner team · read + write** — one hop, so it can grant search:
+```
+This X's Business is Current User's Business
+and Current User's Business is not empty
+```
+
+**Rule 3 · Collaborators · read** — one hop, grants search:
+```
+This X's Collaborators contains Current User
+```
+
+**Rule 4 · Client editing on `Moodboard Slide` · write only** — multi-hop is fine here, because a
+write rule doesn't need search access:
+```
+This Moodboard Slide's Section's Locked slides doesn't contain This Moodboard Slide
+and This Moodboard Slide's Section's Status is not Approved
+and This Moodboard Slide's Collaborators contains Current User
+```
+Leave *Find this in searches* unticked on this one — rule 3 already grants the read.
+
+**This means the lock can stay on `Moodboard Section`**, where clients can't write it. The rule that
+reads it is a write rule, so the multi-hop walk costs nothing. The design you chose survives intact.
+
+### Keeping `Collaborators` in sync
+
+The plugin sets it at creation. When the event's collaborator list changes, the copies go stale — so
+when a **planner** opens a board, the plugin re-syncs `Collaborators` on the board's rows from the
+event. No Bubble workflow needed, and staleness only ever costs a client access they should have
+(fixed on the planner's next visit), never grants access they shouldn't.
