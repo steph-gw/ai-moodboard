@@ -28,6 +28,9 @@ interface DraggableBoxProps {
   style?: React.CSSProperties;
   onSelect: () => void;
   onChange: (patch: BoxPatch) => void;
+  /** Called once at pointerdown and once at pointerup, so a whole drag is one undo step. */
+  onInteractionStart?: () => void;
+  onInteractionEnd?: () => void;
   onDoubleClick?: () => void;
   onContextMenu?: (e: React.MouseEvent) => void;
   children: ReactNode;
@@ -64,6 +67,8 @@ export function DraggableBox({
   style,
   onSelect,
   onChange,
+  onInteractionStart,
+  onInteractionEnd,
   onDoubleClick,
   onContextMenu,
   children,
@@ -152,6 +157,7 @@ export function DraggableBox({
     };
 
     const onPointerUp = () => {
+      if (dragRef.current) onInteractionEnd?.();
       dragRef.current = null;
     };
 
@@ -161,12 +167,15 @@ export function DraggableBox({
       document.removeEventListener('pointermove', onPointerMove);
       document.removeEventListener('pointerup', onPointerUp);
     };
-  }, [scale, clamp, applyResize, onChange]);
+  }, [scale, clamp, applyResize, onChange, onInteractionEnd]);
 
   const startDrag = (e: ReactPointerEvent, mode: DragMode) => {
     if (readOnly) return;
     e.stopPropagation();
     e.preventDefault();
+    // Opened before onSelect so the raise-to-front that selection triggers folds into
+    // the same undo step as the drag itself. One gesture, one entry.
+    onInteractionStart?.();
     onSelect();
 
     const box = (e.currentTarget as HTMLElement).closest('.canvas-element');

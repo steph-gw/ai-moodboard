@@ -77,6 +77,8 @@ interface BoardContextValue {
   deleteComment: (pinId: string, commentId: string) => void;
   currentUserId: string;
   undo: () => void;
+  beginInteraction: () => void;
+  endInteraction: () => void;
   canUndo: boolean;
   pinSuggestion: (suggestionId: string) => void;
   refreshSuggestions: () => void;
@@ -133,6 +135,8 @@ function updateSlidePins(
 export function BoardProvider({ children }: { children: ReactNode }) {
   const [board, setBoard] = useState<Board>(mockBoard);
   const [past, setPast] = useState<Board[]>([]);
+  const interactionRef = useRef(false);
+  const gestureSnapshotRef = useRef(false);
   const [activeSectionId, setActiveSectionIdState] = useState('ceremony');
   const [activeSlideId, setActiveSlideId] = useState('slide-ceremony-1');
   const [selectedElementId, setSelectedElementId] = useState<string | null>('el-img-1');
@@ -158,8 +162,25 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     const next = updater(prev);
     if (next === prev) return;
     boardRef.current = next;
-    setPast((stack) => [...stack, prev].slice(-HISTORY_LIMIT));
+    // A drag calls this on every pointermove. Snapshot once per gesture, or a single
+    // drag fills the whole 60-deep history and undo becomes useless — and, once saving
+    // is wired, every frame would queue a write.
+    if (!interactionRef.current || !gestureSnapshotRef.current) {
+      setPast((stack) => [...stack, prev].slice(-HISTORY_LIMIT));
+      if (interactionRef.current) gestureSnapshotRef.current = true;
+    }
     setBoard(next);
+  }, []);
+
+  /** Marks the start of a pointer gesture: everything until endInteraction is one undo step. */
+  const beginInteraction = useCallback(() => {
+    interactionRef.current = true;
+    gestureSnapshotRef.current = false;
+  }, []);
+
+  const endInteraction = useCallback(() => {
+    interactionRef.current = false;
+    gestureSnapshotRef.current = false;
   }, []);
 
   const undo = useCallback(() => {
@@ -299,24 +320,40 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
   const restack = useCallback(
     (slideId: string, elementId: string, edge: 'front' | 'back') => {
-      commit((prev) => ({
-        ...prev,
-        sections: prev.sections.map((section) => ({
-          ...section,
-          slides: section.slides.map((slide) => {
-            if (slide.id !== slideId) return slide;
-            const zs = slide.elements.map((el) => el.zIndex);
-            const target =
-              edge === 'front' ? Math.max(...zs, 0) + 1 : Math.min(...zs, 0) - 1;
-            return {
-              ...slide,
-              elements: slide.elements.map((el) =>
-                el.id === elementId ? { ...el, zIndex: target } : el
-              ),
-            };
-          }),
-        })),
-      }));
+      commit((prev) => {
+        // Rebuilding the section tree unconditionally would defeat commit's identity
+        // check — every click would look like an edit and cost an undo entry, even
+        // when the element is already at that edge. So decide first, build second.
+        let changed = false;
+        const sections = prev.sections.map((section) => {
+          const idx = section.slides.findIndex((s) => s.id === slideId);
+          if (idx === -1) return section;
+
+          const slide = section.slides[idx];
+          const current = slide.elements.find((el) => el.id === elementId);
+          if (!current) return section;
+
+          const zs = slide.elements.map((el) => el.zIndex);
+          const extreme = edge === 'front' ? Math.max(...zs) : Math.min(...zs);
+          // Already alone at that edge: nothing to do.
+          if (current.zIndex === extreme && zs.filter((z) => z === extreme).length === 1) {
+            return section;
+          }
+
+          const target = edge === 'front' ? Math.max(...zs, 0) + 1 : Math.min(...zs, 0) - 1;
+          const slides = [...section.slides];
+          slides[idx] = {
+            ...slide,
+            elements: slide.elements.map((el) =>
+              el.id === elementId ? { ...el, zIndex: target } : el
+            ),
+          };
+          changed = true;
+          return { ...section, slides };
+        });
+
+        return changed ? { ...prev, sections } : prev;
+      });
     },
     [commit]
   );
@@ -966,6 +1003,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         deleteComment,
         currentUserId,
         undo,
+        beginInteraction,
+        endInteraction,
         canUndo: past.length > 0,
         pinSuggestion,
         refreshSuggestions,

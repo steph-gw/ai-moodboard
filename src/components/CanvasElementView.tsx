@@ -66,7 +66,8 @@ function ImageElementView({
   imageUrl: string;
   readOnly?: boolean;
 }) {
-  const { selectedElementId, selectElement, updateElement, getImageById } = useBoard();
+  const { selectedElementId, selectElement, updateElement, getImageById, bringToFront, beginInteraction, endInteraction } =
+    useBoard();
   const isSelected = selectedElementId === element.id;
   const image = getImageById(element.imageId);
   const hasVote = !!image?.clientVote;
@@ -74,13 +75,15 @@ function ImageElementView({
 
   const handleSelect = () => {
     selectElement(element.id);
-    if (!readOnly) {
-      updateElement(slideId, element.id, { zIndex: Date.now() % 100000 });
-    }
+    // Raise it, but through restack rather than a timestamp: clicking an element that
+    // is already on top is not an edit, and shouldn't cost an undo entry or a save.
+    if (!readOnly) bringToFront(slideId, element.id);
   };
 
   return (
     <DraggableBox
+      onInteractionStart={beginInteraction}
+      onInteractionEnd={endInteraction}
       x={element.x}
       y={element.y}
       width={element.width}
@@ -132,7 +135,8 @@ function TextElementView({
   scale: number;
   readOnly?: boolean;
 }) {
-  const { selectedElementId, selectElement, updateElement } = useBoard();
+  const { selectedElementId, selectElement, updateElement, bringToFront, beginInteraction, endInteraction } =
+    useBoard();
   const [editing, setEditing] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const isSelected = selectedElementId === element.id;
@@ -158,13 +162,15 @@ function TextElementView({
 
   const handleSelect = () => {
     selectElement(element.id);
-    if (!readOnly) {
-      updateElement(slideId, element.id, { zIndex: Date.now() % 100000 });
-    }
+    // Raise it, but through restack rather than a timestamp: clicking an element that
+    // is already on top is not an edit, and shouldn't cost an undo entry or a save.
+    if (!readOnly) bringToFront(slideId, element.id);
   };
 
   return (
     <DraggableBox
+      onInteractionStart={beginInteraction}
+      onInteractionEnd={endInteraction}
       x={element.x}
       y={element.y}
       width={element.width}
