@@ -100,6 +100,7 @@ That's the whole type. Three fields that earlier drafts had are gone:
 | `Moodboard` | Moodboard | |
 | `Section` | Moodboard Section | for grouping in exports and filenames |
 | `Image` | image | the file in Bubble storage — its Data API value *is* the URL |
+| `In use?` | yes / no | on the board right now, vs removed from the canvas |
 
 Elements in `Slides JSON` reference these by Bubble unique id:
 
@@ -126,9 +127,20 @@ and no image data is duplicated into the JSON.
 Still deliberately absent: no `URL` text field (an `image` field's Data API value already *is* the
 URL) and no `Tags` (present on the current `BoardImage` type, read by zero components).
 
+**Deleting an image never deletes the file.** Removing an image from the canvas sets `In use?` to no;
+the row and the file stay. Permanent deletion is a separate, explicit action.
+
+> The reason is undo. ⌘Z restores up to 60 steps, so if deleting an element also deleted the file,
+> undo would bring back an element pointing at a file that no longer exists — permanently broken,
+> with no way back. Removing something from a canvas is a casual, high-frequency gesture; deleting a
+> file isn't. They shouldn't be the same action.
+>
+> So filter your Bubble-side lists and exports on `In use? = yes` for "what's on the board", and drop
+> the constraint for "everything we ever considered". Two useful views instead of one lossy one.
+
 **Downloads.** "Download all" gets built twice, cheaply: in the plugin as a zip (the URLs are already
 in memory, and [`downloadImage.ts`](../src/utils/downloadImage.ts) already does fetch-blob-save for the
-single-image case), and in Bubble as an ordinary search over `Moodboard Image`.
+single-image case), and in Bubble as an ordinary search over `Moodboard Image` (constrained to `In use? = yes`).
 
 ---
 
