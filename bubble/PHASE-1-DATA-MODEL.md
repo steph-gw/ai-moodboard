@@ -80,6 +80,7 @@ list in Bubble would just drift out of sync. The icon is stored as a plain text 
 | `Section vision brief` | text | empty ⇒ inherits the board's |
 | `Order` | number | explicit sort index |
 | `Archived?` | yes / no | |
+| `Locked slides` | Moodboard Slide — **list** | the slides frozen against client editing |
 
 **`Slides JSON` is gone** — see the note below.
 
@@ -91,7 +92,6 @@ list in Bubble would just drift out of sync. The icon is stored as a plain text 
 | `Slide name` | text | |
 | `Order` | number | |
 | `Elements JSON` | text | every text box and image placed on this slide |
-| `Locked?` | yes / no | planner-set; makes the slide read-only to clients |
 
 `Elements JSON` shape:
 
@@ -227,7 +227,7 @@ by calling the API directly.
 On `Moodboard Slide`:
 ```
 This Moodboard Slide's Section's Moodboard's Event's Collaborator Accesses's User contains Current User
-and This Moodboard Slide's Locked? is "no"
+and This Moodboard Slide's Section's Locked slides doesn't contain This Moodboard Slide
 and This Moodboard Slide's Section's Status is not Approved
 ```
 
@@ -239,12 +239,18 @@ Tick the API-write box on these.
 **No client write rule at all on `Moodboard` or `Moodboard Section`.** Those are the board's identity
 and structure. A client deleting a section would take its slides with it, locked ones included.
 
-### Two consequences worth knowing
+### Why lock state lives on the section
 
-**Clients can lock, but never unlock.** Bubble grants write access per *thing*, not per field, so a
-client editing an unlocked slide can also set its `Locked?`. They can't clear it afterwards, because a
-locked slide no longer matches rule 4 at all. Mildly annoying, never dangerous — and the planner rule
-has no lock condition, so you can always unlock.
+Bubble grants write access per *thing*, not per field. A `Locked?` yes/no on the slide would be
+writable by any client who could write that slide — so they could lock a slide, and (since a locked
+slide stops matching the write rule) never unlock it again.
+
+Holding the lock as a list on `Moodboard Section`, which clients never write, makes locking and
+unlocking planner-only in both directions.
+
+*If the privacy rule editor turns out to offer per-field write control, a plain `Locked?` on the slide
+is simpler and we should switch back — the View / Constraint / Auto-bind columns are all read-side, so
+this assumes it doesn't.*
 
 **Approving a section freezes it for clients only.** Rule 4 excludes approved sections; the planner
 rule doesn't mention status. So you keep refining after sign-off while the couple sees a stable board.

@@ -109,7 +109,7 @@ it's a privacy rule, a client can't get round it by calling the API directly.
 29. Add a fourth rule, named `Client editing`.
 30. **WHEN**, built in three parts joined with `and`:
     - `This Moodboard Slide` → `Section` → `Moodboard` → `Event` → `Collaborator Accesses` → `User` → `contains` → `Current User`
-    - `and` `This Moodboard Slide` → `Locked?` → `is` → `no`
+    - `and` `This Moodboard Slide` → `Section` → `Locked slides` → `doesn't contain` → `This Moodboard Slide`
     - `and` `This Moodboard Slide` → `Section` → `Status` → `is not` → `Approved`
 31. Tick **Find this in searches**, **ALL** on **View**, and the API-write checkbox.
 
@@ -123,10 +123,10 @@ included.
 
 ### Two quirks of this, both harmless
 
-**Clients can lock a slide but never unlock it.** Bubble grants write access per *thing*, not per
-field, so a client editing an unlocked slide can also flip its `Locked?`. They can't undo that,
-because a locked slide stops matching rule 4 entirely. Your own rule has no lock condition, so you
-can always unlock.
+**Lock state lives on the section, not the slide.** Bubble grants write access per *thing*, not per
+field, so a `Locked?` on the slide would be writable by any client who could write that slide — they
+could lock it and then never unlock it. `Locked slides` is a list on `Moodboard Section`, which
+clients never write, so locking and unlocking are planner-only in both directions.
 
 **Approving a section freezes it for clients only.** Rule 4 excludes approved sections; the planner
 rule never mentions status. So you keep refining after sign-off while the couple sees something
