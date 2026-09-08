@@ -90,15 +90,23 @@ list in Bubble would just drift out of sync. The icon is stored as a plain text 
 |---|---|---|
 | `Moodboard` | Moodboard | |
 | `Section` | Moodboard Section | |
-| `Image` | image | the file in Bubble storage |
-| `URL` | text | what the canvas actually renders |
-| `Tags` | text — **list** | |
+| `Image` | image | the file in Bubble storage — its Data API value *is* the URL |
 | `Client vote` | Moodboard Vote | empty = no vote |
 | `Voted by` | User | |
 | `Voted date` | date | |
 
-> Both `Image` and `URL` on purpose: `Image` keeps the file native to Bubble (repeating groups, file
-> manager, deletion), `URL` is the plain string the canvas reads without a round-trip. Costs nothing.
+**No `URL` field and no `Tags` field**, both of which earlier drafts had:
+
+- A Bubble `image` field already returns its URL as a plain string over the Data API, so a separate
+  `URL` text column would be the same value stored twice and free to drift. The one case that would
+  justify it is an externally-hosted image (Unsplash via the Pinterest picker) that has no Bubble
+  file — and Pinterest is flagged off in v1, so every image is an upload. If we turn Pinterest on
+  later and Bubble won't accept a foreign URL into an `image` field, adding `URL` then is a
+  30-second change with nothing to migrate.
+- `Tags` exists on the current `BoardImage` type but is **read by nothing** — written on upload
+  (`['Uploaded']`, `['Pasted']`) and rendered in zero components. Being in the old type isn't a
+  reason to put a column in the database. If image filtering or search becomes a feature, it's one
+  field away.
 
 ---
 
