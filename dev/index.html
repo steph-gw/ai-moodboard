@@ -50,11 +50,17 @@
         padding: 14px 20px;
         font-size: 15px;
       }
-      /* The element is given a fixed height, as a Bubble element would be. */
+      /*
+        Mirrors a Bubble page: a sized parent container, and the plugin element
+        filling it completely. No margin, no border — if a gap appears between
+        #host-container and #board, that gap is the app's fault, not the fixture's.
+      */
+      #host-container {
+        height: calc(100vh - 46px);
+        background: #c9cede;
+      }
       #board {
-        height: 760px;
-        border: 3px dashed #9aa5c4;
-        margin: 12px 20px;
+        height: 100%;
       }
 
       /*
@@ -68,10 +74,8 @@
       body.bare {
         overflow: hidden;
       }
-      body.bare #board {
+      body.bare #host-container {
         height: 100vh;
-        border: 0;
-        margin: 0;
       }
     </style>
   </head>
@@ -87,16 +91,11 @@
       </span>
     </div>
 
-    <div class="canvas host-chrome">
-      A host paragraph using <code>.canvas</code>, one of the app's own class names.
-      If this changes appearance, the stylesheet has leaked out of <code>.gw-mb</code>.
-    </div>
+    <div id="host-container"><div id="board"></div></div>
 
-    <div id="board"></div>
-
-    <div class="app host-chrome">
-      Another host block, using <code>.app</code>. Same test.
-    </div>
+    <!-- Leak canaries: host blocks using the app's own class names. Must stay Georgia. -->
+    <div class="canvas host-chrome">Host block using <code>.canvas</code>.</div>
+    <div class="app host-chrome">Host block using <code>.app</code>.</div>
 
     <script src="./gw-moodboard.js"></script>
   </body>
