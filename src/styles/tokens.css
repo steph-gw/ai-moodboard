@@ -1,4 +1,6 @@
 :root {
+  --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-display: 'Playfair Display', Georgia, serif;
   --content-bg: #f8f5f0;
   --surface: #f2ede6;
   --surface-2: #ece6dc;
@@ -12,8 +14,10 @@
   --border: rgba(0, 0, 0, 0.07);
   --border-strong: rgba(0, 0, 0, 0.12);
   --white: #ffffff;
-  --sidebar-w: 200px;
-  --slide-strip-w: 168px;
+  --brand-ink: #333f52;
+  --gold-active: #bc8e3f;
+  --tab-active-bg: rgba(233, 228, 219, 0.05);
+  --slide-strip-w: 210px;
   --comment-panel-w: 360px;
   --topnav-h: 48px;
   --approved-green: #3a7a50;

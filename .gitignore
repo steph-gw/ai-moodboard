@@ -24,3 +24,9 @@ out
 *.njsproj
 *.sln
 *.sw?
+tsconfig.tsbuildinfo
+
+# build output served by the dev harness
+dev/gw-moodboard.js
+dev/gw-moodboard.js.map
+dev/gw-moodboard.css

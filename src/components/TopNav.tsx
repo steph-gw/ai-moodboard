@@ -1,39 +1,71 @@
-import { Sparkles, Presentation, Download } from 'lucide-react';
+import { Sparkles, Presentation, Download, MessageSquare } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
+import { requestFullscreen } from '../utils/fullscreen';
+import { formatEventDate } from '../utils/formatDate';
 
 export function TopNav() {
-  const { board, role, summarizeVision, isSummarizing, setPresenting } = useBoard();
+  const {
+    board,
+    role,
+    summarizeVision,
+    isSummarizing,
+    setPresenting,
+    isCommentsOpen,
+    setCommentsOpen,
+  } = useBoard();
   const isPlanner = role === 'planner';
 
   return (
     <header className="topnav">
       <div className="topnav-left">
-        <span className="topnav-wordmark">Gatherwise</span>
+        <img
+          className="topnav-logo"
+          src="./gatherwise-logo.png"
+          alt="GatherWise"
+          />
         <span className="topnav-sep">/</span>
         <span className="topnav-event">{board.weddingName}</span>
-        <span className="topnav-date-pill">{board.weddingDate}</span>
+        <span className="topnav-date">{formatEventDate(board.weddingDate)}</span>
       </div>
       <div className="topnav-right">
         <div className="viewer-stack">
           {board.viewers.map((v) => (
-            <div key={v.id} className="viewer-avatar" title={v.name}>
+            <div key={v.id} className="viewer-avatar" data-tooltip={v.name}>
               {v.initials}
             </div>
           ))}
         </div>
+        <button
+          type="button"
+          className={`btn-ghost btn-sm btn-icon ${isCommentsOpen ? 'active' : ''}`}
+          onClick={() => setCommentsOpen(!isCommentsOpen)}
+          data-tooltip="Show all comments"
+          aria-label="Show all comments"
+          aria-pressed={isCommentsOpen}
+        >
+          <MessageSquare size={13} strokeWidth={1.5} />
+        </button>
         {isPlanner && (
           <>
             <button
               type="button"
               className="btn-ghost btn-sm"
-              onClick={() => setPresenting(true)}
+              onClick={() => {
+                // Requested from the click itself so the user gesture is still valid.
+                void requestFullscreen();
+                setPresenting(true);
+              }}
             >
               <Presentation size={13} strokeWidth={1.5} />
               Present
             </button>
-            <button type="button" className="btn-ghost btn-sm">
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              onClick={() => window.print()}
+            >
               <Download size={13} strokeWidth={1.5} />
-              Export
+              Export PDF
             </button>
           </>
         )}

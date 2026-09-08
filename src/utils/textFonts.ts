@@ -3,18 +3,13 @@ import type { TextFontFamily } from '../types';
 export const TEXT_FONT_OPTIONS: { value: TextFontFamily; label: string; css: string }[] = [
   {
     value: 'sans',
-    label: 'Sans',
-    css: 'var(--font-sans), sans-serif',
-  },
-  {
-    value: 'serif',
-    label: 'Serif',
-    css: 'var(--font-body-serif), serif',
+    label: 'Body — DM Sans',
+    css: 'var(--font-sans)',
   },
   {
     value: 'display',
-    label: 'Display',
-    css: 'var(--font-serif), serif',
+    label: 'Title — Playfair',
+    css: 'var(--font-display)',
   },
 ];
 
