@@ -334,53 +334,66 @@ against those keys.
 
 ---
 
-## Appendix B — Field names as actually built (read 2026-09-08)
+## Appendix B — Confirmed Data API field keys (probed 2026-09-08)
 
-Several differ from the names proposed above. **The real names win**; the client is written against
-these. `✓` = key observed over the Data API. Everything else is derived from the observed pattern
-(lowercase, spaces → `_`, `?` dropped leaving its underscore, then a type suffix) and must be
-confirmed by a successful write before the client relies on it.
+Every key below was verified by an actual `PATCH` against a live record — not derived. The naming
+rule Bubble uses is `<field name lowercased, spaces→_>` + `_` + type suffix, where a reference field's
+suffix is `custom_<the target type's internal id>` and a list adds `list_`.
 
-| Type | Field | Data API key |
+| Type | Field | API key |
 |---|---|---|
-| `Moodboard` | Name | `name_text` ✓ |
+| `Moodboard` | Name | `name_text` |
 | | Vision brief | `vision_brief_text` |
-| | Palette | `palette_list_text` ✓ |
-| | Event | `event_custom_wedding` — note `1 Project / Event`'s internal id is `wedding` |
-| `Moodboard Section` | Section name | `section_name_text` ✓ |
+| | Palette (list) | `palette_list_text` |
+| | Event | `event_custom_wedding` |
+| `Moodboard Section` | Section name | `section_name_text` |
 | | Section vision brief | `section_vision_brief_text` |
 | | Icon | `icon_text` |
-| | Slides JSON | `slides_json_text` |
 | | Order | `order_number` |
 | | Status | `status_option_moodboard_status_os` |
 | | Approved date | `approved_date_date` |
 | | Archived? | `archived__boolean` |
 | | Moodboard | `moodboard_custom_moodboard` |
+| `Moodboard Slide` | Slide name | `slide_name_text` |
+| | Order | `order_number` |
+| | Elements JSON | `elements_json_text` |
+| | Section | `section_custom_moodboard_section` |
 | `Moodboard Image` | Image | `image_image` |
-| | In use? | `in_use__boolean` ✓ |
+| | In use? | `in_use__boolean` |
 | | Moodboard | `moodboard_custom_moodboard` |
 | | Moodboard Section | `moodboard_section_custom_moodboard_section` |
 | `Moodboard Image Vote` | Moodboard image | `moodboard_image_custom_moodboard_image` |
-| | Moodboard vote | `moodboard_vote_option_moodboard_vote_os` ✓ |
-| `Moodboard Thread` | Slide id | `slide_id_text` |
-| | X-axis | `x_axis_number` |
+| | Moodboard vote | `moodboard_vote_option_moodboard_vote_os` |
+| `Moodboard Thread` | X-axis | `x_axis_number` |
 | | Y-axis | `y_axis_number` |
 | | Resolved? | `resolved__boolean` |
-| | Resolved by | `resolved_by_custom_user` |
-| | Resolved date | `resolved_date_date` ✓ |
+| | Resolved date | `resolved_date_date` |
 | | Moodboard | `moodboard_custom_moodboard` |
 | | Moodboard section | `moodboard_section_custom_moodboard_section` |
-| `Moodboard Comment` | Text | `text_text` ✓ |
-| | Parent comment | `parent_comment_custom_moodboard_comment` |
+| `Moodboard Comment` | Text | `text_text` |
 | | Edited? | `edited__boolean` |
 | | Thread | `thread_custom_moodboard_thread` |
+| | Parent comment | `parent_comment_custom_moodboard_comment` |
 
-Two things worth knowing about the Data API generally:
+Note `1 Project / Event`'s internal id is **`wedding`**, hence `event_custom_wedding`. Note also the
+double underscore on `yes/no` fields whose name ends in `?` — `archived__boolean`, `in_use__boolean`,
+`resolved__boolean`, `edited__boolean`.
 
-- **Empty fields are omitted from responses entirely** — not returned as null. The client must treat
-  every field as possibly absent rather than assuming the key is present.
-- List-of-text fields take `_list_text`, not `_text`. `palette_text` is rejected as an unrecognised
-  field; `palette_list_text` is accepted.
+**`image_image` accepts a plain URL string** — confirmed by writing one. That's what makes uploading
+via `context.uploadContent` and storing the result work.
+
+### Three fields are still missing
+
+Probed with a deliberately invalid value, so "Unrecognized field" means the field doesn't exist:
+
+| Type | Missing field | Type to create |
+|---|---|---|
+| `Moodboard Section` | `Locked slides` | Moodboard Slide — **list** |
+| `Moodboard Thread` | `Moodboard slide` | Moodboard Slide |
+| `Moodboard Thread` | `Resolved by` | User |
+
+Without `Moodboard slide`, **nothing links a comment pin to the slide it sits on** — the old
+`Slide id` text field is gone too, so threads are currently orphaned.
 
 ---
 
