@@ -1,5 +1,9 @@
 # Phase 10 — the `GW Moodboard` plugin element
 
+**Status: built.** The element, its 19 fields, 6 states, 2 events and all three code
+blocks exist in the plugin editor and survived a reload. What is left is placing it on
+a page and binding the fields — section 7.
+
 Everything in this file is applied in the **plugin editor**
 (`bubble.io/plugin_editor?id=1788887915866x725990324315095000`), not in the app.
 
@@ -92,10 +96,10 @@ decide whether it's reachable.
 
 ## 5. Events
 
-| Name |
-|---|
-| `board_loaded` |
-| `error` |
+| Name | Caption |
+|---|---|
+| `board_loaded` | has loaded the board |
+| `error` | hits an error |
 
 Only two, because the plugin writes to the database itself over the Data API.
 Bubble doesn't need to be told a slide changed — it can just read the record.
@@ -123,6 +127,14 @@ protocol-relative `//s3...` URL, which the adapter rewrites to `https:`.
    **fixed or stretched height** — the element is `height: 100%`, so a parent
    with no resolved height collapses the canvas to a sliver.
 3. Bind the fields per the table above.
+
+### One thing still unverified
+
+Bubble derives each property key from the field *name* (lowercased, non-alphanumerics
+to underscores), so `Show AI summarize` should arrive as `properties.show_ai_summarize`.
+That rule is not visible anywhere in the plugin editor — the first place it can be
+checked is a real page. If a binding comes through empty, that's the cause, and the fix
+is renaming the field rather than changing the code.
 
 ### Checkpoint
 
