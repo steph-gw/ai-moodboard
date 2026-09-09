@@ -87,9 +87,11 @@
 .gw-mb .save-status.is-dirty {
   color: var(--gold-active);
 }
-.gw-mb .save-status.is-dirty:hover {
-  background: var(--gold-light);
-}
 .gw-mb .save-status.is-error {
   color: #b04a3a;
+}
+
+/* Status text only — the action lives in the adjacent Save changes button. */
+.gw-mb span.save-status {
+  pointer-events: none;
 }

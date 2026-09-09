@@ -88,8 +88,12 @@ function headTags(): string {
 
   return `${links}<style>
     /* 960x540 at 96dpi. Chrome ignores px page sizes on some platforms; inches it doesn't. */
+    /* 960x540 at 96dpi — a landscape page the exact shape of the artboard. */
     @page { size: 10in 5.625in; margin: 0; }
     html, body { margin: 0; padding: 0; background: #fff; height: auto; overflow: visible; }
+    /* Browsers drop backgrounds when printing unless told otherwise, which would
+       flatten every coloured block on the board. */
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     /* The sheet is display:none in the app stylesheet, where it's only a hidden staging area. */
     .export-sheet { display: block !important; }
     .export-page { break-after: page; page-break-after: always; overflow: hidden; }

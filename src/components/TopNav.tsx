@@ -115,9 +115,17 @@ function SaveStatus({
   }
   if (isDirty) {
     return (
-      <button type="button" className="save-status is-dirty" onClick={() => void onSave()} data-tooltip="Save now (⌘S)">
-        Unsaved changes
-      </button>
+      <>
+        <span className="save-status is-dirty">Unsaved changes</span>
+        <button
+          type="button"
+          className="btn-primary btn-sm"
+          onClick={() => void onSave()}
+          data-tooltip="⌘S"
+        >
+          Save changes
+        </button>
+      </>
     );
   }
   return <span className="save-status">Saved</span>;

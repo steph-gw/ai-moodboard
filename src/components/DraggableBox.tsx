@@ -50,6 +50,8 @@ const HANDLES: { handle: ResizeHandle; className: string }[] = [
 
 /** Snap increment (degrees) while rotating with Shift held. */
 const ROTATE_SNAP = 15;
+/** Arm plus handle, in screen px. Below this there isn't room above the box. */
+const ROTATE_HANDLE_CLEARANCE = 40;
 
 export function DraggableBox({
   x,
@@ -170,6 +172,11 @@ export function DraggableBox({
     };
   }, [scale, clamp, applyResize, onChange, onInteractionEnd]);
 
+  // The rotate handle sits above the box, and the canvas stage clips anything that
+  // escapes the artboard — so for a box near the top it would be invisible and
+  // unusable. Flip it underneath instead.
+  const rotateBelow = y * scale < ROTATE_HANDLE_CLEARANCE;
+
   const startDrag = (e: ReactPointerEvent, mode: DragMode) => {
     if (readOnly) return;
     e.stopPropagation();
@@ -218,9 +225,9 @@ export function DraggableBox({
       {children}
       {selected && !readOnly && (
         <>
-          <div className="rotate-handle-arm" aria-hidden />
+          <div className={`rotate-handle-arm${rotateBelow ? ' is-below' : ''}`} aria-hidden />
           <div
-            className="rotate-handle"
+            className={`rotate-handle${rotateBelow ? ' is-below' : ''}`}
             role="slider"
             aria-label="Rotate"
             aria-valuenow={rotation}
