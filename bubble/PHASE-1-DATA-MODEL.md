@@ -359,7 +359,7 @@ suffix is `custom_<the target type's internal id>` and a list adds `list_`.
 | | Approved date | `approved_date_date` |
 | | Archived? | `archived__boolean` |
 | | Moodboard | `moodboard_custom_moodboard` |
-| | Locked slides (list) | `locked_slides_list_custom_moonboard_slide` |
+| | Locked slides (list) | `locked_slides_list_custom_moodboard_slide` |
 | `Moodboard Slide` | Slide name | `slide_name_text` |
 | | Order | `order_number` |
 | | Elements JSON | `elements_json_text` |
@@ -367,7 +367,6 @@ suffix is `custom_<the target type's internal id>` and a list adds `list_`.
 | `Moodboard Image` | Image | `image_image` |
 | | In use? | `in_use__boolean` |
 | | Moodboard | `moodboard_custom_moodboard` |
-| | Moodboard Section | `moodboard_section_custom_moodboard_section` |
 | `Moodboard Image Vote` | Moodboard image | `moodboard_image_custom_moodboard_image` |
 | | Moodboard vote | `moodboard_vote_option_moodboard_vote_os` |
 | `Moodboard Thread` | X-axis | `x_axis_number` |
@@ -375,8 +374,7 @@ suffix is `custom_<the target type's internal id>` and a list adds `list_`.
 | | Resolved? | `resolved__boolean` |
 | | Resolved date | `resolved_date_date` |
 | | Moodboard | `moodboard_custom_moodboard` |
-| | Moodboard section | `moodboard_section_custom_moodboard_section` |
-| | Moodboard slide | `moodboard_slide_custom_moonboard_slide` |
+| | Moodboard slide | `moodboard_slide_custom_moodboard_slide` |
 | | Resolved by | `resolved_by_user` |
 | `Moodboard Comment` | Text | `text_text` |
 | | Edited? | `edited__boolean` |
@@ -390,17 +388,16 @@ double underscore on `yes/no` fields whose name ends in `?` — `archived__boole
 **`image_image` accepts a plain URL string** — confirmed by writing one. That's what makes uploading
 via `context.uploadContent` and storing the result work.
 
-### Two traps in the key format
-
-**`moonboard_slide`, not `moodboard_slide`.** The slide type was created as *Moonboard Slide* and
-renamed afterwards. **Bubble keeps a type's internal id from its original name**, so every field key
-that references it still says `moonboard_slide` — permanently, unless the type is deleted and
-recreated. Curiously the *endpoint* name did follow the rename (`/obj/moodboardslide`), so the
-endpoint and the internal id diverge. Not worth fixing: it works, it's just ugly, and recreating the
-type means recreating the two fields that point at it.
+### One trap in the key format
 
 **User references use `_user`, not `_custom_user`.** `resolved_by_custom_user` is rejected;
 `resolved_by_user` is correct. Every other data type uses the `custom_` form.
+
+There was a second trap — the slide type was created as *Moonboard Slide*, and **Bubble keeps a
+type's internal id from its original name**, so renaming it left `moonboard_slide` in every
+referencing key. That's since been fixed by deleting and recreating the type, which came back cleanly
+as `moodboard_slide` with no `_1` suffix. Worth remembering the rule: rename a type and its endpoint
+name follows, but its internal id doesn't.
 
 Both were found by probing rather than derivation — an "Unrecognized field" error only tells you the
 key you sent is wrong, never that the field is absent. Check the Data types tab before concluding
