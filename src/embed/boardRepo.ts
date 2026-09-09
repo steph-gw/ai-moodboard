@@ -117,21 +117,26 @@ export class BoardRepo {
     };
   }
 
-  /**
-   * Writes one slide's canvas. Returns the new `Modified Date` so the caller can keep its
-   * version current; a stale one is how the next write detects a clobber.
-   */
-  async saveSlide(slideId: string, elements: Slide['elements']): Promise<string> {
+  /** Writes one slide's canvas. */
+  async saveSlide(slideId: string, elements: Slide['elements']): Promise<void> {
     await this.api.patch(TYPE.slide, slideId, { [K.slide.elementsJson]: serializeElements(elements) });
-    const row = await this.api.get(TYPE.slide, slideId);
-    return str(row['Modified Date']);
   }
 
-  /** True when the slide has changed underneath us since `since`. */
-  async hasMovedOn(slideId: string, since: string | undefined): Promise<boolean> {
-    if (!since) return false;
-    const row = await this.api.get(TYPE.slide, slideId);
-    return str(row['Modified Date']) !== since;
+  /**
+   * `Modified Date` for several slides in a single query.
+   *
+   * Used both to check for a clobber before writing and to refresh versions after, so a save
+   * cycle costs one query either side however many slides changed — rather than a GET per
+   * slide, which is what makes an autosaving canvas expensive on Bubble.
+   */
+  async versionsOf(slideIds: readonly string[]): Promise<SlideVersions> {
+    const versions: SlideVersions = new Map();
+    if (!slideIds.length) return versions;
+    const rows = await this.api.list(TYPE.slide, [
+      { key: '_id', constraint_type: 'in', value: [...slideIds] },
+    ]);
+    for (const row of rows) versions.set(row._id, str(row['Modified Date']));
+    return versions;
   }
 
   async createImage(moodboardId: string, url: string): Promise<string> {

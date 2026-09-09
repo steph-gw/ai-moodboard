@@ -38,6 +38,15 @@ export class DevBubbleApi extends BubbleApi {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
   }
 
+  /** Counts calls so the harness can measure write volume rather than guess at it. */
+  calls: { list: number; get: number; create: number; patch: number; remove: number } = {
+    list: 0, get: 0, create: 0, patch: 0, remove: 0,
+  };
+
+  get totalCalls(): number {
+    return Object.values(this.calls).reduce((a, b) => a + b, 0);
+  }
+
   private async settle<T>(value: T): Promise<T> {
     // Real latency, so the debounce and the "saving" state behave as they will in Bubble.
     await new Promise((r) => setTimeout(r, LATENCY_MS));
@@ -45,6 +54,7 @@ export class DevBubbleApi extends BubbleApi {
   }
 
   override async list(type: string, constraints: Constraint[] = []): Promise<BubbleRow[]> {
+    this.calls.list++;
     const rows = (this.read()[type] ?? []).filter((row) =>
       constraints.every((c) => {
         const actual = row[c.key];
@@ -56,12 +66,14 @@ export class DevBubbleApi extends BubbleApi {
   }
 
   override async get(type: string, id: string): Promise<BubbleRow> {
+    this.calls.get++;
     const row = (this.read()[type] ?? []).find((r) => r._id === id);
     if (!row) throw new Error(`dev store: no ${type}/${id}`);
     return this.settle(row);
   }
 
   override async create(type: string, fields: Record<string, unknown>): Promise<string> {
+    this.calls.create++;
     const store = this.read();
     const now = new Date().toISOString();
     const id = `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
@@ -71,6 +83,7 @@ export class DevBubbleApi extends BubbleApi {
   }
 
   override async patch(type: string, id: string, fields: Record<string, unknown>): Promise<void> {
+    this.calls.patch++;
     const store = this.read();
     store[type] = (store[type] ?? []).map((row) =>
       row._id === id ? { ...row, ...fields, 'Modified Date': new Date().toISOString() } : row
@@ -80,6 +93,7 @@ export class DevBubbleApi extends BubbleApi {
   }
 
   override async remove(type: string, id: string): Promise<void> {
+    this.calls.remove++;
     const store = this.read();
     store[type] = (store[type] ?? []).filter((row) => row._id !== id);
     this.write(store);

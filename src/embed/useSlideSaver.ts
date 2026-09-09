@@ -2,9 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Board, CanvasElement } from '../types';
 import type { BoardRepo, SlideVersions } from './boardRepo';
 
-const DEBOUNCE_MS = 900;
-/** Continuous editing would otherwise defer the save indefinitely. */
-const MAX_WAIT_MS = 4000;
+/**
+ * How long the board must sit still before an idle save. Deliberately long: saving on every
+ * gesture turns a normal editing session into hundreds of Bubble writes, and the cost there
+ * is the number of save cycles, not what each one does. Real work is captured by the
+ * boundary flushes instead — switching slide or section, hiding the tab, closing, ⌘S.
+ */
+const IDLE_MS = 25_000;
 
 export type SaveState = 'idle' | 'saving' | 'error' | 'conflict';
 
@@ -30,6 +34,8 @@ export interface SlideSaver {
   adopt: (board: Board) => void;
   /** Writes anything outstanding now. Awaitable, for teardown. */
   flush: () => Promise<void>;
+  /** True when there are edits the server hasn't got yet. */
+  isDirty: boolean;
   state: SaveState;
   lastSavedAt: number | null;
 }
@@ -45,11 +51,11 @@ export interface SlideSaver {
 export function useSlideSaver({ repo, boardRef, versionsRef, onError, onConflict }: Options): SlideSaver {
   const [state, setState] = useState<SaveState>('idle');
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [isDirty, setIsDirty] = useState(false);
 
   /** Element arrays as last written. Absent means "not seen yet", not "empty". */
   const savedRef = useRef(new Map<string, readonly CanvasElement[]>());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const firstDirtyAtRef = useRef<number | null>(null);
   const inFlightRef = useRef<Promise<void> | null>(null);
   /** Set while a conflict reload is pending, so we don't retry against a version we know is stale. */
   const awaitingReloadRef = useRef(false);
@@ -57,6 +63,7 @@ export function useSlideSaver({ repo, boardRef, versionsRef, onError, onConflict
   /** Seeds the baseline after a load, so a fresh board isn't seen as entirely dirty. */
   const adopt = useCallback((board: Board) => {
     awaitingReloadRef.current = false;
+    setIsDirty(false);
     const map = new Map<string, readonly CanvasElement[]>();
     for (const section of board.sections) {
       for (const slide of section.slides) map.set(slide.id, slide.elements);
@@ -91,26 +98,35 @@ export function useSlideSaver({ repo, boardRef, versionsRef, onError, onConflict
     const run = (async () => {
       setState('saving');
       try {
+        const ids = dirty.map((d) => d.id);
+        // One query for every dirty slide's version, rather than one per slide.
+        const current = await repo.versionsOf(ids);
+        const stale = ids.find((id) => {
+          const known = versionsRef.current.get(id);
+          return known !== undefined && current.get(id) !== known;
+        });
+        if (stale) {
+          // Stop scheduling until adopt() confirms the reload landed, or every queued
+          // change re-reports the same conflict against the same stale version.
+          awaitingReloadRef.current = true;
+          setState('conflict');
+          onConflict(stale);
+          return;
+        }
+
         for (const { id, elements } of dirty) {
-          if (await repo.hasMovedOn(id, versionsRef.current.get(id))) {
-            // Stop scheduling until adopt() confirms the reload landed, or every queued
-            // change re-reports the same conflict against the same stale version.
-            awaitingReloadRef.current = true;
-            setState('conflict');
-            onConflict(id);
-            return;
-          }
-          const modified = await repo.saveSlide(id, elements as CanvasElement[]);
-          versionsRef.current.set(id, modified);
+          await repo.saveSlide(id, elements as CanvasElement[]);
           savedRef.current.set(id, elements);
         }
+
+        // Refresh all the versions we just invalidated, again in one query.
+        for (const [id, modified] of await repo.versionsOf(ids)) versionsRef.current.set(id, modified);
         setState('idle');
+        setIsDirty(false);
         setLastSavedAt(Date.now());
       } catch (err) {
         setState('error');
         onError(err instanceof Error ? err.message : 'Could not save the board.');
-      } finally {
-        firstDirtyAtRef.current = null;
       }
     })();
 
@@ -132,33 +148,39 @@ export function useSlideSaver({ repo, boardRef, versionsRef, onError, onConflict
 
   const noteChange = useCallback(() => {
     if (!repo || awaitingReloadRef.current) return;
-    const now = Date.now();
-    if (firstDirtyAtRef.current === null) firstDirtyAtRef.current = now;
-
+    // Each change pushes the idle save further out. Anything the user would notice losing is
+    // captured by a boundary flush long before this fires.
+    setIsDirty(true);
     if (timerRef.current) clearTimeout(timerRef.current);
-    // Cap the deferral, or a long uninterrupted drag never reaches a quiet moment to save in.
-    const wait = Math.min(DEBOUNCE_MS, Math.max(0, firstDirtyAtRef.current + MAX_WAIT_MS - now));
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
       void writeNow();
-    }, wait);
+    }, IDLE_MS);
   }, [repo, writeNow]);
 
   // Leaving the page or hiding the tab has to take unsaved work with it. beforeunload can't
-  // await, so this is best-effort — the debounce is short enough that it rarely matters.
+  // await, so that one is best-effort.
+  //
+  // The listeners are registered once and reach flush through a ref. Depending on `flush`
+  // directly would re-run this effect whenever its identity changed, and the cleanup would
+  // fire a save on every render — which is exactly the write storm the idle timer exists to
+  // prevent.
+  const flushRef = useRef(flush);
+  flushRef.current = flush;
+
   useEffect(() => {
     const onHide = () => {
-      if (document.visibilityState === 'hidden') void flush();
+      if (document.visibilityState === 'hidden') void flushRef.current();
     };
-    const onUnload = () => void flush();
+    const onUnload = () => void flushRef.current();
     document.addEventListener('visibilitychange', onHide);
     window.addEventListener('beforeunload', onUnload);
     return () => {
       document.removeEventListener('visibilitychange', onHide);
       window.removeEventListener('beforeunload', onUnload);
-      void flush();
+      void flushRef.current();
     };
-  }, [flush]);
+  }, []);
 
-  return { noteChange, adopt, flush, state, lastSavedAt };
+  return { noteChange, adopt, flush, state, lastSavedAt, isDirty };
 }

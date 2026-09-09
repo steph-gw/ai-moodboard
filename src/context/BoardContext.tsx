@@ -80,6 +80,8 @@ interface BoardContextValue {
   currentUserId: string;
   undo: () => void;
   isLoading: boolean;
+  isDirty: boolean;
+  saveNow: () => Promise<void>;
   saveState: import('../embed/useSlideSaver').SaveState;
   lockedSlideIds: ReadonlySet<string>;
   beginInteraction: () => void;
@@ -189,10 +191,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     boardRef,
     versionsRef,
     onError,
-    onConflict: () => {
+    onConflict: useCallback(() => {
       onError('Someone else edited this slide. Reloading so their changes are not lost.');
       void loadBoardRef.current?.();
-    },
+    }, [onError]),
   });
 
   // The saver is a fresh object each render. Reading it through a ref keeps commit(),
@@ -285,6 +287,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   );
 
   const setActiveSectionId = useCallback((id: string) => {
+    // Leaving a section is a natural boundary — write now rather than waiting out the idle
+    // timer, so navigating away can never strand an edit.
+    void saverRef.current.flush();
     setActiveSectionIdState(id);
     const slides = getActiveSectionSlides(board, id);
     if (slides.length > 0) {
@@ -1009,6 +1014,13 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     const handleKeyDown = (e: KeyboardEvent) => {
       const typing = isTypingTarget(e.target);
 
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        // The browser's Save Page dialog is never what someone wants here.
+        e.preventDefault();
+        void saverRef.current.flush();
+        return;
+      }
+
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         if (typing) return;
         e.preventDefault();
@@ -1050,7 +1062,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         activeSectionId,
         setActiveSectionId,
         activeSlideId,
-        setActiveSlideId,
+        setActiveSlideId: (id: string) => {
+          void saverRef.current.flush();
+          setActiveSlideId(id);
+        },
         activeSlide,
         selectedElementId,
         selectedCommentPinId,
@@ -1080,6 +1095,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         undo,
         isLoading,
         saveState: saver.state,
+        isDirty: saver.isDirty,
+        saveNow: saver.flush,
         lockedSlideIds,
         beginInteraction,
         endInteraction,

@@ -69,3 +69,27 @@
   font-size: 13px;
   letter-spacing: 0.02em;
 }
+
+/* Save state, in the top nav. Quiet when saved, actionable when not. */
+.gw-mb .save-status {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+.gw-mb button.save-status {
+  cursor: pointer;
+}
+.gw-mb .save-status.is-dirty {
+  color: var(--gold-active);
+}
+.gw-mb .save-status.is-dirty:hover {
+  background: var(--gold-light);
+}
+.gw-mb .save-status.is-error {
+  color: #b04a3a;
+}

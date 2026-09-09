@@ -15,6 +15,7 @@ export function TopNav() {
     setCommentsOpen,
   } = useBoard();
   const { features, logoUrl } = useHost();
+  const { isDirty, saveState, saveNow } = useBoard();
   const isPlanner = role === 'planner';
 
   return (
@@ -30,6 +31,7 @@ export function TopNav() {
         <span className="topnav-date">{formatEventDate(board.weddingDate)}</span>
       </div>
       <div className="topnav-right">
+        <SaveStatus isDirty={isDirty} state={saveState} onSave={saveNow} />
         <div className="viewer-stack">
           {board.viewers.map((v) => (
             <div key={v.id} className="viewer-avatar" data-tooltip={v.name}>
@@ -87,4 +89,35 @@ export function TopNav() {
       </div>
     </header>
   );
+}
+
+/**
+ * The board saves on idle and on navigation rather than on every edit, which keeps Bubble
+ * writes down — so it has to say so, or "I moved something 20 seconds ago" feels unsaved.
+ */
+function SaveStatus({
+  isDirty,
+  state,
+  onSave,
+}: {
+  isDirty: boolean;
+  state: 'idle' | 'saving' | 'error' | 'conflict';
+  onSave: () => Promise<void>;
+}) {
+  if (state === 'saving') return <span className="save-status">Saving…</span>;
+  if (state === 'error') {
+    return (
+      <button type="button" className="save-status is-error" onClick={() => void onSave()}>
+        Save failed — retry
+      </button>
+    );
+  }
+  if (isDirty) {
+    return (
+      <button type="button" className="save-status is-dirty" onClick={() => void onSave()} data-tooltip="Save now (⌘S)">
+        Unsaved changes
+      </button>
+    );
+  }
+  return <span className="save-status">Saved</span>;
 }
