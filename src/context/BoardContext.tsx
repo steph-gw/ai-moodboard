@@ -168,6 +168,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     identity,
     onError,
     uploadFile,
+    onStateChange,
+    onLoaded,
   } = useHost();
   // With no moodboard to open, run on the seed board so the dev harness and a bare
   // element still show something rather than an empty shell.
@@ -237,17 +239,30 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         loaded.sections.some((s) => s.slides.some((sl) => sl.id === id)) ? id : first?.slides[0]?.id ?? ''
       );
       setSelectedElementId(null);
+      onLoaded?.();
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Could not load the moodboard.');
     } finally {
       setIsLoading(false);
     }
-  }, [repo, identity, onError]);
+  }, [repo, identity, onError, onLoaded]);
   loadBoardRef.current = loadBoard;
 
   useEffect(() => {
     void loadBoard();
   }, [loadBoard]);
+
+  // Mirrors the state Bubble can bind to. Kept in an effect so the host is told once per
+  // settled render rather than once per intermediate state during a load.
+  useEffect(() => {
+    onStateChange?.({
+      activeSectionId,
+      activeSlideId,
+      isDirty: saver.isDirty,
+      isSaving: saver.state === 'saving',
+      isLoading,
+    });
+  }, [onStateChange, activeSectionId, activeSlideId, saver.isDirty, saver.state, isLoading]);
 
   /**
    * Re-reads the board when the tab regains focus, so what's on screen is always current.

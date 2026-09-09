@@ -34,8 +34,12 @@ const uploadFile = (file: File) =>
 // save loop, the version guard and the row mapping are all the production code paths.
 const devApi = new DevBubbleApi();
 const devRepo = new BoardRepo(devApi);
+// Mirrors what the Bubble element publishes as states, so the host-facing contract is
+// exercised here rather than first discovered inside the plugin.
+const hostView = { state: null as unknown, loadedCount: 0 };
 (window as unknown as { gwDev: unknown }).gwDev = {
   api: devApi,
+  hostView,
   reset: () => { devApi.reset(); location.reload(); },
 };
 
@@ -51,6 +55,8 @@ const id = GWMoodboard.mount(el, {
   eventDate: '2026-06-14',
   uploadFile,
   onError: (m) => console.error('[host]', m),
+  onStateChange: (state) => { hostView.state = state; },
+  onLoaded: () => { hostView.loadedCount++; },
 }, devRepo);
 
 document.getElementById('role-switch')?.addEventListener('click', (e) => {

@@ -47,6 +47,18 @@ export interface GWMoodboardProps {
   /** Uploads a file and resolves with a durable URL. Rejecting cancels the insert. */
   uploadFile?: (file: File) => Promise<string>;
   onError?: (message: string) => void;
+  /** Fires whenever the host-visible state changes, for publishing to plugin states. */
+  onStateChange?: (state: BoardState) => void;
+  /** Fires once the board has loaded. */
+  onLoaded?: () => void;
+}
+
+export interface BoardState {
+  activeSectionId: string;
+  activeSlideId: string;
+  isDirty: boolean;
+  isSaving: boolean;
+  isLoading: boolean;
 }
 
 export interface GWMoodboardApi {

@@ -17,6 +17,8 @@ export interface HostServices {
   portalHost: HTMLElement;
   uploadFile: (file: File) => Promise<string>;
   onError: (message: string) => void;
+  onStateChange?: (state: import('./types').BoardState) => void;
+  onLoaded?: () => void;
   /** null when no moodboardId was supplied — the app then runs on seed data. */
   repo: BoardRepo | null;
   identity: BoardIdentity | null;
@@ -59,6 +61,8 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
     features,
     uploadFile,
     onError,
+    onStateChange,
+    onLoaded,
     moodboardId,
     eventName,
     eventDate,
@@ -96,6 +100,8 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
       onError: onError ?? ((message: string) => console.error('[gw-moodboard]', message)),
       repo,
       identity,
+      onStateChange,
+      onLoaded,
     }),
     [
       currentUserId,
@@ -111,6 +117,8 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
       onError,
       repo,
       identity,
+      onStateChange,
+      onLoaded,
     ]
   );
 
