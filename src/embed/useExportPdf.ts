@@ -1,25 +1,23 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 /**
- * PDF export, by printing a popup window.
+ * PDF export: print the page itself, with a print stylesheet that hides everything except
+ * the export sheet.
  *
- * The app used to do this with a `@media print` block that hid every sibling of the export
- * sheet — fine when the app owned the page, fatal inside Bubble, where it would blank the
- * host's own chrome. A separate window owns its document outright, so nothing on the host
- * page is touched.
+ * This is the original approach, restored. It was briefly replaced with a printed iframe
+ * because `body > *:not(...) { display: none }` looked like it would blank Bubble's own
+ * page — but that rule lives inside `@media print`, so it only applies while printing,
+ * which is precisely when everything but the slides *should* be hidden. The iframe version
+ * also silently lost the page size: Chrome takes `@page` from the top-level document, so
+ * every slide came out on portrait Letter with its right-hand side clipped.
  *
- * It's a popup rather than a hidden iframe because **Chrome takes the page size from the
- * top-level document**. `@page { size: 10in 5.625in }` inside a printed iframe is ignored,
- * and every slide lands on a portrait Letter page with its right-hand side clipped off. A
- * popup is top-level, so the page box is the slide.
- *
- * Deliberately not html2canvas + jsPDF: board images are cross-origin (S3, Unsplash), and
- * html2canvas silently renders blanks or taints the canvas without correct CORS headers on
- * every single one. The browser's own print engine has no such restriction, keeps text
- * vector and selectable, and adds no runtime dependencies.
+ * The print rules live in embed.css, which is concatenated unprefixed — `body > *` must not
+ * be rewritten to `.gw-mb body > *` by the scoping pass.
  */
 
 const RENDER_TIMEOUT_MS = 15_000;
+/** Marks the one body child the print stylesheet keeps visible. */
+export const EXPORT_ROOT_CLASS = 'gw-mb-export';
 
 export interface PdfExport {
   /** Where the export sheet should portal to, or null when not exporting. */
@@ -31,64 +29,46 @@ export interface PdfExport {
 export function useExportPdf(onError: (message: string) => void): PdfExport {
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const [isExporting, setIsExporting] = useState(false);
-  const winRef = useRef<Window | null>(null);
-  const frameRef = useRef<HTMLIFrameElement | null>(null);
+  const hostRef = useRef<HTMLElement | null>(null);
 
   const cleanup = useCallback(() => {
     setTarget(null);
     setIsExporting(false);
-    winRef.current?.close();
-    winRef.current = null;
-    frameRef.current?.remove();
-    frameRef.current = null;
+    hostRef.current?.remove();
+    hostRef.current = null;
   }, []);
 
+  // afterprint fires on the window, and print() blocks, so the listener has to be in place
+  // before the dialog opens rather than registered around the call.
+  useEffect(() => {
+    const onAfterPrint = () => {
+      if (hostRef.current) cleanup();
+    };
+    window.addEventListener('afterprint', onAfterPrint);
+    return () => window.removeEventListener('afterprint', onAfterPrint);
+  }, [cleanup]);
+
   const exportPdf = useCallback(async () => {
-    if ((winRef.current && !winRef.current.closed) || frameRef.current) return;
+    if (hostRef.current) return;
     setIsExporting(true);
 
     try {
-      // Opened synchronously from the click, or the popup blocker takes it.
-      const popup = window.open('', 'gw-moodboard-export', 'width=1024,height=640');
-      let win: Window;
+      // A direct child of body, so the print stylesheet's `body > *` rule can single it
+      // out. It carries .gw-mb too, or none of the app's styles would match inside it.
+      const host = document.createElement('div');
+      host.className = `gw-mb ${EXPORT_ROOT_CLASS}`;
+      document.body.appendChild(host);
+      hostRef.current = host;
 
-      if (popup) {
-        winRef.current = popup;
-        win = popup;
-      } else {
-        // Blocked. An iframe still prints the right content, but Chrome takes the page
-        // size from the top-level document, so the slide lands on default paper instead
-        // of a 960x540 landscape page. Better than nothing, and worth saying out loud.
-        const frame = document.createElement('iframe');
-        frame.setAttribute('aria-hidden', 'true');
-        frame.style.cssText = 'position:fixed;left:-10000px;top:0;width:960px;height:540px;border:0;';
-        document.body.appendChild(frame);
-        frameRef.current = frame;
-        if (!frame.contentWindow) throw new Error('Could not open a document to print into.');
-        win = frame.contentWindow;
-        onError(
-          'Pop-ups are blocked, so the PDF will use your default paper size. Allow pop-ups for this site to get proper landscape slides.'
-        );
-      }
-
-      const doc = win.document;
-      doc.open();
-      doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>Moodboard</title>${headTags()}</head><body class="gw-mb"></body></html>`);
-      doc.close();
-
-      // Handing React the popup's body makes it a portal destination inside the existing
-      // component tree, so the export sheet still sees board state and host context. A
-      // separate React root would see neither.
-      setTarget(doc.body);
+      setTarget(host);
       await nextPaint();
+      await Promise.all([waitForImages(document), document.fonts?.ready].filter(Boolean));
 
-      await Promise.all([waitForImages(doc), doc.fonts?.ready].filter(Boolean));
-
-      win.addEventListener('afterprint', cleanup, { once: true });
-      // Some browsers never fire afterprint; don't strand the window if so.
-      setTimeout(cleanup, 120_000);
-      win.focus();
-      win.print();
+      window.print();
+      // Some browsers never fire afterprint; don't leave the sheet in the DOM if so.
+      setTimeout(() => {
+        if (hostRef.current) cleanup();
+      }, 1000);
     } catch (err) {
       cleanup();
       onError(err instanceof Error ? err.message : 'Could not prepare the PDF.');
@@ -98,41 +78,6 @@ export function useExportPdf(onError: (message: string) => void): PdfExport {
   return { target, isExporting, exportPdf };
 }
 
-/**
- * Reuses the stylesheet the page already loaded rather than duplicating the export rules,
- * so a change to the canvas styling can't silently stop applying to the printed version.
- */
-function headTags(): string {
-  const links = [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')]
-    .map((l) => `<link rel="stylesheet" href="${escapeAttr(l.href)}">`)
-    .join('');
-
-  return `${links}<style>
-    /* 960x540 at 96dpi. Chrome ignores px page sizes on some platforms; inches it doesn't. */
-    /* 960x540 at 96dpi — a landscape page the exact shape of the artboard. */
-    @page { size: 10in 5.625in; margin: 0; }
-    html, body { margin: 0; padding: 0; background: #fff; height: auto; overflow: visible; }
-    /* Browsers drop backgrounds when printing unless told otherwise, which would
-       flatten every coloured block on the board. */
-    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    /* The sheet is display:none in the app stylesheet, where it's only a hidden staging area. */
-    .export-sheet { display: block !important; }
-    .export-page { break-after: page; page-break-after: always; overflow: hidden; }
-    .export-page:last-child { break-after: auto; page-break-after: auto; }
-  </style>`;
-}
-
-function escapeAttr(value: string): string {
-  return value.replace(/"/g, '&quot;');
-}
-
-/**
- * Waits for React to have rendered into the iframe.
- *
- * Races a frame against a timer rather than trusting rAF alone: a background tab never
- * paints, so an export started and then tab-switched would wait forever with the button
- * stuck on "Preparing…".
- */
 function nextPaint(): Promise<void> {
   return new Promise((resolve) => {
     let done = false;
@@ -142,6 +87,7 @@ function nextPaint(): Promise<void> {
         resolve();
       }
     };
+    // A background tab never paints, so don't wait on a frame alone.
     requestAnimationFrame(() => requestAnimationFrame(finish));
     setTimeout(finish, 150);
   });
@@ -149,11 +95,8 @@ function nextPaint(): Promise<void> {
 
 /**
  * Printing before the images have loaded is the commonest cause of a PDF full of blank
- * frames, so this waits for every one — but never forever.
- *
- * Deliberately does not call `img.decode()`. It reads like the right API, but in an
- * offscreen or hidden document Chrome never settles that promise, so the export hangs until
- * the timeout below rescues it. `complete && naturalWidth > 0` is the reliable signal.
+ * frames. Deliberately does not use `img.decode()` — it reads like the right API, but
+ * Chrome never settles that promise for an offscreen document.
  */
 function waitForImages(doc: Document): Promise<void> {
   const settled = [...doc.images].map(
@@ -164,7 +107,6 @@ function waitForImages(doc: Document): Promise<void> {
           return;
         }
         img.addEventListener('load', () => resolve(), { once: true });
-        // A broken image shouldn't hold up the whole export.
         img.addEventListener('error', () => resolve(), { once: true });
       })
   );

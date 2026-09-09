@@ -95,3 +95,51 @@
 .gw-mb span.save-status {
   pointer-events: none;
 }
+
+/*
+ * Print: the page becomes the deck.
+ *
+ * Unprefixed on purpose — `body > *` must not be rewritten to `.gw-mb body > *` by the
+ * scoping pass, and these rules only apply while printing, so the host page is untouched
+ * on screen.
+ */
+@media print {
+  @page {
+    size: 960px 540px;
+    margin: 0;
+  }
+
+  html,
+  body {
+    height: auto;
+    overflow: visible;
+    background: #fff;
+  }
+
+  /* Everything except the export sheet, including whatever the host page renders. */
+  body > *:not(.gw-mb-export) {
+    display: none !important;
+  }
+
+  .gw-mb-export,
+  .gw-mb-export .export-sheet {
+    display: block !important;
+  }
+
+  .gw-mb-export .export-page {
+    break-after: page;
+    page-break-after: always;
+    overflow: hidden;
+  }
+
+  .gw-mb-export .export-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  /* Browsers drop backgrounds when printing unless told otherwise. */
+  .gw-mb-export * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}
