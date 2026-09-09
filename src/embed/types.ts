@@ -33,7 +33,8 @@ export interface GWMoodboardProps {
 
   currentUserId: string;
   currentUserName: string;
-  currentUserInitials: string;
+  /** Optional. Derived from currentUserName when blank. */
+  currentUserInitials?: string;
   role: UserRole;
 
   /** Blocks all board mutation regardless of role. */

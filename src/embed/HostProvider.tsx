@@ -85,7 +85,7 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
     () => ({
       currentUserId,
       currentUserName,
-      currentUserInitials,
+      currentUserInitials: currentUserInitials || initialsFrom(currentUserName),
       role,
       // Clients read the board; they still vote and comment, which don't go
       // through the board state at all.
@@ -123,4 +123,21 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
   );
 
   return <HostContext.Provider value={value}>{children}</HostContext.Provider>;
+}
+
+/**
+ * Initials for the avatar, from the name. The host can still pass its own — some people
+ * go by initials that their name doesn't spell — but it shouldn't have to store a field
+ * whose value is almost always the first letters of the name it already has.
+ *
+ * Takes the first letter of the first and last words, so "Mary-Jane van der Berg" gives
+ * MB rather than MV — the particles in the middle are not what anyone would write down.
+ * Falls back to the first two characters of a single word, and to nothing at all when the
+ * name is empty: a blank avatar reads better than a stray "?".
+ */
+function initialsFrom(name: string): string {
+  const words = (name ?? '').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return '';
+  if (words.length === 1) return [...words[0]].slice(0, 2).join('').toUpperCase();
+  return ([...words[0]][0] + [...words[words.length - 1]][0]).toUpperCase();
 }

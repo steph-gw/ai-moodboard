@@ -10,9 +10,11 @@ import type { UserRole } from './types';
 const el = document.getElementById('board');
 if (!el) throw new Error('dev harness: #board missing');
 
-const PEOPLE: Record<UserRole, { id: string; name: string; initials: string }> = {
-  planner: { id: 'u-planner', name: 'Stephanie Chang', initials: 'SC' },
-  client: { id: 'u-client', name: 'Alexander Lee', initials: 'AL' },
+// No initials here on purpose: the bundle derives them from the name, and the harness
+// should exercise the path Bubble actually uses.
+const PEOPLE: Record<UserRole, { id: string; name: string }> = {
+  planner: { id: 'u-planner', name: 'Stephanie Chang' },
+  client: { id: 'u-client', name: 'Alexander Lee' },
 };
 
 let role: UserRole = 'planner';
@@ -47,7 +49,6 @@ const id = GWMoodboard.mount(el, {
   ...PEOPLE[role],
   currentUserId: PEOPLE[role].id,
   currentUserName: PEOPLE[role].name,
-  currentUserInitials: PEOPLE[role].initials,
   role,
   logoUrl: './gatherwise-logo.png',
   moodboardId: DEV_MOODBOARD_ID,
@@ -67,8 +68,7 @@ document.getElementById('role-switch')?.addEventListener('click', (e) => {
     role,
     currentUserId: PEOPLE[role].id,
     currentUserName: PEOPLE[role].name,
-    currentUserInitials: PEOPLE[role].initials,
-  });
+    });
   document
     .querySelectorAll('#role-switch button')
     .forEach((b) => b.classList.toggle('on', (b as HTMLElement).dataset.role === role));
