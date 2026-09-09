@@ -49,39 +49,49 @@ Plugin editor → **Elements** → New element.
 ## 3. Fields
 
 Names are the `properties.<key>` keys `element_update.js` reads — they must match
-exactly.
+exactly. Every field carries a one-line Documentation string, which the app's property
+editor shows as help text.
 
-| Name | Key | Type | Default | Bind to |
+**Editor type matters.** *Static text* fields take a literal string and nothing else —
+no dynamic-expression composer, so they cannot be bound to anything. Every field that
+has to read from the page is *Dynamic value*; only the feature flags, which are
+editor-time toggles rather than data, stay checkboxes.
+
+| Name | Key | Editor | Default | Bind to |
 |---|---|---|---|---|
-| Moodboard id | `moodboard_id` | text | — | `Current page Event's Moodboard's unique id` |
-| Event name | `event_name` | text | — | `Current page Event's Name` |
-| Event date | `event_date` | date | — | `Current page Event's Date` |
-| Current user id | `current_user_id` | text | — | `Current User's unique id` |
-| Current user name | `current_user_name` | text | — | `Current User's Name` |
-| Current user initials | `current_user_initials` | text | — | `Current User's Initials` |
-| Is planner | `is_planner` | checkbox | no | `Current User's Business is not empty` |
-| Read only | `read_only` | checkbox | no | — |
-| Logo url | `logo_url` | text | — | your wordmark's file URL |
-| Height css | `height_css` | text | `100%` | — |
-| API base | `api_base` | text | *(blank)* | leave blank |
-| Auth token | `auth_token` | text | *(blank)* | leave blank |
-| Show pinterest | `show_pinterest` | checkbox | **no** | — |
-| Show AI summarize | `show_ai_summarize` | checkbox | **no** | — |
-| Show suggestions | `show_suggestions` | checkbox | **no** | — |
-| Enable present | `enable_present` | checkbox | **yes** | — |
-| Enable export | `enable_export` | checkbox | **yes** | — |
-| Enable voting | `enable_voting` | checkbox | no | phase 8 |
-| Enable comments | `enable_comments` | checkbox | no | phase 7 |
+| Moodboard id | `moodboard_id` | Dynamic value / text | — | `Current page Event's Moodboard's unique id` |
+| Event name | `event_name` | Dynamic value / text | — | `Current page Event's Name` |
+| Event date | `event_date` | Dynamic value / date | — | `Current page Event's Date` |
+| Current user id | `current_user_id` | Dynamic value / text | — | `Current User's unique id` |
+| Current user name | `current_user_name` | Dynamic value / text | — | `Current User's Name` |
+| Current user initials | `current_user_initials` | Dynamic value / text | — | `Current User's Initials` |
+| Is planner | `is_planner` | Dynamic value / yes-no | — | `Current User's Business is not empty` |
+| Read only | `read_only` | Dynamic value / yes-no | — | — |
+| Logo url | `logo_url` | Dynamic value / text | — | your wordmark's file URL |
+| Height css | `height_css` | Dynamic value / text | `100%` | — |
+| API base | `api_base` | Dynamic value / text | — | leave blank |
+| Auth token | `auth_token` | Dynamic value / text | — | leave blank |
+| Show pinterest | `show_pinterest` | Checkbox | **no** | — |
+| Show AI summarize | `show_ai_summarize` | Checkbox | **no** | — |
+| Show suggestions | `show_suggestions` | Checkbox | **no** | — |
+| Enable present | `enable_present` | Checkbox | **yes** | — |
+| Enable export | `enable_export` | Checkbox | **yes** | — |
+| Enable voting | `enable_voting` | Checkbox | no | phase 8 |
+| Enable comments | `enable_comments` | Checkbox | no | phase 7 |
 
-`api_base` and `auth_token` stay blank: the plugin runs same-origin, so the
-session cookie authenticates it and the base URL is derived from the page's own
-`/version-test` prefix. They exist as an escape hatch if the board ever has to
-run off-domain.
+Every Dynamic value field is marked **Optional** except `Moodboard id`. Optional keeps
+Bubble's issue checker from blocking the page over a field you haven't got round to;
+`Moodboard id` stays required on purpose, so an unbound one is flagged in the editor
+rather than silently loading the sample board.
 
-The three feature flags default to **no** because the code behind them isn't
-real yet — the Pinterest picker is a static Unsplash list and "Summarize vision"
-is a hardcoded string on a timer. The code is all still in the bundle; these
-decide whether it's reachable.
+`api_base` and `auth_token` stay blank: the plugin runs same-origin, so the session
+cookie authenticates it and the base URL is derived from the page's own `/version-test`
+prefix. They exist as an escape hatch if the board ever has to run off-domain.
+
+The three feature flags default to **no** because the code behind them isn't real yet —
+the Pinterest picker is a static Unsplash list and "Summarize vision" is a hardcoded
+string on a timer. The code is all still in the bundle; these decide whether it's
+reachable.
 
 ## 4. States
 
