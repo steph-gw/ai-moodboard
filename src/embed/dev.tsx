@@ -17,10 +17,18 @@ const PEOPLE: Record<UserRole, { id: string; name: string; initials: string }> =
 
 let role: UserRole = 'planner';
 
-// Local stand-in for Bubble's context.uploadContent. Object URLs die on reload,
-// which is exactly the behaviour the real host has to replace.
+/**
+ * Stand-in for Bubble's context.uploadContent. Returns a data URL rather than an object
+ * URL: an object URL dies with the page, so an upload would look fine and then vanish on
+ * reload — the exact bug this phase exists to remove, hidden by the harness.
+ */
 const uploadFile = (file: File) =>
-  new Promise<string>((resolve) => setTimeout(() => resolve(URL.createObjectURL(file)), 400));
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => setTimeout(() => resolve(String(reader.result)), 300);
+    reader.onerror = () => reject(new Error('Could not read that file.'));
+    reader.readAsDataURL(file);
+  });
 
 // Talks to a localStorage-backed stand-in for Bubble, through the real repo — so the
 // save loop, the version guard and the row mapping are all the production code paths.

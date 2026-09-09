@@ -8,7 +8,8 @@ export function CanvasToolbar() {
     addTextElement,
     setShowSuggestionsPanel,
     showSuggestionsPanel,
-    addUploadedImage,
+    uploadAndAddImage,
+    isUploading,
     undo,
     canUndo,
   } = useBoard();
@@ -19,7 +20,8 @@ export function CanvasToolbar() {
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    addUploadedImage(URL.createObjectURL(file));
+    void uploadAndAddImage(file);
+    // Cleared so picking the same file twice still fires a change event.
     e.target.value = '';
   };
 
@@ -53,8 +55,9 @@ export function CanvasToolbar() {
           type="button"
           className="btn-ghost btn-sm"
           onClick={() => fileInputRef.current?.click()}
+          disabled={isUploading}
         >
-          Upload
+          {isUploading ? 'Uploading…' : 'Upload'}
         </button>
         <input
           ref={fileInputRef}

@@ -117,7 +117,10 @@ interface BoardContextValue {
   showSuggestionsPanel: boolean;
   setShowSuggestionsPanel: (show: boolean) => void;
   getImageById: (imageId: string) => BoardImage | undefined;
-  addUploadedImage: (url: string, tags?: string[]) => void;
+  addUploadedImage: (url: string, tags?: string[], id?: string) => void;
+  /** Uploads a file to the host's storage and places it on the active slide. */
+  uploadAndAddImage: (file: File, tags?: string[]) => Promise<void>;
+  isUploading: boolean;
 }
 
 const BoardContext = createContext<BoardContextValue | null>(null);
@@ -155,8 +158,17 @@ const EMPTY_BOARD: Board = {
 };
 
 export function BoardProvider({ children }: { children: ReactNode }) {
-  const { role, currentUserId, currentUserName, currentUserInitials, rootEl, repo, identity, onError } =
-    useHost();
+  const {
+    role,
+    currentUserId,
+    currentUserName,
+    currentUserInitials,
+    rootEl,
+    repo,
+    identity,
+    onError,
+    uploadFile,
+  } = useHost();
   // With no moodboard to open, run on the seed board so the dev harness and a bare
   // element still show something rather than an empty shell.
   const [board, setBoard] = useState<Board>(repo ? EMPTY_BOARD : mockBoard);
@@ -415,6 +427,11 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   );
 
   const deleteElement = useCallback((slideId: string, elementId: string) => {
+    const removed = boardRef.current.sections
+      .flatMap((s) => s.slides)
+      .find((s) => s.id === slideId)
+      ?.elements.find((el) => el.id === elementId);
+
     commit((prev) => ({
       ...prev,
       sections: prev.sections.map((section) => ({
@@ -429,7 +446,23 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       })),
     }));
     setSelectedElementId(null);
-  }, [commit]);
+
+    // Mark the image unused once nothing places it any more. The file itself is never
+    // deleted — undo reaches back 60 steps, and it would resurrect an element pointing at
+    // something that no longer exists.
+    if (repo && removed?.type === 'image') {
+      const stillPlaced = boardRef.current.sections
+        .flatMap((s) => s.slides)
+        .flatMap((s) => s.elements)
+        .some((el) => el.type === 'image' && el.imageId === removed.imageId);
+      if (!stillPlaced) {
+        void repo.retireImage(removed.imageId).catch(() => {
+          // Cosmetic bookkeeping — a board that shows a removed image in its library is
+          // not worth interrupting the user for.
+        });
+      }
+    }
+  }, [commit, repo]);
 
   const restack = useCallback(
     (slideId: string, elementId: string, edge: 'front' | 'back') => {
@@ -954,10 +987,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   }, [commit]);
 
   const addUploadedImage = useCallback(
-    (url: string, tags: string[] = ['Uploaded']) => {
+    (url: string, tags: string[] = ['Uploaded'], id?: string) => {
       if (!activeSlide || !activeSlideId) return;
 
-      const imageId = `img-${Date.now()}`;
+      const imageId = id ?? `img-${Date.now()}`;
       const newImage: BoardImage = {
         id: imageId,
         sectionId: activeSectionId,
@@ -988,6 +1021,33 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     },
     [activeSlide, activeSlideId, activeSectionId, commit]
   );
+
+  const [isUploading, setIsUploading] = useState(false);
+
+  /**
+   * Uploads a file to Bubble's storage and places it on the active slide.
+   *
+   * The file has to reach real storage before anything is added to the board. The old code
+   * put a `URL.createObjectURL` blob straight into board state — fine on screen, but the
+   * moment that got saved the board held a URL that dies with the page, and the image was
+   * gone for good on the next reload.
+   */
+  const uploadAndAddImage = useCallback(
+    async (file: File, tags: string[] = ['Uploaded']) => {
+      setIsUploading(true);
+      try {
+        const url = await uploadFile(file);
+        const id = repo && identity ? await repo.createImage(identity.moodboardId, url) : undefined;
+        addUploadedImage(url, tags, id);
+      } catch (err) {
+        onError(err instanceof Error ? err.message : 'Could not upload that image.');
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [uploadFile, repo, identity, addUploadedImage, onError]
+  );
+
 
   const cutSelection = useCallback(
     (writeClipboard: (text: string) => void): boolean => {
@@ -1069,7 +1129,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         if (file) {
           e.preventDefault();
           cutRef.current = null;
-          addUploadedImage(URL.createObjectURL(file), ['Pasted']);
+          void uploadAndAddImage(file, ['Pasted']);
           return;
         }
       }
@@ -1210,6 +1270,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         setShowSuggestionsPanel: showSuggestionsPanelExclusive,
         getImageById,
         addUploadedImage,
+        uploadAndAddImage,
+        isUploading,
       }}
     >
       {children}
