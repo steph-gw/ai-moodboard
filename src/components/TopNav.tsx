@@ -15,7 +15,7 @@ export function TopNav() {
     setCommentsOpen,
   } = useBoard();
   const { features, logoUrl } = useHost();
-  const { isDirty, saveState, saveNow } = useBoard();
+  const { isDirty, saveState, saveNow, exportPdf, isExporting } = useBoard();
   const isPlanner = role === 'planner';
 
   return (
@@ -69,10 +69,11 @@ export function TopNav() {
           <button
             type="button"
             className="btn-ghost btn-sm"
-            onClick={() => window.print()}
+            onClick={() => void exportPdf()}
+            disabled={isExporting}
           >
             <Download size={13} strokeWidth={1.5} />
-            Export PDF
+            {isExporting ? 'Preparing…' : 'Export PDF'}
           </button>
         )}
         {features.summarizeVision && (

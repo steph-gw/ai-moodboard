@@ -31,6 +31,7 @@ import {
 import { inferSectionIcon } from '../utils/sectionIcons';
 import { useHost } from '../embed/HostProvider';
 import { useSlideSaver } from '../embed/useSlideSaver';
+import { useExportPdf } from '../embed/useExportPdf';
 import type { SlideVersions } from '../embed/boardRepo';
 
 const HISTORY_LIMIT = 60;
@@ -80,6 +81,9 @@ interface BoardContextValue {
   currentUserId: string;
   undo: () => void;
   isLoading: boolean;
+  exportPdf: () => Promise<void>;
+  isExporting: boolean;
+  exportTarget: HTMLElement | null;
   isDirty: boolean;
   saveNow: () => Promise<void>;
   saveState: import('../embed/useSlideSaver').SaveState;
@@ -182,6 +186,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
   const versionsRef = useRef<SlideVersions>(new Map());
   const [lockedSlideIds, setLockedSlideIds] = useState<ReadonlySet<string>>(new Set());
+  const pdf = useExportPdf(onError);
 
   // Declared before the saver, which closes over it to reload after a conflict.
   const loadBoardRef = useRef<(() => Promise<void>) | null>(null);
@@ -1094,6 +1099,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         currentUserId,
         undo,
         isLoading,
+        exportPdf: pdf.exportPdf,
+        isExporting: pdf.isExporting,
+        exportTarget: pdf.target,
         saveState: saver.state,
         isDirty: saver.isDirty,
         saveNow: saver.flush,

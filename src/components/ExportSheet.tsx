@@ -1,10 +1,8 @@
-import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBoard } from '../context/BoardContext';
 import type { CanvasElement } from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 import { textFontCss } from '../utils/textFonts';
-import { useHost } from '../embed/HostProvider';
 
 /**
  * One slide element, rendered flat at full size — no selection chrome, comment
@@ -64,20 +62,16 @@ function StaticElement({
  * Hidden on screen; the print stylesheet hides the app and reveals this, so
  * "Save as PDF" in the browser's print dialog yields a slides-only deck.
  */
-export function ExportSheet() {
+export function ExportSheet({ target }: { target: HTMLElement | null }) {
   const { board, getImageById } = useBoard();
-  const { portalHost } = useHost();
-  // Portals need a DOM, and this one renders on every page load, so wait for
-  // the client rather than reaching for document during SSR.
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
 
   const pages = board.sections.flatMap((section) =>
     section.slides.map((slide) => ({ key: `${section.id}-${slide.id}`, slide }))
   );
 
-  if (!mounted) return null;
+  // Only mounted during an export. Rendering it permanently meant every slide's images
+  // loading on page load, hidden, for a feature most visits never use.
+  if (!target) return null;
 
   return createPortal(
     <div className="export-sheet" aria-hidden>
@@ -103,6 +97,6 @@ export function ExportSheet() {
         </div>
       ))}
     </div>,
-    portalHost
+    target
   );
 }

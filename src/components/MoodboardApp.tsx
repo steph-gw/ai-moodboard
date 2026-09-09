@@ -14,7 +14,7 @@ import type { BoardRepo } from '../embed/boardRepo';
 import type { GWMoodboardProps } from '../embed/types';
 
 function MoodboardShell() {
-  const { isPresenting, isLoading } = useBoard();
+  const { isPresenting, isLoading, exportTarget } = useBoard();
   const { features } = useHost();
 
   if (isLoading) {
@@ -37,7 +37,7 @@ function MoodboardShell() {
       </div>
       {!isPresenting && features.comments && <CommentWidget />}
       {isPresenting && <PresentOverlay />}
-      <ExportSheet />
+      <ExportSheet target={exportTarget} />
     </div>
   );
 }
