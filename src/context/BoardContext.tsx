@@ -250,6 +250,33 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   }, [loadBoard]);
 
   /**
+   * Re-reads the board when the tab regains focus.
+   *
+   * The workflow is a handoff, not concurrent editing: the planner does a pass, the client
+   * reviews days later. The failure that causes is a tab left open across the handoff —
+   * you come back to Monday's board, and your first edit trips the version check and
+   * reloads underneath you. Refreshing on return keeps that from happening.
+   *
+   * Skipped while there are unsaved edits, since a reload would discard them, and while a
+   * save is in flight. Costs three reads only when someone actually comes back to the tab,
+   * and nothing at all while it sits idle.
+   */
+  useEffect(() => {
+    if (!repo) return;
+    const refresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (saverRef.current.isDirty || saverRef.current.state === 'saving') return;
+      void loadBoardRef.current?.();
+    };
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('focus', refresh);
+    };
+  }, [repo]);
+
+  /**
    * Wraps a structural change — adding, renaming or removing a section or slide.
    *
    * Unlike canvas edits these are rare and deliberate, so they write immediately rather
