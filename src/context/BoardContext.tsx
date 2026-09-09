@@ -250,29 +250,37 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   }, [loadBoard]);
 
   /**
-   * Re-reads the board when the tab regains focus.
+   * Re-reads the board when the tab regains focus, so what's on screen is always current.
    *
-   * The workflow is a handoff, not concurrent editing: the planner does a pass, the client
-   * reviews days later. The failure that causes is a tab left open across the handoff —
-   * you come back to Monday's board, and your first edit trips the version check and
-   * reloads underneath you. Refreshing on return keeps that from happening.
+   * The workflow is a handoff: the planner does a pass, the client reviews days later. A tab
+   * left open across that handoff would otherwise still be showing Monday's board.
    *
-   * Skipped while there are unsaved edits, since a reload would discard them, and while a
-   * save is in flight. Costs three reads only when someone actually comes back to the tab,
-   * and nothing at all while it sits idle.
+   * Unsaved edits are written first rather than skipped. Saving happens at boundaries, so
+   * returning to a tab with work still only in the browser is normal — reloading over it
+   * would throw that work away, but refusing to reload would leave the board stale. Writing
+   * first resolves both, and costs nothing extra: it's the same save the next boundary would
+   * have made, just sooner.
    */
   useEffect(() => {
     if (!repo) return;
-    const refresh = () => {
-      if (document.visibilityState !== 'visible') return;
-      if (saverRef.current.isDirty || saverRef.current.state === 'saving') return;
-      void loadBoardRef.current?.();
+    let running = false;
+    const refresh = async () => {
+      if (document.visibilityState !== 'visible' || running) return;
+      running = true;
+      try {
+        // Waits for any in-flight save too, so a reload can't land on top of one.
+        await saverRef.current.flush();
+        await loadBoardRef.current?.();
+      } finally {
+        running = false;
+      }
     };
-    document.addEventListener('visibilitychange', refresh);
-    window.addEventListener('focus', refresh);
+    const onEvent = () => void refresh();
+    document.addEventListener('visibilitychange', onEvent);
+    window.addEventListener('focus', onEvent);
     return () => {
-      document.removeEventListener('visibilitychange', refresh);
-      window.removeEventListener('focus', refresh);
+      document.removeEventListener('visibilitychange', onEvent);
+      window.removeEventListener('focus', onEvent);
     };
   }, [repo]);
 
