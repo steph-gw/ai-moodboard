@@ -64,7 +64,7 @@ editor-time toggles rather than data, stay checkboxes.
 | Event date | `event_date` | Dynamic value / date | — | `Current page Event's Date` |
 | Current user id | `current_user_id` | Dynamic value / text | — | `Current User's unique id` |
 | Current user name | `current_user_name` | Dynamic value / text | — | `Current User's Name` |
-| Current user initials | `current_user_initials` | Dynamic value / text | — | `Current User's Initials` |
+| Current user initials | `current_user_initials` | Dynamic value / text | — | leave blank — derived from the name |
 | Is planner | `is_planner` | Dynamic value / yes-no | — | `Current User's Business is not empty` |
 | Read only | `read_only` | Dynamic value / yes-no | — | — |
 | Logo url | `logo_url` | Dynamic value / text | — | your wordmark's file URL |
@@ -136,7 +136,10 @@ protocol-relative `//s3...` URL, which the adapter rewrites to `https:`.
 2. Drop `GW Moodboard` onto the event dashboard page inside a group with a
    **fixed or stretched height** — the element is `height: 100%`, so a parent
    with no resolved height collapses the canvas to a sliver.
-3. Bind the fields per the table above.
+3. Bind the fields per the table above. `Moodboard id` comes from the Event: add a
+   `Moodboard` field to your Event type, create the row on page load when it's empty,
+   and bind to `Current Page Event's Moodboard's unique id` — a stored reference rather
+   than a search that runs on every load and again per row in any list of events.
 
 ### One thing still unverified
 
