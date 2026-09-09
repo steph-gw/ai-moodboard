@@ -237,6 +237,34 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     void loadBoard();
   }, [loadBoard]);
 
+  /**
+   * Wraps a structural change — adding, renaming or removing a section or slide.
+   *
+   * Unlike canvas edits these are rare and deliberate, so they write immediately rather
+   * than waiting for the idle timer. Pending canvas edits are flushed first, or moving away
+   * from a slide as part of the change could strand them.
+   *
+   * The undo stack is cleared afterwards. Undo only rewinds local state, so letting someone
+   * undo past a change that has already been written to Bubble would show them a board that
+   * no longer matches the database — and the next reload would silently undo their undo.
+   */
+  const runStructural = useCallback(
+    async (write: () => Promise<void>): Promise<boolean> => {
+      await saverRef.current.flush();
+      try {
+        await write();
+      } catch (err) {
+        onError(err instanceof Error ? err.message : 'Could not save that change.');
+        // Local state and the database have diverged; the database wins.
+        await loadBoardRef.current?.();
+        return false;
+      }
+      setPast([]);
+      return true;
+    },
+    [onError]
+  );
+
   const commit = useCallback((updater: (prev: Board) => Board) => {
     const prev = boardRef.current;
     const next = updater(prev);
@@ -477,15 +505,30 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   }, [activeSlide, activeSectionId, activeSlideId, commit]);
 
   const addSection = useCallback(
-    (name: string, brief: string, icon?: string) => {
+    async (name: string, brief: string, icon?: string) => {
       const trimmed = name.trim();
       if (!trimmed) return;
-      const newId = `section-${Date.now()}`;
-      const firstSlideId = `slide-${newId}-1`;
+      const resolvedIcon = icon ?? inferSectionIcon(trimmed);
+      let newId = `section-${Date.now()}`;
+      let firstSlideId = `slide-${newId}-1`;
+
+      if (repo && identity) {
+        // Bubble mints the ids, so this has to round-trip before the section can be shown —
+        // inventing a local id and swapping it later would leave every reference to fix up.
+        const ok = await runStructural(async () => {
+          const order = boardRef.current.sections.length;
+          newId = await repo.createSection(identity.moodboardId, trimmed, resolvedIcon, order);
+          if (brief.trim()) await repo.updateSection(newId, { visionBrief: brief.trim() });
+          firstSlideId = await repo.createSlide(newId, 'Slide 1', 0);
+        });
+        // A failed create already triggered a reload; don't also add a phantom section.
+        if (!ok) return;
+      }
+
       const newSection: Section = {
         id: newId,
         name: trimmed,
-        icon: icon ?? inferSectionIcon(trimmed),
+        icon: resolvedIcon,
         status: 'none',
         visionBrief: brief.trim() || undefined,
         imageCount: 0,
@@ -506,7 +549,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       setSelectedCommentPinId(null);
       setPlacingComment(false);
     },
-    [commit]
+    [commit, repo, identity, runStructural]
   );
 
   const updateSection = useCallback(
@@ -539,8 +582,22 @@ export function BoardProvider({ children }: { children: ReactNode }) {
             : section
         ),
       }));
+
+      // Optimistic: these are single-field edits, and showing a rename instantly matters
+      // more than the small chance the write fails (which reloads and puts it right).
+      if (repo) {
+        void runStructural(() =>
+          repo.updateSection(sectionId, {
+            ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
+            ...(patch.icon !== undefined ? { icon: patch.icon } : {}),
+            ...(patch.visionBrief !== undefined ? { visionBrief: patch.visionBrief.trim() } : {}),
+            ...(patch.status !== undefined ? { status: patch.status } : {}),
+            ...(patch.approvedDate !== undefined ? { approvedDate: patch.approvedDate } : {}),
+          })
+        );
+      }
     },
-    [commit]
+    [commit, repo, runStructural]
   );
 
   const deleteSection = useCallback(
@@ -552,6 +609,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         sections: prev.sections.filter((s) => s.id !== sectionId),
         images: prev.images.filter((img) => img.sectionId !== sectionId),
       }));
+      // Archived, not deleted — its slides and their comments stay recoverable.
+      if (repo) void runStructural(() => repo.archiveSection(sectionId));
       if (activeSectionId === sectionId) {
         const next = remaining[0];
         setActiveSectionIdState(next.id);
@@ -561,15 +620,24 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         setPlacingComment(false);
       }
     },
-    [activeSectionId, commit]
+    [activeSectionId, commit, repo, runStructural]
   );
 
-  const addSlide = useCallback(() => {
-    const newId = `slide-${activeSectionId}-${Date.now()}`;
+  const addSlide = useCallback(async () => {
+    let newId = `slide-${activeSectionId}-${Date.now()}`;
+    const slideName = `Slide ${(activeSection?.slides.length ?? 0) + 1}`;
+
+    if (repo) {
+      const ok = await runStructural(async () => {
+        newId = await repo.createSlide(activeSectionId, slideName, activeSection?.slides.length ?? 0);
+      });
+      if (!ok) return;
+    }
+
     const newSlide: Slide = {
       id: newId,
       sectionId: activeSectionId,
-      name: `Slide ${(activeSection?.slides.length ?? 0) + 1}`,
+      name: slideName,
       elements: [],
       commentPins: [],
     };
@@ -583,7 +651,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     setActiveSlideId(newId);
     setSelectedElementId(null);
     setSelectedCommentPinId(null);
-  }, [activeSectionId, activeSection?.slides.length, commit]);
+  }, [activeSectionId, activeSection?.slides.length, commit, repo, runStructural]);
 
   const deleteSlide = useCallback(
     (slideId: string) => {
@@ -596,6 +664,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           return { ...section, slides };
         }),
       }));
+      if (repo) void runStructural(() => repo.deleteSlide(slideId));
       if (activeSlideId === slideId) {
         const remaining = activeSection.slides.filter((s) => s.id !== slideId);
         setActiveSlideId(remaining[0]?.id ?? '');
@@ -607,10 +676,22 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   );
 
   const duplicateSlide = useCallback(
-    (slideId: string) => {
+    async (slideId: string) => {
       const slide = activeSection?.slides.find((s) => s.id === slideId);
       if (!slide) return;
-      const newId = `slide-${activeSectionId}-${Date.now()}`;
+      let newId = `slide-${activeSectionId}-${Date.now()}`;
+
+      if (repo) {
+        const idx = activeSection?.slides.findIndex((s) => s.id === slideId) ?? 0;
+        const ok = await runStructural(async () => {
+          newId = await repo.createSlide(activeSectionId, `${slide.name} (copy)`, idx + 1);
+          // The copy's canvas is written here rather than left to the autosave, so a
+          // duplicate is complete the moment it appears.
+          await repo.saveSlide(newId, slide.elements);
+        });
+        if (!ok) return;
+      }
+
       const duplicated: Slide = {
         ...slide,
         id: newId,
@@ -636,7 +717,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       }));
       setActiveSlideId(newId);
     },
-    [activeSection, activeSectionId, commit]
+    [activeSection, activeSectionId, commit, repo, runStructural]
   );
 
   const setSectionBrief = useCallback(
@@ -647,8 +728,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           section.id === sectionId ? { ...section, visionBrief: text } : section
         ),
       }));
+      // The brief commits on blur, so this is once per edit rather than once per keystroke.
+      if (repo) void runStructural(() => repo.updateSection(sectionId, { visionBrief: text }));
     },
-    [commit]
+    [commit, repo, runStructural]
   );
 
   const summarizeVision = useCallback(() => {
