@@ -20,6 +20,17 @@ export interface FeatureFlags {
 }
 
 export interface GWMoodboardProps {
+  /** The Moodboard record to open. Without it the app runs on seed data. */
+  moodboardId?: string;
+  /** Shown in the top nav. Comes from the host — the Event type isn't on the Data API. */
+  eventName?: string;
+  /** ISO date, e.g. 2026-06-14. */
+  eventDate?: string;
+  /** Overrides the version-derived API base. Rarely needed. */
+  apiBase?: string;
+  /** Bearer token. Not needed same-origin — the session cookie authenticates. */
+  authToken?: string;
+
   currentUserId: string;
   currentUserName: string;
   currentUserInitials: string;
@@ -40,8 +51,11 @@ export interface GWMoodboardProps {
 
 export interface GWMoodboardApi {
   version: string;
-  /** Mounts into el; mounting twice on the same element replaces the first. */
-  mount(el: HTMLElement, props: GWMoodboardProps): string;
+  /**
+   * Mounts into el; mounting twice on the same element replaces the first.
+   * `repoOverride` is for the dev harness only — Bubble never passes it.
+   */
+  mount(el: HTMLElement, props: GWMoodboardProps, repoOverride?: unknown): string;
   /** Shallow-merges props and re-renders. Safe to call on every host update tick. */
   update(instanceId: string, props: Partial<GWMoodboardProps>): void;
   unmount(instanceId: string): void;

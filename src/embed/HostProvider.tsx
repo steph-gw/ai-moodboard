@@ -1,4 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { BubbleApi } from './bubbleApi';
+import { BoardRepo, type BoardIdentity } from './boardRepo';
 import type { FeatureFlags, GWMoodboardProps, UserRole } from './types';
 
 export interface HostServices {
@@ -15,6 +17,9 @@ export interface HostServices {
   portalHost: HTMLElement;
   uploadFile: (file: File) => Promise<string>;
   onError: (message: string) => void;
+  /** null when no moodboardId was supplied — the app then runs on seed data. */
+  repo: BoardRepo | null;
+  identity: BoardIdentity | null;
 }
 
 const DEFAULT_FEATURES: Required<FeatureFlags> = {
@@ -38,10 +43,12 @@ export function useHost(): HostServices {
 interface Props extends GWMoodboardProps {
   rootEl: HTMLElement;
   portalHost: HTMLElement;
+  /** Lets the dev harness swap in a local store instead of talking to Bubble. */
+  repoOverride?: BoardRepo | null;
   children: ReactNode;
 }
 
-export function HostProvider({ rootEl, portalHost, children, ...props }: Props) {
+export function HostProvider({ rootEl, portalHost, repoOverride, children, ...props }: Props) {
   const {
     currentUserId,
     currentUserName,
@@ -52,7 +59,23 @@ export function HostProvider({ rootEl, portalHost, children, ...props }: Props) 
     features,
     uploadFile,
     onError,
+    moodboardId,
+    eventName,
+    eventDate,
+    apiBase,
+    authToken,
   } = props;
+
+  const repo = useMemo(() => {
+    if (repoOverride !== undefined) return repoOverride;
+    if (!moodboardId) return null;
+    return new BoardRepo(new BubbleApi({ base: apiBase, authToken }));
+  }, [repoOverride, moodboardId, apiBase, authToken]);
+
+  const identity = useMemo<BoardIdentity | null>(
+    () => (moodboardId ? { moodboardId, eventName: eventName ?? '', eventDate: eventDate ?? '' } : null),
+    [moodboardId, eventName, eventDate]
+  );
 
   const value = useMemo<HostServices>(
     () => ({
@@ -71,6 +94,8 @@ export function HostProvider({ rootEl, portalHost, children, ...props }: Props) 
         uploadFile ??
         (() => Promise.reject(new Error('No upload handler configured for this moodboard'))),
       onError: onError ?? ((message: string) => console.error('[gw-moodboard]', message)),
+      repo,
+      identity,
     }),
     [
       currentUserId,
@@ -84,6 +109,8 @@ export function HostProvider({ rootEl, portalHost, children, ...props }: Props) 
       portalHost,
       uploadFile,
       onError,
+      repo,
+      identity,
     ]
   );
 

@@ -1,12 +1,14 @@
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MoodboardApp } from '../components/MoodboardApp';
+import type { BoardRepo } from './boardRepo';
 import type { GWMoodboardApi, GWMoodboardProps } from './types';
 
 declare const __GW_VERSION__: string;
 
 interface Instance {
   root: Root;
+  repoOverride?: BoardRepo | null;
   el: HTMLElement;
   portalHost: HTMLElement;
   props: GWMoodboardProps;
@@ -23,6 +25,7 @@ function render(id: string, inst: Instance) {
       key: id,
       rootEl: inst.el,
       portalHost: inst.portalHost,
+      repoOverride: inst.repoOverride,
     })
   );
 }
@@ -30,7 +33,8 @@ function render(id: string, inst: Instance) {
 export const GWMoodboard: GWMoodboardApi = {
   version: __GW_VERSION__,
 
-  mount(el, props) {
+  mount(el, props, repoOverride) {
+    const repo = repoOverride as BoardRepo | null | undefined;
     // Bubble can re-run initialize on the same node; leaving the old React root
     // attached would leave two apps fighting over the same element.
     for (const [existingId, inst] of instances) {
@@ -53,7 +57,7 @@ export const GWMoodboard: GWMoodboardApi = {
 
     if (props.height) el.style.height = props.height;
 
-    const inst: Instance = { root: createRoot(el), el, portalHost, props, focusOnInteract };
+    const inst: Instance = { root: createRoot(el), el, portalHost, props, focusOnInteract, repoOverride: repo };
     instances.set(id, inst);
     render(id, inst);
     return id;

@@ -10,11 +10,20 @@ import { PinterestPicker } from './PinterestPicker';
 import { CommentDrawer } from './CommentDrawer';
 import { ExportSheet } from './ExportSheet';
 import { HostProvider, useHost } from '../embed/HostProvider';
+import type { BoardRepo } from '../embed/boardRepo';
 import type { GWMoodboardProps } from '../embed/types';
 
 function MoodboardShell() {
-  const { isPresenting } = useBoard();
+  const { isPresenting, isLoading } = useBoard();
   const { features } = useHost();
+
+  if (isLoading) {
+    return (
+      <div className="app app-loading">
+        <span>Loading moodboard…</span>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -36,6 +45,8 @@ function MoodboardShell() {
 interface Props extends GWMoodboardProps {
   rootEl: HTMLElement;
   portalHost: HTMLElement;
+  /** Dev harness only — lets a local store stand in for Bubble. */
+  repoOverride?: BoardRepo | null;
 }
 
 export function MoodboardApp(props: Props) {

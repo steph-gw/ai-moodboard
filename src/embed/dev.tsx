@@ -1,4 +1,6 @@
 import { GWMoodboard } from './index';
+import { BoardRepo } from './boardRepo';
+import { DevBubbleApi, DEV_MOODBOARD_ID } from './devStore';
 import type { UserRole } from './types';
 
 /**
@@ -20,6 +22,15 @@ let role: UserRole = 'planner';
 const uploadFile = (file: File) =>
   new Promise<string>((resolve) => setTimeout(() => resolve(URL.createObjectURL(file)), 400));
 
+// Talks to a localStorage-backed stand-in for Bubble, through the real repo — so the
+// save loop, the version guard and the row mapping are all the production code paths.
+const devApi = new DevBubbleApi();
+const devRepo = new BoardRepo(devApi);
+(window as unknown as { gwDev: unknown }).gwDev = {
+  api: devApi,
+  reset: () => { devApi.reset(); location.reload(); },
+};
+
 const id = GWMoodboard.mount(el, {
   ...PEOPLE[role],
   currentUserId: PEOPLE[role].id,
@@ -27,9 +38,12 @@ const id = GWMoodboard.mount(el, {
   currentUserInitials: PEOPLE[role].initials,
   role,
   logoUrl: './gatherwise-logo.png',
+  moodboardId: DEV_MOODBOARD_ID,
+  eventName: 'The Ashworth–Linden Wedding',
+  eventDate: '2026-06-14',
   uploadFile,
   onError: (m) => console.error('[host]', m),
-});
+}, devRepo);
 
 document.getElementById('role-switch')?.addEventListener('click', (e) => {
   const target = e.target as HTMLElement;

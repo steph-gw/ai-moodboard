@@ -60,3 +60,12 @@
 .gw-mb:focus {
   outline: none;
 }
+
+/* Shown while the board loads; deliberately quiet rather than a spinner. */
+.gw-mb .app-loading {
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}

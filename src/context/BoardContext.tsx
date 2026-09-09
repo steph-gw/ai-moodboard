@@ -30,6 +30,8 @@ import {
 } from '../utils/commentHelpers';
 import { inferSectionIcon } from '../utils/sectionIcons';
 import { useHost } from '../embed/HostProvider';
+import { useSlideSaver } from '../embed/useSlideSaver';
+import type { SlideVersions } from '../embed/boardRepo';
 
 const HISTORY_LIMIT = 60;
 /** Offset a pasted element so it does not land exactly on top of the original. */
@@ -77,6 +79,9 @@ interface BoardContextValue {
   deleteComment: (pinId: string, commentId: string) => void;
   currentUserId: string;
   undo: () => void;
+  isLoading: boolean;
+  saveState: import('../embed/useSlideSaver').SaveState;
+  lockedSlideIds: ReadonlySet<string>;
   beginInteraction: () => void;
   endInteraction: () => void;
   canUndo: boolean;
@@ -132,14 +137,30 @@ function updateSlidePins(
   };
 }
 
+const EMPTY_BOARD: Board = {
+  weddingName: '',
+  weddingDate: '',
+  visionBrief: '',
+  palette: [],
+  sections: [],
+  images: [],
+  suggestions: [],
+  viewers: [],
+};
+
 export function BoardProvider({ children }: { children: ReactNode }) {
-  const [board, setBoard] = useState<Board>(mockBoard);
+  const { role, currentUserId, currentUserName, currentUserInitials, rootEl, repo, identity, onError } =
+    useHost();
+  // With no moodboard to open, run on the seed board so the dev harness and a bare
+  // element still show something rather than an empty shell.
+  const [board, setBoard] = useState<Board>(repo ? EMPTY_BOARD : mockBoard);
+  const [isLoading, setIsLoading] = useState(!!repo);
   const [past, setPast] = useState<Board[]>([]);
   const interactionRef = useRef(false);
   const gestureSnapshotRef = useRef(false);
-  const [activeSectionId, setActiveSectionIdState] = useState('ceremony');
-  const [activeSlideId, setActiveSlideId] = useState('slide-ceremony-1');
-  const [selectedElementId, setSelectedElementId] = useState<string | null>('el-img-1');
+  const [activeSectionId, setActiveSectionIdState] = useState(() => mockBoard.sections[0]?.id ?? '');
+  const [activeSlideId, setActiveSlideId] = useState(() => mockBoard.sections[0]?.slides[0]?.id ?? '');
+  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [selectedCommentPinId, setSelectedCommentPinId] = useState<string | null>(null);
   const [isPlacingComment, setPlacingComment] = useState(false);
   const [isCommentsOpen, setCommentsOpenState] = useState(false);
@@ -157,6 +178,58 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const cutRef = useRef<{ element: CanvasElement; clipboardText: string } | null>(null);
   const lastCutAtRef = useRef(0);
 
+  const versionsRef = useRef<SlideVersions>(new Map());
+  const [lockedSlideIds, setLockedSlideIds] = useState<ReadonlySet<string>>(new Set());
+
+  // Declared before the saver, which closes over it to reload after a conflict.
+  const loadBoardRef = useRef<(() => Promise<void>) | null>(null);
+
+  const saver = useSlideSaver({
+    repo,
+    boardRef,
+    versionsRef,
+    onError,
+    onConflict: () => {
+      onError('Someone else edited this slide. Reloading so their changes are not lost.');
+      void loadBoardRef.current?.();
+    },
+  });
+
+  // The saver is a fresh object each render. Reading it through a ref keeps commit(),
+  // undo() and loadBoard() stable — otherwise the load effect re-fires every render and
+  // the board never finishes loading.
+  const saverRef = useRef(saver);
+  saverRef.current = saver;
+
+  const loadBoard = useCallback(async () => {
+    if (!repo || !identity) return;
+    setIsLoading(true);
+    try {
+      const { board: loaded, versions, lockedSlideIds: locked } = await repo.load(identity);
+      versionsRef.current = versions;
+      setLockedSlideIds(locked);
+      boardRef.current = loaded;
+      setBoard(loaded);
+      setPast([]);
+      saverRef.current.adopt(loaded);
+      const first = loaded.sections[0];
+      setActiveSectionIdState((id) => (loaded.sections.some((s) => s.id === id) ? id : first?.id ?? ''));
+      setActiveSlideId((id) =>
+        loaded.sections.some((s) => s.slides.some((sl) => sl.id === id)) ? id : first?.slides[0]?.id ?? ''
+      );
+      setSelectedElementId(null);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Could not load the moodboard.');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [repo, identity, onError]);
+  loadBoardRef.current = loadBoard;
+
+  useEffect(() => {
+    void loadBoard();
+  }, [loadBoard]);
+
   const commit = useCallback((updater: (prev: Board) => Board) => {
     const prev = boardRef.current;
     const next = updater(prev);
@@ -170,6 +243,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       if (interactionRef.current) gestureSnapshotRef.current = true;
     }
     setBoard(next);
+    // Works out for itself which slides changed, so no mutation has to declare it.
+    saverRef.current.noteChange();
   }, []);
 
   /** Marks the start of a pointer gesture: everything until endInteraction is one undo step. */
@@ -189,6 +264,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       const restored = stack[stack.length - 1];
       boardRef.current = restored;
       setBoard(restored);
+      saverRef.current.noteChange();
       return stack.slice(0, -1);
     });
   }, []);
@@ -197,7 +273,6 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const activeSlide = activeSection?.slides.find((s) => s.id === activeSlideId) ?? null;
   const activeSectionName = activeSection?.name ?? '';
   const visionBrief = activeSection?.visionBrief ?? board.visionBrief;
-  const { role, currentUserId, currentUserName, currentUserInitials, rootEl } = useHost();
 
   const selectedCommentPin = useMemo(() => {
     if (!selectedCommentPinId) return null;
@@ -1003,6 +1078,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         deleteComment,
         currentUserId,
         undo,
+        isLoading,
+        saveState: saver.state,
+        lockedSlideIds,
         beginInteraction,
         endInteraction,
         canUndo: past.length > 0,
