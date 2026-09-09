@@ -125,13 +125,14 @@ rather than silently losing work.
 
 | Field name | Type | Notes |
 |---|---|---|
-| `Moodboard` | Moodboard | |
-| `Moodboard Section` | Moodboard Section | grouping for exports and filenames |
+| `Moodboard` | Moodboard | lets every image for a board load in one query |
 | `Image` | image | its Data API value *is* the URL |
 | `In use?` | yes / no | on the board now, vs removed from the canvas |
 
 Still an asset separate from its placement: one image can be placed on two slides, and votes point at
-the image rather than at any particular placement. Deleting an element never deletes the file — it
+the image rather than at any particular placement. That's also why there's **no `Moodboard Section`
+field** — which section an image is "in" is a fact about each placement, not about the image, so the
+field would be a copy that's wrong as soon as the same image is used twice. Deleting an element never deletes the file — it
 sets `In use?` to no, because undo restores up to 60 steps and would otherwise resurrect an element
 pointing at a file that no longer exists.
 
@@ -149,14 +150,18 @@ collaborator's thumbs-up can't silently overwrite another's thumbs-down.
 
 | Field name | Type | Notes |
 |---|---|---|
-| `Moodboard` | Moodboard | |
-| `Moodboard section` | Moodboard Section | |
-| `Moodboard slide` | Moodboard Slide | replaces the old `Slide id` text field |
+| `Moodboard` | Moodboard | lets every thread for a board load in one query |
+| `Moodboard slide` | Moodboard Slide | which slide the pin sits on |
 | `X-axis` | number | 0–960 |
 | `Y-axis` | number | 0–540 |
 | `Resolved?` | yes / no | |
 | `Resolved by` | User | |
 | `Resolved date` | date | |
+
+`Moodboard Thread` deliberately has **no `Moodboard section`**: it's derivable through
+`Moodboard slide → Section`, buys nothing once the board's threads are in memory, and would go stale
+if a slide ever moved between sections. `Moodboard` is kept only because it collapses the load into a
+single query instead of an `in` constraint listing every slide id.
 
 ### `Moodboard Comment`
 
