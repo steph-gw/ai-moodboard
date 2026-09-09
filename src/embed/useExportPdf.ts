@@ -1,12 +1,17 @@
 import { useCallback, useRef, useState } from 'react';
 
 /**
- * PDF export, by printing an offscreen same-origin iframe.
+ * PDF export, by printing a popup window.
  *
  * The app used to do this with a `@media print` block that hid every sibling of the export
  * sheet — fine when the app owned the page, fatal inside Bubble, where it would blank the
- * host's own chrome. An iframe owns its document outright, so nothing on the host page is
- * touched and no print stylesheet has to reach across into it.
+ * host's own chrome. A separate window owns its document outright, so nothing on the host
+ * page is touched.
+ *
+ * It's a popup rather than a hidden iframe because **Chrome takes the page size from the
+ * top-level document**. `@page { size: 10in 5.625in }` inside a printed iframe is ignored,
+ * and every slide lands on a portrait Letter page with its right-hand side clipped off. A
+ * popup is top-level, so the page box is the slide.
  *
  * Deliberately not html2canvas + jsPDF: board images are cross-origin (S3, Unsplash), and
  * html2canvas silently renders blanks or taints the canvas without correct CORS headers on
@@ -26,34 +31,52 @@ export interface PdfExport {
 export function useExportPdf(onError: (message: string) => void): PdfExport {
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const winRef = useRef<Window | null>(null);
   const frameRef = useRef<HTMLIFrameElement | null>(null);
 
   const cleanup = useCallback(() => {
     setTarget(null);
     setIsExporting(false);
+    winRef.current?.close();
+    winRef.current = null;
     frameRef.current?.remove();
     frameRef.current = null;
   }, []);
 
   const exportPdf = useCallback(async () => {
-    if (frameRef.current) return;
+    if ((winRef.current && !winRef.current.closed) || frameRef.current) return;
     setIsExporting(true);
 
     try {
-      const frame = document.createElement('iframe');
-      frame.setAttribute('aria-hidden', 'true');
-      frame.style.cssText = 'position:fixed;left:-10000px;top:0;width:960px;height:540px;border:0;';
-      document.body.appendChild(frame);
-      frameRef.current = frame;
+      // Opened synchronously from the click, or the popup blocker takes it.
+      const popup = window.open('', 'gw-moodboard-export', 'width=1024,height=640');
+      let win: Window;
 
-      const doc = frame.contentDocument;
-      if (!doc) throw new Error('Could not open a document to print into.');
+      if (popup) {
+        winRef.current = popup;
+        win = popup;
+      } else {
+        // Blocked. An iframe still prints the right content, but Chrome takes the page
+        // size from the top-level document, so the slide lands on default paper instead
+        // of a 960x540 landscape page. Better than nothing, and worth saying out loud.
+        const frame = document.createElement('iframe');
+        frame.setAttribute('aria-hidden', 'true');
+        frame.style.cssText = 'position:fixed;left:-10000px;top:0;width:960px;height:540px;border:0;';
+        document.body.appendChild(frame);
+        frameRef.current = frame;
+        if (!frame.contentWindow) throw new Error('Could not open a document to print into.');
+        win = frame.contentWindow;
+        onError(
+          'Pop-ups are blocked, so the PDF will use your default paper size. Allow pop-ups for this site to get proper landscape slides.'
+        );
+      }
 
+      const doc = win.document;
       doc.open();
-      doc.write(`<!doctype html><html><head><meta charset="utf-8">${headTags()}</head><body class="gw-mb"></body></html>`);
+      doc.write(`<!doctype html><html><head><meta charset="utf-8"><title>Moodboard</title>${headTags()}</head><body class="gw-mb"></body></html>`);
       doc.close();
 
-      // Handing React the iframe's body makes it a portal destination inside the existing
+      // Handing React the popup's body makes it a portal destination inside the existing
       // component tree, so the export sheet still sees board state and host context. A
       // separate React root would see neither.
       setTarget(doc.body);
@@ -61,11 +84,9 @@ export function useExportPdf(onError: (message: string) => void): PdfExport {
 
       await Promise.all([waitForImages(doc), doc.fonts?.ready].filter(Boolean));
 
-      const win = frame.contentWindow;
-      if (!win) throw new Error('The print window went away.');
       win.addEventListener('afterprint', cleanup, { once: true });
-      // Some browsers never fire afterprint; don't leak the iframe if so.
-      setTimeout(cleanup, 60_000);
+      // Some browsers never fire afterprint; don't strand the window if so.
+      setTimeout(cleanup, 120_000);
       win.focus();
       win.print();
     } catch (err) {

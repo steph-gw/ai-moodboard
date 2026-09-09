@@ -63,11 +63,12 @@ function StaticElement({
  * "Save as PDF" in the browser's print dialog yields a slides-only deck.
  */
 export function ExportSheet({ target }: { target: HTMLElement | null }) {
-  const { board, getImageById } = useBoard();
+  const { board, getImageById, activeSectionId } = useBoard();
 
-  const pages = board.sections.flatMap((section) =>
-    section.slides.map((slide) => ({ key: `${section.id}-${slide.id}`, slide }))
-  );
+  // Only the section on screen. Exporting every slide of every section meant ten pages
+  // from a two-slide view, which is not what the button appears to promise.
+  const section = board.sections.find((s) => s.id === activeSectionId);
+  const pages = (section?.slides ?? []).map((slide) => ({ key: slide.id, slide }));
 
   // Only mounted during an export. Rendering it permanently meant every slide's images
   // loading on page load, hidden, for a feature most visits never use.
