@@ -256,9 +256,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    * than waiting for the idle timer. Pending canvas edits are flushed first, or moving away
    * from a slide as part of the change could strand them.
    *
-   * The undo stack is cleared afterwards. Undo only rewinds local state, so letting someone
-   * undo past a change that has already been written to Bubble would show them a board that
-   * no longer matches the database — and the next reload would silently undo their undo.
+   * Clearing the undo stack is applyStructural's job, not this one's — doing it here would
+   * be undone by the local commit that follows.
    */
   const runStructural = useCallback(
     async (write: () => Promise<void>): Promise<boolean> => {
@@ -271,10 +270,35 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         await loadBoardRef.current?.();
         return false;
       }
-      setPast([]);
       return true;
     },
     [onError]
+  );
+
+  /**
+   * Applies a structural change to local state without recording it for undo.
+   *
+   * Undo only rewinds the client. A section or slide that has already been written to
+   * Bubble can't be taken back by rewinding local state — you'd see a board that no longer
+   * matches the database, and the next reload would silently undo your undo. So these
+   * changes don't enter the history, and they clear what's behind them: undo can never
+   * cross one.
+   *
+   * `commit()` can't do this itself — it runs after the write, so clearing the stack inside
+   * runStructural just gets a fresh entry pushed on top a moment later.
+   */
+  const applyStructural = useCallback(
+    (updater: (prev: Board) => Board) => {
+      const prev = boardRef.current;
+      const next = updater(prev);
+      if (next === prev) return;
+      boardRef.current = next;
+      setBoard(next);
+      // Only when there's a database to diverge from; in seed mode undo stays useful.
+      if (repo) setPast([]);
+      saverRef.current.noteChange();
+    },
+    [repo]
   );
 
   const commit = useCallback((updater: (prev: Board) => Board) => {
@@ -575,14 +599,14 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           },
         ],
       };
-      commit((prev) => ({ ...prev, sections: [...prev.sections, newSection] }));
+      applyStructural((prev) => ({ ...prev, sections: [...prev.sections, newSection] }));
       setActiveSectionIdState(newId);
       setActiveSlideId(firstSlideId);
       setSelectedElementId(null);
       setSelectedCommentPinId(null);
       setPlacingComment(false);
     },
-    [commit, repo, identity, runStructural]
+    [applyStructural, repo, identity, runStructural]
   );
 
   const updateSection = useCallback(
@@ -596,7 +620,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         approvedDate?: string;
       }
     ) => {
-      commit((prev) => ({
+      applyStructural((prev) => ({
         ...prev,
         sections: prev.sections.map((section) =>
           section.id === sectionId
@@ -630,14 +654,14 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         );
       }
     },
-    [commit, repo, runStructural]
+    [applyStructural, repo, runStructural]
   );
 
   const deleteSection = useCallback(
     (sectionId: string) => {
       const remaining = boardRef.current.sections.filter((s) => s.id !== sectionId);
       if (remaining.length === 0) return;
-      commit((prev) => ({
+      applyStructural((prev) => ({
         ...prev,
         sections: prev.sections.filter((s) => s.id !== sectionId),
         images: prev.images.filter((img) => img.sectionId !== sectionId),
@@ -653,7 +677,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         setPlacingComment(false);
       }
     },
-    [activeSectionId, commit, repo, runStructural]
+    [activeSectionId, applyStructural, repo, runStructural]
   );
 
   const addSlide = useCallback(async () => {
@@ -674,7 +698,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       elements: [],
       commentPins: [],
     };
-    commit((prev) => ({
+    applyStructural((prev) => ({
       ...prev,
       sections: prev.sections.map((section) => {
         if (section.id !== activeSectionId) return section;
@@ -684,12 +708,12 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     setActiveSlideId(newId);
     setSelectedElementId(null);
     setSelectedCommentPinId(null);
-  }, [activeSectionId, activeSection?.slides.length, commit, repo, runStructural]);
+  }, [activeSectionId, activeSection?.slides.length, applyStructural, repo, runStructural]);
 
   const deleteSlide = useCallback(
     (slideId: string) => {
       if (!activeSection || activeSection.slides.length <= 1) return;
-      commit((prev) => ({
+      applyStructural((prev) => ({
         ...prev,
         sections: prev.sections.map((section) => {
           if (section.id !== activeSectionId) return section;
@@ -705,7 +729,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         setSelectedCommentPinId(null);
       }
     },
-    [activeSection, activeSectionId, activeSlideId, commit, repo, runStructural]
+    [activeSection, activeSectionId, activeSlideId, applyStructural, repo, runStructural]
   );
 
   const duplicateSlide = useCallback(
@@ -738,7 +762,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           id: `pin-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         })),
       };
-      commit((prev) => ({
+      applyStructural((prev) => ({
         ...prev,
         sections: prev.sections.map((section) => {
           if (section.id !== activeSectionId) return section;
@@ -750,12 +774,12 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       }));
       setActiveSlideId(newId);
     },
-    [activeSection, activeSectionId, commit, repo, runStructural]
+    [activeSection, activeSectionId, applyStructural, repo, runStructural]
   );
 
   const setSectionBrief = useCallback(
     (sectionId: string, text: string) => {
-      commit((prev) => ({
+      applyStructural((prev) => ({
         ...prev,
         sections: prev.sections.map((section) =>
           section.id === sectionId ? { ...section, visionBrief: text } : section
@@ -764,7 +788,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       // The brief commits on blur, so this is once per edit rather than once per keystroke.
       if (repo) void runStructural(() => repo.updateSection(sectionId, { visionBrief: text }));
     },
-    [commit, repo, runStructural]
+    [applyStructural, repo, runStructural]
   );
 
   const summarizeVision = useCallback(() => {
