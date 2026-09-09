@@ -859,17 +859,38 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     [activeSection]
   );
 
-  const goToNextSlide = useCallback(() => {
-    const slides = activeSection?.slides ?? [];
-    const idx = slides.findIndex((s) => s.id === activeSlideId);
-    if (idx < slides.length - 1) selectSlideAtIndex(idx + 1);
-  }, [activeSection, activeSlideId, selectSlideAtIndex]);
+  /**
+   * Every slide on the board in order, flattened across sections.
+   *
+   * Presenting walks the whole deck rather than stopping at the end of a section — a
+   * moodboard is shown to a client start to finish, and the section boundaries are an
+   * editing concept, not something the audience should hit a wall at.
+   */
+  const slideSequence = useMemo(
+    () => board.sections.flatMap((section) => section.slides.map((slide) => ({ sectionId: section.id, slideId: slide.id }))),
+    [board.sections]
+  );
 
-  const goToPrevSlide = useCallback(() => {
-    const slides = activeSection?.slides ?? [];
-    const idx = slides.findIndex((s) => s.id === activeSlideId);
-    if (idx > 0) selectSlideAtIndex(idx - 1);
-  }, [activeSection, activeSlideId, selectSlideAtIndex]);
+  const stepSlide = useCallback(
+    (delta: number) => {
+      const idx = slideSequence.findIndex((s) => s.slideId === activeSlideId);
+      const next = slideSequence[idx + delta];
+      if (idx === -1 || !next) return;
+      // Crossing into another section changes it without the usual side effects of
+      // setActiveSectionId, which would jump to that section's first slide.
+      if (next.sectionId !== activeSectionId) setActiveSectionIdState(next.sectionId);
+      setActiveSlideId(next.slideId);
+      setSelectedElementId(null);
+      setSelectedCommentPinId(null);
+    },
+    [slideSequence, activeSlideId, activeSectionId]
+  );
+
+  const goToNextSlide = useCallback(() => stepSlide(1), [stepSlide]);
+
+  const goToPrevSlide = useCallback(() => stepSlide(-1), [stepSlide]);
+
+
 
   const resolveComment = useCallback((pinId: string, commentId: string) => {
     commit((prev) => {
