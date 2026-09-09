@@ -1156,7 +1156,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     };
     document.addEventListener('paste', onPasteScoped);
     return () => document.removeEventListener('paste', onPasteScoped);
-  }, [addUploadedImage, addTextElement, insertElement, rootEl]);
+  }, [uploadAndAddImage, addTextElement, insertElement, rootEl]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
