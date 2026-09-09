@@ -672,7 +672,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         setSelectedCommentPinId(null);
       }
     },
-    [activeSection, activeSectionId, activeSlideId, commit]
+    [activeSection, activeSectionId, activeSlideId, commit, repo, runStructural]
   );
 
   const duplicateSlide = useCallback(
