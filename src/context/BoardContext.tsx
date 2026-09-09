@@ -252,6 +252,16 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     void loadBoard();
   }, [loadBoard]);
 
+  // Without a repo the board is seed data, which is ready immediately. Still announce it:
+  // a host that hides a loading overlay on board_loaded would otherwise wait forever when
+  // the moodboard id binding is momentarily empty.
+  const seedAnnouncedRef = useRef(false);
+  useEffect(() => {
+    if (repo || seedAnnouncedRef.current) return;
+    seedAnnouncedRef.current = true;
+    onLoaded?.();
+  }, [repo, onLoaded]);
+
   // Mirrors the state Bubble can bind to. Kept in an effect so the host is told once per
   // settled render rather than once per intermediate state during a load.
   useEffect(() => {

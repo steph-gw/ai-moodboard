@@ -1,0 +1,25 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>CDN smoke test</title>
+<!-- headers, verbatim -->
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300..500;1,300..500&family=Playfair+Display:ital,wght@0,400..500;1,400..500&display=swap">
+<link rel="stylesheet" href="https://5e364458276059f98e6f71fb28ad5255.cdn.bubble.io/f1788977723003x349230637797656640/gw-moodboard.css">
+<script src="https://5e364458276059f98e6f71fb28ad5255.cdn.bubble.io/f1788977718459x542713291197455040/gw-moodboard.js"></script>
+<style>body{margin:0;font:14px system-ui}#wrap{height:100vh}</style>
+</head><body>
+<div id="wrap"><div id="board" style="height:100%"></div></div>
+<script>
+  window.smoke = { api: !!window.GWMoodboard, version: window.GWMoodboard && window.GWMoodboard.version, errors: [] };
+  window.addEventListener('error', function (e) { window.smoke.errors.push(String(e.message)); });
+  if (window.GWMoodboard) {
+    window.smoke.id = window.GWMoodboard.mount(document.getElementById('board'), {
+      moodboardId: '', currentUserId: 'u1', currentUserName: 'Smoke Test',
+      currentUserInitials: 'ST', role: 'planner', logoUrl: './gatherwise-logo.png',
+      eventName: 'CDN smoke test', eventDate: '2026-06-14',
+      onError: function (m) { window.smoke.errors.push('[onError] ' + m); },
+      onStateChange: function (s) { window.smoke.state = s; },
+      onLoaded: function () { window.smoke.loaded = true; }
+    });
+  }
+</script>
+</body></html>

@@ -4,6 +4,11 @@ import postcss from 'postcss';
 import postcssConfig from './postcss.config.mjs';
 
 const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+/** UTC yyyymmdd-hhmm, so builds sort and compare across machines. */
+function stamp() {
+  return new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 13);
+}
+
 const dev = process.argv.includes('--dev');
 const outDir = dev ? 'dev' : 'dist';
 
@@ -26,7 +31,10 @@ const options = {
   define: {
     // Without this React ships its dev build and throws "process is not defined" in Bubble.
     'process.env.NODE_ENV': dev ? '"development"' : '"production"',
-    __GW_VERSION__: JSON.stringify(pkg.version),
+    // Stamped with the build time because Bubble mints a new file URL per upload and
+    // never overwrites: window.GWMoodboard.version is how you tell, from the live page,
+    // whether the Headers field is still pointing at last week's bundle.
+    __GW_VERSION__: JSON.stringify(`${pkg.version}+${stamp()}`),
   },
   // The 'use client' directives are Next-only leftovers and mean nothing here.
   logOverride: { 'ignored-directive': 'silent' },
