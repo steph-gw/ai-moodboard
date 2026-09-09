@@ -842,22 +842,6 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     [activeSectionId, setSectionBrief]
   );
 
-  const selectSlideAtIndex = useCallback(
-    (index: number) => {
-      const slides = activeSection?.slides ?? [];
-      const slide = slides[index];
-      if (!slide) return;
-      setActiveSlideId(slide.id);
-      const imgEl = slide.elements.find((el) => el.type === 'image');
-      if (imgEl && imgEl.type === 'image') {
-        setSelectedElementId(imgEl.id);
-      } else {
-        setSelectedElementId(null);
-      }
-      setSelectedCommentPinId(null);
-    },
-    [activeSection]
-  );
 
   /**
    * Every slide on the board in order, flattened across sections.
