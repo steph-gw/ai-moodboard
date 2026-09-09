@@ -45,8 +45,13 @@
         background: #fff;
         color: #223055;
       }
-      .canvas,
-      .app {
+      /*
+        Scoped to .host-chrome on purpose. Unqualified `.canvas, .app` selectors
+        also match the app's own elements, so the fixture styled the very thing
+        it exists to keep an eye on.
+      */
+      .canvas.host-chrome,
+      .app.host-chrome {
         padding: 14px 20px;
         font-size: 15px;
       }
@@ -56,32 +61,42 @@
         #host-container and #board, that gap is the app's fault, not the fixture's.
       */
       #host-container {
-        height: calc(100vh - 46px);
-        background: #c9cede;
+        height: 100vh;
       }
       #board {
         height: 100%;
       }
 
       /*
-        ?bare drops the test scaffolding and gives the element the whole viewport,
-        so the board can be compared like-for-like against how it used to look.
-        The scaffolding is what proves the CSS stays scoped; this is for eyeballing.
+        The board gets the whole viewport by default — nothing of the fixture is
+        visible. Load ?host to bring back the test scaffolding: the blue host
+        chrome (which carries the only role switch in dev) and the leak canaries
+        that prove the app's CSS stays inside .gw-mb.
       */
-      body.bare .host-chrome {
-        display: none;
-      }
-      body.bare {
+      body {
         overflow: hidden;
       }
-      body.bare #host-container {
-        height: 100vh;
+      .host-chrome {
+        display: none;
+      }
+      body.with-host {
+        overflow: auto;
+      }
+      body.with-host .host-chrome {
+        display: revert;
+      }
+      body.with-host .host-header {
+        display: flex;
+      }
+      body.with-host #host-container {
+        height: calc(100vh - 46px);
+        background: #c9cede;
       }
     </style>
   </head>
   <body>
     <script>
-      if (location.search.includes('bare')) document.body.classList.add('bare');
+      if (location.search.includes('host')) document.body.classList.add('with-host');
     </script>
     <div class="host-header host-chrome">
       <span>Host page chrome — should stay Georgia on blue</span>
