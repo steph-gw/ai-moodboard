@@ -117,6 +117,7 @@ export function SlideCanvas({
         style={{
           width: SLIDE_WIDTH * scale,
           height: SLIDE_HEIGHT * scale,
+          ...(activeSlide.background ? { background: activeSlide.background } : {}),
         }}
         onMouseDown={() => {
           if (!isPlacingComment && !readOnly) {

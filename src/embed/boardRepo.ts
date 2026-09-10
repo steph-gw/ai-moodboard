@@ -9,7 +9,7 @@ import type {
   Slide,
 } from '../types';
 import { BubbleApi, K, TYPE, type BubbleRow } from './bubbleApi';
-import { parseElements, serializeElements } from './serialize';
+import { parseSlideContent, serializeSlideContent } from './serialize';
 import { initialsFrom } from '../utils/initials';
 
 /**
@@ -113,11 +113,13 @@ export class BoardRepo {
     const slidesBySection = new Map<string, Slide[]>();
     for (const row of slideRows) {
       const sectionId = str(row[K.slide.section]);
+      const content = parseSlideContent(row[K.slide.elementsJson], knownImageIds);
       const slide: Slide = {
         id: row._id,
         sectionId,
         name: str(row[K.slide.name]) || 'Slide',
-        elements: parseElements(row[K.slide.elementsJson], knownImageIds),
+        elements: content.elements,
+        background: content.background,
         commentPins: pinsBySlide.get(row._id) ?? [],
       };
       versions.set(row._id, str(row['Modified Date']));
@@ -160,9 +162,15 @@ export class BoardRepo {
     };
   }
 
-  /** Writes one slide's canvas. */
-  async saveSlide(slideId: string, elements: Slide['elements']): Promise<void> {
-    await this.api.patch(TYPE.slide, slideId, { [K.slide.elementsJson]: serializeElements(elements) });
+  /** Writes one slide's canvas: its elements and anything else the slide itself carries. */
+  async saveSlide(
+    slideId: string,
+    elements: Slide['elements'],
+    background?: string
+  ): Promise<void> {
+    await this.api.patch(TYPE.slide, slideId, {
+      [K.slide.elementsJson]: serializeSlideContent({ elements: [...elements], background }),
+    });
   }
 
   /**
@@ -200,7 +208,7 @@ export class BoardRepo {
       [K.slide.section]: sectionId,
       [K.slide.name]: name,
       [K.slide.order]: order,
-      [K.slide.elementsJson]: '[]',
+      [K.slide.elementsJson]: serializeSlideContent({ elements: [] }),
     });
   }
 
@@ -243,6 +251,10 @@ export class BoardRepo {
   /** Sections are archived rather than deleted, so their slides and comments survive. */
   async archiveSection(sectionId: string): Promise<void> {
     await this.api.patch(TYPE.section, sectionId, { [K.section.archived]: true });
+  }
+
+  async setPalette(moodboardId: string, colors: readonly string[]): Promise<void> {
+    await this.api.patch(TYPE.moodboard, moodboardId, { [K.moodboard.palette]: [...colors] });
   }
 
   async setBoardVisionBrief(moodboardId: string, text: string): Promise<void> {

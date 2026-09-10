@@ -1,6 +1,7 @@
 import { Bold, Italic, Minus, Plus } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { ColorField } from './ColorField';
+import { loadFont } from '../utils/loadFont';
 import type { TextElement } from '../types';
 import { TEXT_FONT_OPTIONS } from '../utils/textFonts';
 
@@ -26,9 +27,12 @@ export function TextFormatControls({
       <select
         className="text-format-select"
         value={text.fontFamily}
-        onChange={(e) =>
-          patch({ fontFamily: e.target.value as TextElement['fontFamily'] })
-        }
+        onChange={(e) => {
+          const family = e.target.value as TextElement['fontFamily'];
+          // Fetched on choice rather than up front — see loadFont.
+          loadFont(family);
+          patch({ fontFamily: family });
+        }}
         aria-label="Font family"
       >
         {TEXT_FONT_OPTIONS.map((opt) => (

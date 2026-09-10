@@ -32,6 +32,7 @@ import {
   withLivePins,
 } from '../utils/commentHelpers';
 import { inferSectionIcon } from '../utils/sectionIcons';
+import { loadFontsFor } from '../utils/loadFont';
 import { useHost } from '../embed/HostProvider';
 import { useSlideSaver } from '../embed/useSlideSaver';
 import { useExportPdf } from '../embed/useExportPdf';
@@ -68,6 +69,7 @@ interface BoardContextValue {
   voteImage: (imageId: string, vote: ImageVote) => void;
   visionBrief: string;
   updateVisionBrief: (text: string) => void;
+  setPalette: (colors: string[]) => void;
   summarizeVision: () => void;
   isSummarizing: boolean;
   isCommentsOpen: boolean;
@@ -109,6 +111,7 @@ interface BoardContextValue {
   sendToBack: (slideId: string, elementId: string) => void;
   addTextElement: (content?: string) => void;
   addShapeElement: (shape: ShapeKind) => void;
+  setSlideBackground: (slideId: string, background: string | undefined) => void;
   addSection: (name: string, visionBrief: string, icon?: string) => void;
   updateSection: (
     sectionId: string,
@@ -264,6 +267,15 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       setActiveSectionIdState((id) => (loaded.sections.some((s) => s.id === id) ? id : first?.id ?? ''));
       setActiveSlideId((id) =>
         loaded.sections.some((s) => s.slides.some((sl) => sl.id === id)) ? id : first?.slides[0]?.id ?? ''
+      );
+      // Anything the board already uses has to arrive with it, or stored text renders in
+      // a fallback until someone happens to reopen the font menu.
+      loadFontsFor(
+        loaded.sections.flatMap((section) =>
+          section.slides.flatMap((slide) =>
+            slide.elements.flatMap((el) => (el.type === 'text' ? [el.fontFamily] : []))
+          )
+        )
       );
       // A refresh keeps whatever the person had selected; only a first load clears it.
       if (!silent) setSelectedElementId(null);
@@ -754,6 +766,21 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     setSelectedElementId(el.id);
   }, [activeSlide, activeSectionId, activeSlideId, commit]);
 
+  const setSlideBackground = useCallback(
+    (slideId: string, background: string | undefined) => {
+      commit((prev) => ({
+        ...prev,
+        sections: prev.sections.map((section) => ({
+          ...section,
+          slides: section.slides.map((slide) =>
+            slide.id === slideId ? { ...slide, background } : slide
+          ),
+        })),
+      }));
+    },
+    [commit]
+  );
+
   const addShapeElement = useCallback(
     (shape: ShapeKind) => {
       if (!activeSlide) return;
@@ -1056,6 +1083,25 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       setSectionBrief(activeSectionId, text.trim());
     },
     [activeSectionId, setSectionBrief]
+  );
+
+  /**
+   * The board's working colours, shared by every colour control on the canvas.
+   *
+   * Written immediately rather than left to the autosave: it belongs to the moodboard row,
+   * not to a slide's canvas, so the slide saver never looks at it.
+   */
+  const setPalette = useCallback(
+    (colors: string[]) => {
+      if (!canManageRef.current) return;
+      applyStructural((prev) => ({ ...prev, palette: colors }));
+      if (!repo || !identity) return;
+      void repo.setPalette(identity.moodboardId, colors).catch((err: unknown) => {
+        onError(err instanceof Error ? err.message : 'Could not save the palette.');
+        void loadBoardRef.current?.(true);
+      });
+    },
+    [repo, identity, applyStructural, onError]
   );
 
 
@@ -1590,6 +1636,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         voteImage,
         visionBrief,
         updateVisionBrief,
+        setPalette,
         summarizeVision,
         isSummarizing,
         isCommentsOpen,
@@ -1628,6 +1675,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         sendToBack,
         addTextElement,
         addShapeElement,
+        setSlideBackground,
         addSection,
         updateSection,
         deleteSection,

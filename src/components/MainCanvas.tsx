@@ -8,6 +8,8 @@ import { CanvasToolbar } from './CanvasToolbar';
 import { VisionBrief } from './VisionBrief';
 import { SectionStatusSelect } from './SectionStatusSelect';
 import { TextFormatControls } from './TextFormatBar';
+import { PaletteEditor } from './PaletteEditor';
+import { ColorField } from './ColorField';
 import type { Section } from '../types';
 
 /**
@@ -18,14 +20,23 @@ function SectionMeta({ section }: { section: Section }) {
   return (
     <div className="canvas-bar-left">
       <VisionBrief />
+      <PaletteEditor />
       <SectionStatusSelect section={section} />
     </div>
   );
 }
 
 export function MainCanvas() {
-  const { board, activeSectionId, activeSlide, activeSlideId, selectedElementId, lockedSlideIds } =
-    useBoard();
+  const {
+    board,
+    activeSectionId,
+    activeSlide,
+    activeSlideId,
+    selectedElementId,
+    lockedSlideIds,
+    canEdit,
+    setSlideBackground,
+  } = useBoard();
   // The header lines up with the slide rather than the window, so the two read as one
   // object. The artboard is the only thing that knows its own rendered width.
   const [artboardWidth, setArtboardWidth] = useState<number | null>(null);
@@ -51,12 +62,26 @@ export function MainCanvas() {
           <SectionMeta section={activeSection} />
           {/* Text formatting rides in this row rather than a bar of its own: the row is
               already here, so using it costs the artboard no height. */}
-          {selectedText && activeSlideId && (
+          {activeSlideId && (selectedText || canEdit) && (
             <div className="canvas-bar-mid">
-              <TextFormatControls
-                element={selectedText as Extract<typeof selectedText, { type: 'text' }>}
-                slideId={activeSlideId}
-              />
+              {selectedText ? (
+                <TextFormatControls
+                  element={selectedText as Extract<typeof selectedText, { type: 'text' }>}
+                  slideId={activeSlideId}
+                />
+              ) : (
+                // Nothing selected means the slide itself is what you are editing.
+                <>
+                  <span className="shape-format-label">Background</span>
+                  <ColorField
+                    label="Slide background"
+                    value={activeSlide?.background ?? 'transparent'}
+                    onChange={(background) => setSlideBackground(activeSlideId, background)}
+                    allowNone
+                    onNone={() => setSlideBackground(activeSlideId, undefined)}
+                  />
+                </>
+              )}
             </div>
           )}
           <div className="canvas-bar-right">

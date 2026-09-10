@@ -101,6 +101,8 @@ export interface Slide {
   name: string;
   elements: CanvasElement[];
   commentPins: CommentPin[];
+  /** Slide background colour. Undefined uses the default paper. */
+  background?: string;
 }
 
 export interface Section {

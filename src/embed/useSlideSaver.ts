@@ -53,8 +53,8 @@ export function useSlideSaver({ repo, boardRef, versionsRef, onError, onConflict
   const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
   const [isDirty, setIsDirty] = useState(false);
 
-  /** Element arrays as last written. Absent means "not seen yet", not "empty". */
-  const savedRef = useRef(new Map<string, readonly CanvasElement[]>());
+  /** Slide content as last written. Absent means "not seen yet", not "empty". */
+  const savedRef = useRef(new Map<string, { elements: readonly CanvasElement[]; background?: string }>());
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inFlightRef = useRef<Promise<void> | null>(null);
   /** Set while a conflict reload is pending, so we don't retry against a version we know is stale. */
@@ -64,19 +64,28 @@ export function useSlideSaver({ repo, boardRef, versionsRef, onError, onConflict
   const adopt = useCallback((board: Board) => {
     awaitingReloadRef.current = false;
     setIsDirty(false);
-    const map = new Map<string, readonly CanvasElement[]>();
+    const map = new Map<string, { elements: readonly CanvasElement[]; background?: string }>();
     for (const section of board.sections) {
-      for (const slide of section.slides) map.set(slide.id, slide.elements);
+      for (const slide of section.slides) {
+        map.set(slide.id, { elements: slide.elements, background: slide.background });
+      }
     }
     savedRef.current = map;
   }, []);
 
-  const collectDirty = useCallback((): { id: string; elements: readonly CanvasElement[] }[] => {
-    const dirty: { id: string; elements: readonly CanvasElement[] }[] = [];
+  const collectDirty = useCallback((): {
+    id: string;
+    elements: readonly CanvasElement[];
+    background?: string;
+  }[] => {
+    const dirty: { id: string; elements: readonly CanvasElement[]; background?: string }[] = [];
     for (const section of boardRef.current.sections) {
       for (const slide of section.slides) {
-        if (savedRef.current.get(slide.id) !== slide.elements) {
-          dirty.push({ id: slide.id, elements: slide.elements });
+        const saved = savedRef.current.get(slide.id);
+        // Elements compare by reference — every mutation is immutable, so an untouched
+        // slide keeps its exact array. Background is a string and compares by value.
+        if (!saved || saved.elements !== slide.elements || saved.background !== slide.background) {
+          dirty.push({ id: slide.id, elements: slide.elements, background: slide.background });
         }
       }
     }
@@ -114,9 +123,9 @@ export function useSlideSaver({ repo, boardRef, versionsRef, onError, onConflict
           return;
         }
 
-        for (const { id, elements } of dirty) {
-          await repo.saveSlide(id, elements as CanvasElement[]);
-          savedRef.current.set(id, elements);
+        for (const { id, elements, background } of dirty) {
+          await repo.saveSlide(id, elements as CanvasElement[], background);
+          savedRef.current.set(id, { elements, background });
         }
 
         // Refresh all the versions we just invalidated, again in one query.

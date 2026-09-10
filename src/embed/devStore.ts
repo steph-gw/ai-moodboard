@@ -1,6 +1,6 @@
 import { BubbleApi, K, TYPE, type BubbleRow, type Constraint } from './bubbleApi';
 import { mockBoard } from '../data/mockData';
-import { serializeElements } from './serialize';
+import { serializeSlideContent } from './serialize';
 
 /**
  * A stand-in for Bubble's Data API, backed by localStorage, for the dev harness.
@@ -153,7 +153,7 @@ function seed(): Store {
         [K.slide.section]: section.id,
         [K.slide.name]: slide.name,
         [K.slide.order]: j,
-        [K.slide.elementsJson]: serializeElements(slide.elements),
+        [K.slide.elementsJson]: serializeSlideContent({ elements: slide.elements, background: slide.background }),
       });
     });
   });

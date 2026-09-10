@@ -141,6 +141,12 @@ protocol-relative `//s3...` URL, which the adapter rewrites to `https:`.
    and bind to `Current Page Event's Moodboard's unique id` — a stored reference rather
    than a search that runs on every load and again per row in any list of events.
 
+### Fonts
+
+The Headers block loads only the board's own two families. The seven optional ones
+(Inter, Roboto, Open Sans, Montserrat, Poppins, Lato, Lora) are fetched by the bundle the
+first time a board uses one, so a board that uses none costs nothing.
+
 ### One thing still unverified
 
 Bubble derives each property key from the field *name* (lowercased, non-alphanumerics

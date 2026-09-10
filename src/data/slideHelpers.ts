@@ -79,6 +79,164 @@ function pushImage(
   }
 }
 
+
+/** A named colour in the palette slide, with the swatch's own label colour. */
+interface Swatch {
+  name: string;
+  hex: string;
+  /** Dark swatches need light type over them. */
+  onDark?: boolean;
+}
+
+const CEREMONY_PALETTE: Swatch[] = [
+  { name: 'Shell Cream', hex: '#F5EDE8' },
+  { name: 'Warm Sand', hex: '#F6EAD4' },
+  { name: 'Sage Leaf', hex: '#8A9A7B', onDark: true },
+  { name: 'Blush Petal', hex: '#D4B5A0' },
+  { name: 'Antique Gold', hex: '#C4A35A' },
+  { name: 'Weathered Stone', hex: '#9B9186' },
+  { name: 'Deep Bark', hex: '#5C4A3A', onDark: true },
+  { name: 'Pearl White', hex: '#FAFAF8' },
+];
+
+/**
+ * The palette board: eight named swatches over two rows, with a direction note.
+ *
+ * Built out of the same shape and text elements a planner has, rather than a special slide
+ * type — it is a worked example of the tools, and it can be picked apart and rearranged
+ * like anything else on the canvas.
+ */
+function buildPaletteSlide(): Slide {
+  const elements: CanvasElement[] = [];
+  let z = 1;
+
+  // Header band
+  elements.push(
+    shapeElement('el-pal-band', 'rect', 0, 0, SLIDE_WIDTH, 78, z++, {
+      fill: '#5C4A3A',
+      stroke: '#5C4A3A',
+      strokeWidth: 0,
+    }),
+    textElement('el-pal-title', 'COLOUR PALETTE', 40, 22, 460, 40, z++, {
+      fontSize: 26,
+      fontFamily: 'display',
+      color: '#FAFAF8',
+      align: 'left',
+    }),
+    textElement('el-pal-kicker', 'Ivory · Sage · Sand · Gold', 560, 32, 360, 24, z++, {
+      fontSize: 13,
+      fontFamily: 'sans',
+      color: '#E8DCCB',
+      align: 'right',
+      italic: true,
+    })
+  );
+
+  // Two rows of four
+  // Sized so two rows plus the note card land inside the 540px slide with margin to
+  // spare — anything taller gets clamped on load and the text bunches up.
+  const COLS = 4;
+  const CARD_W = 208;
+  const CARD_H = 128;
+  const GAP_X = 24;
+  const GAP_Y = 20;
+  const LEFT = (SLIDE_WIDTH - (COLS * CARD_W + (COLS - 1) * GAP_X)) / 2;
+  const TOP = 100;
+
+  CEREMONY_PALETTE.forEach((swatch, i) => {
+    const col = i % COLS;
+    const row = Math.floor(i / COLS);
+    const x = LEFT + col * (CARD_W + GAP_X);
+    const y = TOP + row * (CARD_H + GAP_Y);
+    const ink = swatch.onDark ? '#FAFAF8' : '#5C4A3A';
+
+    elements.push(
+      shapeElement(`el-pal-sw-${i}`, 'rect', x, y, CARD_W, CARD_H, z++, {
+        fill: swatch.hex,
+        stroke: '#DED7CC',
+        strokeWidth: 1,
+        radius: 2,
+      }),
+      textElement(`el-pal-name-${i}`, swatch.name, x, y + CARD_H - 50, CARD_W, 22, z++, {
+        fontSize: 14,
+        fontFamily: 'display',
+        color: ink,
+        align: 'center',
+        italic: true,
+      }),
+      textElement(`el-pal-hex-${i}`, swatch.hex, x, y + CARD_H - 28, CARD_W, 18, z++, {
+        fontSize: 10,
+        fontFamily: 'sans',
+        color: ink,
+        align: 'center',
+      })
+    );
+  });
+
+  const noteY = TOP + 2 * (CARD_H + GAP_Y) + 10;
+  elements.push(
+    shapeElement('el-pal-note-card', 'rect', LEFT, noteY, SLIDE_WIDTH - LEFT * 2, 88, z++, {
+      fill: '#FFFFFF',
+      stroke: '#E4DCD0',
+      strokeWidth: 1,
+      radius: 3,
+    }),
+    textElement('el-pal-note-title', 'PALETTE DIRECTION', LEFT + 18, noteY + 8, 400, 18, z++, {
+      fontSize: 11,
+      fontFamily: 'sans',
+      color: '#C4A35A',
+      align: 'left',
+      bold: true,
+    }),
+    textElement(
+      'el-pal-note-body',
+      'Primary: shell cream and warm sand carry the linens and paper.\nAccents: sage and antique gold for foliage, candles and hardware.\nGrounding: weathered stone and deep bark tie the garden to the aisle.',
+      LEFT + 18,
+      noteY + 30,
+      SLIDE_WIDTH - LEFT * 2 - 36,
+      54,
+      z++,
+      { fontSize: 12, fontFamily: 'sans', color: '#5C4A3A', align: 'left' }
+    )
+  );
+
+  return {
+    id: 'slide-ceremony-palette',
+    sectionId: 'ceremony',
+    name: 'Colour palette',
+    elements,
+    commentPins: [],
+    background: '#F8F3EF',
+  };
+}
+
+function shapeElement(
+  id: string,
+  shape: ShapeKind,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  zIndex: number,
+  options: { fill?: string; stroke?: string; strokeWidth?: number; radius?: number } = {}
+): ShapeElement {
+  return {
+    id,
+    type: 'shape',
+    shape,
+    x,
+    y,
+    width,
+    height,
+    zIndex,
+    fill: options.fill,
+    stroke: options.stroke ?? '#1a1714',
+    strokeWidth: options.strokeWidth ?? 1,
+    strokeStyle: 'solid',
+    ...(shape === 'rect' ? { radius: options.radius ?? 0 } : {}),
+  };
+}
+
 function buildCeremonySlides(images: BoardImage[]): Slide[] {
   const img = indexById(images);
   const moodElements: CanvasElement[] = [];
@@ -173,6 +331,8 @@ function buildCeremonySlides(images: BoardImage[]): Slide[] {
   );
 
   return [
+    // Palette first: it is the decision the rest of the section is judged against.
+    buildPaletteSlide(),
     { id: 'slide-ceremony-1', sectionId: 'ceremony', name: 'Mood', elements: moodElements, commentPins: ceremonySamplePins() },
     { id: 'slide-ceremony-2', sectionId: 'ceremony', name: 'Guests', elements: guestElements, commentPins: [] },
   ];

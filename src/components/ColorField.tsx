@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useBoard } from '../context/BoardContext';
+import { useHost } from '../embed/HostProvider';
 
 /**
  * One swatch that opens the palette, rather than the whole palette inline.
@@ -23,14 +25,37 @@ export function ColorField({
   onNone?: () => void;
 }) {
   const { board } = useBoard();
+  const { portalHost } = useHost();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [at, setAt] = useState<{ left: number; top: number } | null>(null);
   const none = value === 'transparent';
+
+  // Rendered into the portal host rather than next to the swatch: the toolbar row it sits
+  // in scrolls horizontally, and an absolutely positioned popover inside a scroll
+  // container is clipped by it — the palette opened and was invisible.
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const r = triggerRef.current?.getBoundingClientRect();
+      if (r) setAt({ left: r.left + r.width / 2, top: r.bottom + 6 });
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
+      const node = e.target as Node;
+      if (!wrapRef.current?.contains(node) && !popRef.current?.contains(node)) setOpen(false);
     };
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
     window.addEventListener('pointerdown', onDown);
@@ -44,6 +69,7 @@ export function ColorField({
   return (
     <div className="color-field" ref={wrapRef}>
       <button
+        ref={triggerRef}
         type="button"
         className={`color-field-trigger ${none ? 'is-none' : ''}`}
         style={none ? undefined : { backgroundColor: value }}
@@ -53,8 +79,16 @@ export function ColorField({
         aria-expanded={open}
       />
 
-      {open && (
-        <div className="color-field-pop" role="dialog" aria-label={label}>
+      {open &&
+        at &&
+        createPortal(
+          <div
+            ref={popRef}
+            className="color-field-pop"
+            style={{ left: at.left, top: at.top }}
+            role="dialog"
+            aria-label={label}
+          >
           <div className="color-field-swatches">
             {allowNone && (
               <button
@@ -90,8 +124,9 @@ export function ColorField({
             />
             <span>Custom…</span>
           </label>
-        </div>
-      )}
+          </div>,
+          portalHost
+        )}
     </div>
   );
 }

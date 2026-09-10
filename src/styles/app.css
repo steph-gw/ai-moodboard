@@ -337,7 +337,12 @@
   min-height: 0;
 }
 
+/* The stage below is positioned and this row was not, so the stage painted over anything
+   escaping this row — tooltips and the colour popover both disappeared behind the slide.
+   A layer of its own, above the floating element toolbar, keeps them on top. */
 .canvas-head {
+  position: relative;
+  z-index: 400;
   flex-shrink: 0;
 }
 
@@ -364,12 +369,6 @@
      as soon as the window narrows. */
   flex: 1;
   min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.canvas-bar-mid::-webkit-scrollbar {
-  display: none;
 }
 
 .canvas-bar-right {
@@ -640,7 +639,7 @@
   /* Matches .btn-sm's box so the row reads as one line of controls. */
   height: 30px;
   padding: 0 9px;
-  border-radius: 20px;
+  border-radius: 5px;
   transition: background 0.15s;
 }
 
@@ -2781,11 +2780,9 @@
 }
 
 .color-field-pop {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 50%;
+  position: fixed;
   transform: translateX(-50%);
-  z-index: 9300;
+  z-index: 9401;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -2868,6 +2865,107 @@
 .num-field-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+/* ── Palette editor ── */
+.palette-pop {
+  position: fixed;
+  z-index: 9401;
+  width: 230px;
+  padding: 12px 14px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(26, 23, 20, 0.16);
+}
+
+.palette-hint {
+  margin: 4px 0 9px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+.palette-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.palette-row-swatch {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.palette-row-swatch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.palette-row-hex {
+  flex: 1;
+  min-width: 0;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: none;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.palette-row-remove,
+.palette-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.palette-row-remove {
+  width: 22px;
+  height: 22px;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.palette-row-remove:hover {
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.palette-add {
+  margin-top: 9px;
+  padding: 5px 7px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.palette-add:hover {
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 /* ── Shapes ── */

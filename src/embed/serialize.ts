@@ -7,29 +7,55 @@ import {
   type TextFontFamily,
 } from '../types';
 
+export interface SlideContent {
+  elements: CanvasElement[];
+  /** Slide background. Undefined means the default paper colour. */
+  background?: string;
+}
+
 /**
  * Reads a slide's `Elements JSON`. Never throws: a board that fails to parse should render
  * as an empty slide the planner can rebuild, not an error boundary over the whole app.
+ *
+ * Two shapes are accepted. The original is a bare array of elements; the current one wraps
+ * it so the slide can carry properties of its own, starting with a background colour.
+ * Keeping the old shape readable means the field needs no migration and no second Bubble
+ * field — every board written before this still opens.
  */
-export function parseElements(json: unknown, knownImageIds: ReadonlySet<string>): CanvasElement[] {
-  if (typeof json !== 'string' || !json.trim()) return [];
+export function parseSlideContent(json: unknown, knownImageIds: ReadonlySet<string>): SlideContent {
+  if (typeof json !== 'string' || !json.trim()) return { elements: [] };
 
   let raw: unknown;
   try {
     raw = JSON.parse(json);
   } catch {
-    return [];
+    return { elements: [] };
   }
-  if (!Array.isArray(raw)) return [];
 
-  return raw.flatMap((item) => {
-    const el = coerceElement(item, knownImageIds);
-    return el ? [el] : [];
-  });
+  const list = Array.isArray(raw)
+    ? raw
+    : Array.isArray((raw as { elements?: unknown })?.elements)
+      ? ((raw as { elements: unknown[] }).elements)
+      : [];
+  const background =
+    !Array.isArray(raw) && typeof (raw as { background?: unknown })?.background === 'string'
+      ? (raw as { background: string }).background
+      : undefined;
+
+  return {
+    elements: list.flatMap((item) => {
+      const el = coerceElement(item, knownImageIds);
+      return el ? [el] : [];
+    }),
+    background,
+  };
 }
 
-export function serializeElements(elements: readonly CanvasElement[]): string {
-  return JSON.stringify(elements);
+export function serializeSlideContent(content: SlideContent): string {
+  return JSON.stringify({
+    elements: content.elements,
+    ...(content.background ? { background: content.background } : {}),
+  });
 }
 
 const FONTS: readonly TextFontFamily[] = [
