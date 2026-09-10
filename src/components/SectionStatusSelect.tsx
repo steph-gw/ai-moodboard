@@ -25,12 +25,11 @@ function today(): string {
 }
 
 export function SectionStatusSelect({ section }: { section: Section }) {
-  const { updateSection, role } = useBoard();
+  const { updateSection, canManage } = useBoard();
   const { portalHost } = useHost();
   const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
-  const isPlanner = role === 'planner';
-
+  
   const current = toChoice(section);
 
   useEffect(() => {
@@ -67,7 +66,7 @@ export function SectionStatusSelect({ section }: { section: Section }) {
     );
 
   // Clients see the status but cannot change it.
-  if (!isPlanner) {
+  if (!canManage) {
     return (
       <span className={`status-pill is-${current}`}>
         {icon}

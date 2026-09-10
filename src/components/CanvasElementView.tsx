@@ -14,10 +14,10 @@ interface CanvasElementViewProps {
   readOnly?: boolean;
 }
 
-function ImageVoteControls({ imageId, readOnly }: { imageId: string; readOnly?: boolean }) {
+function ImageVoteControls({ imageId }: { imageId: string }) {
   const { getImageById, voteImage } = useBoard();
   const image = getImageById(imageId);
-  if (!image || readOnly) return null;
+  if (!image) return null;
 
   const vote = image.clientVote;
 
@@ -59,12 +59,16 @@ function ImageElementView({
   scale,
   imageUrl,
   readOnly,
+  isStatic,
 }: {
   element: ImageElement;
   slideId: string;
   scale: number;
   imageUrl: string;
+  /** This viewer may not change the board — a client, or a locked slide. */
   readOnly?: boolean;
+  /** Present mode or the export sheet: nothing interactive, votes included. */
+  isStatic?: boolean;
 }) {
   const { selectedElementId, selectElement, updateElement, getImageById, bringToFront, beginInteraction, endInteraction } =
     useBoard();
@@ -109,7 +113,7 @@ function ImageElementView({
     >
       <div className="canvas-image-inner">
         <img src={imageUrl} alt="" draggable={false} />
-        {!readOnly && <ImageVoteControls imageId={element.imageId} readOnly={readOnly} />}
+        {!isStatic && <ImageVoteControls imageId={element.imageId} />}
       </div>
       {menu && (
         <ElementContextMenu
@@ -246,7 +250,13 @@ export function CanvasElementView({
   scale,
   readOnly,
 }: CanvasElementViewProps) {
-  const { getImageById } = useBoard();
+  const { getImageById, canEdit } = useBoard();
+
+  // Two different noes. `readOnly` here means a static render — present mode and the export
+  // sheet — where nothing should be interactive at all. `canEdit` means this viewer may not
+  // change the board: a client, or a slide the planner has locked. They differ over voting,
+  // which is the client's whole job and must survive the second but not the first.
+  const frozen = readOnly || !canEdit;
 
   if (element.type === 'image') {
     const image = getImageById(element.imageId);
@@ -256,7 +266,8 @@ export function CanvasElementView({
         element={element}
         slideId={slideId}
         scale={scale}
-        readOnly={readOnly}
+        readOnly={frozen}
+        isStatic={readOnly ?? false}
         imageUrl={image.url}
       />
     );
@@ -267,7 +278,7 @@ export function CanvasElementView({
       element={element}
       slideId={slideId}
       scale={scale}
-      readOnly={readOnly}
+      readOnly={frozen}
     />
   );
 }

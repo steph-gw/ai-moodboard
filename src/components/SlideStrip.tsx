@@ -108,7 +108,7 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
     activeSlideId,
     setActiveSlideId,
     selectElement,
-    role,
+    canManage,
     deleteSlide,
     duplicateSlide,
   } = useBoard();
@@ -116,8 +116,7 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
   const section = board.sections.find((s) => s.id === activeSectionId);
   const slide = section?.slides.find((s) => s.id === slideId);
   const isActive = activeSlideId === slideId;
-  const isPlanner = role === 'planner';
-  const canDelete = isPlanner && (section?.slides.length ?? 0) > 1;
+    const canDelete = canManage && (section?.slides.length ?? 0) > 1;
 
   if (!slide) return null;
 
@@ -151,7 +150,7 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
         >
           <SlideMiniPreview slide={slide} />
         </button>
-        {isPlanner && (
+        {canManage && (
           <div className="slide-tab-actions">
             <button
               type="button"
@@ -187,9 +186,8 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
 }
 
 export function SlideStrip() {
-  const { board, activeSectionId, role, addSlide } = useBoard();
-  const isPlanner = role === 'planner';
-
+  const { board, activeSectionId, canManage, addSlide } = useBoard();
+  
   const section = board.sections.find((s) => s.id === activeSectionId);
   if (!section) return null;
 
@@ -199,7 +197,7 @@ export function SlideStrip() {
         {section.slides.map((slide, index) => (
           <SlideThumbnail key={slide.id} slideId={slide.id} index={index} />
         ))}
-        {isPlanner && (
+        {canManage && (
           <button type="button" className="slide-tab-add" onClick={addSlide}>
             <Plus size={16} strokeWidth={1.5} />
           </button>

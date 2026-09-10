@@ -1,4 +1,13 @@
-import type { Board, BoardImage, Comment, CommentPin, Section, SectionStatus, Slide } from '../types';
+import type {
+  Board,
+  BoardImage,
+  Comment,
+  CommentPin,
+  ImageVote,
+  Section,
+  SectionStatus,
+  Slide,
+} from '../types';
 import { BubbleApi, K, TYPE, type BubbleRow } from './bubbleApi';
 import { parseElements, serializeElements } from './serialize';
 import { initialsFrom } from '../utils/initials';
@@ -16,6 +25,8 @@ export interface LoadedBoard {
   versions: SlideVersions;
   /** Slides frozen by the planner. Client edits are refused on these. */
   lockedSlideIds: Set<string>;
+  /** This viewer's existing vote row per image, so a change patches instead of duplicating. */
+  voteRowIds: Map<string, string>;
 }
 
 export interface BoardIdentity {
@@ -34,7 +45,10 @@ export class BoardRepo {
    * Loads a whole board in three queries — sections, slides and images — rather than one per
    * section. Each row carries its parent id, so the tree is assembled here.
    */
-  async load({ moodboardId, eventName, eventDate }: BoardIdentity): Promise<LoadedBoard> {
+  async load(
+    { moodboardId, eventName, eventDate }: BoardIdentity,
+    currentUserId: string
+  ): Promise<LoadedBoard> {
     // Constraint keys are the same field keys the API returns, not the display names.
     const byMoodboard = [
       { key: K.section.moodboard, constraint_type: 'equals' as const, value: moodboardId },
@@ -71,6 +85,19 @@ export class BoardRepo {
       : [];
     const pinsBySlide = buildPins(threadRows, commentRows);
 
+    // Only this viewer's votes. One row per person per image is the point of the type —
+    // a single field on the image would let one person's thumbs-up erase another's down.
+    const voteRows = await this.api.list(TYPE.vote, [
+      { key: 'Created By', constraint_type: 'equals', value: currentUserId },
+    ]);
+    const myVotes = new Map<string, ImageVote>();
+    for (const row of voteRows) {
+      const vote = readVote(row[K.vote.vote]);
+      if (vote) myVotes.set(str(row[K.vote.image]), vote);
+    }
+    const voteRowIds = new Map<string, string>();
+    for (const row of voteRows) voteRowIds.set(str(row[K.vote.image]), row._id);
+
     const images: BoardImage[] = imageRows
       .filter((r) => r[K.image.inUse] !== false)
       .map((r) => ({
@@ -78,6 +105,7 @@ export class BoardRepo {
         sectionId: '', // images belong to the board, not a section — see PHASE-1-DATA-MODEL
         url: str(r[K.image.image]),
         tags: [],
+        clientVote: myVotes.get(r._id),
       }));
     const knownImageIds = new Set(images.map((i) => i.id));
 
@@ -128,6 +156,7 @@ export class BoardRepo {
       },
       versions,
       lockedSlideIds,
+      voteRowIds,
     };
   }
 
@@ -227,6 +256,22 @@ export class BoardRepo {
       [K.thread.y]: Math.round(y),
       [K.thread.resolved]: false,
     });
+  }
+
+  async castVote(imageId: string, vote: ImageVote): Promise<string> {
+    return this.api.create(TYPE.vote, {
+      [K.vote.image]: imageId,
+      [K.vote.vote]: vote,
+    });
+  }
+
+  async changeVote(voteRowId: string, vote: ImageVote): Promise<void> {
+    await this.api.patch(TYPE.vote, voteRowId, { [K.vote.vote]: vote });
+  }
+
+  /** Clearing a vote removes the row: "no opinion" and "never voted" are the same thing. */
+  async clearVote(voteRowId: string): Promise<void> {
+    await this.api.remove(TYPE.vote, voteRowId);
   }
 
   async deleteThread(threadId: string): Promise<void> {
@@ -342,6 +387,12 @@ function toComment(row: BubbleRow, threadResolved: boolean): Comment {
     resolved: threadResolved,
     edited: row[K.comment.edited] === true,
   };
+}
+
+/** Option sets come back as their display text, so 'Up' and 'up' both have to land. */
+function readVote(value: unknown): ImageVote | undefined {
+  const v = str(value).toLowerCase();
+  return v === 'up' || v === 'down' ? v : undefined;
 }
 
 function num(value: unknown): number {

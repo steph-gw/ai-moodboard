@@ -78,3 +78,33 @@ export function markResolved(
     replies: c.replies ? markResolved(c.replies, resolved, resolvedBy) : c.replies,
   }));
 }
+
+/**
+ * Puts the current comment pins onto a board restored from an undo snapshot.
+ *
+ * Undo rewinds the canvas; comments are their own rows in Bubble and were written the
+ * moment they were made. Without this, undoing past a comment would take it off the screen
+ * while it sat in the database, and the next load would put it back — an undo that undoes
+ * itself. Slides that no longer exist are simply not visited.
+ */
+export function withLivePins<T extends { sections: { slides: Slide[] }[] }>(
+  restored: T,
+  live: T
+): T {
+  const pins = new Map<string, Slide['commentPins']>();
+  for (const section of live.sections) {
+    for (const slide of section.slides) pins.set(slide.id, slide.commentPins);
+  }
+  return {
+    ...restored,
+    sections: restored.sections.map((section) => ({
+      ...section,
+      slides: section.slides.map((slide) => {
+        const current = pins.get(slide.id);
+        return current && current !== slide.commentPins
+          ? { ...slide, commentPins: current }
+          : slide;
+      }),
+    })),
+  };
+}

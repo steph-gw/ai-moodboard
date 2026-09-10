@@ -119,12 +119,11 @@ function TabMenu({
 }
 
 export function SectionTabs() {
-  const { board, role, activeSectionId, setActiveSectionId, deleteSection } = useBoard();
+  const { board, canManage, activeSectionId, setActiveSectionId, deleteSection } = useBoard();
   const [isAdding, setIsAdding] = useState(false);
   const [editing, setEditing] = useState<Section | null>(null);
   const [deleting, setDeleting] = useState<Section | null>(null);
-  const isPlanner = role === 'planner';
-
+  
   return (
     <nav className="section-tabs" aria-label="Sections">
       <div className="section-tabs-scroll">
@@ -140,7 +139,7 @@ export function SectionTabs() {
             >
               <span className="section-tab-icon">{sectionIcon(section.icon)}</span>
               <span className="section-tab-name">{section.name}</span>
-              {isActive && isPlanner && (
+              {isActive && canManage && (
                 <TabMenu
                   section={section}
                   onEdit={() => setEditing(section)}
@@ -150,7 +149,7 @@ export function SectionTabs() {
             </button>
           );
         })}
-        {isPlanner && (
+        {canManage && (
           <button
             type="button"
             className="section-tab-add"

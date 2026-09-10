@@ -12,6 +12,7 @@ export function CanvasToolbar() {
     isUploading,
     undo,
     canUndo,
+    canEdit,
   } = useBoard();
 
   const { features } = useHost();
@@ -24,6 +25,10 @@ export function CanvasToolbar() {
     // Cleared so picking the same file twice still fires a change event.
     e.target.value = '';
   };
+
+  // A client reviews; a locked slide is closed for redesign. The mutations are refused
+  // either way, so what's left is not offering a row of buttons that do nothing.
+  if (!canEdit) return null;
 
   return (
     <div className="canvas-toolbar">

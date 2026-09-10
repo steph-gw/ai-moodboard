@@ -28,6 +28,7 @@ import {
   removePinComment,
   updatePinComments,
   markResolved,
+  withLivePins,
 } from '../utils/commentHelpers';
 import { inferSectionIcon } from '../utils/sectionIcons';
 import { useHost } from '../embed/HostProvider';
@@ -90,6 +91,10 @@ interface BoardContextValue {
   saveNow: () => Promise<void>;
   saveState: import('../embed/useSlideSaver').SaveState;
   lockedSlideIds: ReadonlySet<string>;
+  /** False for a client, or when the planner has locked this slide. */
+  canEdit: boolean;
+  /** False for a client. Structure — sections, slides, status, vision brief. */
+  canManage: boolean;
   beginInteraction: () => void;
   endInteraction: () => void;
   canUndo: boolean;
@@ -162,6 +167,7 @@ const EMPTY_BOARD: Board = {
 export function BoardProvider({ children }: { children: ReactNode }) {
   const {
     role,
+    readOnly,
     currentUserId,
     currentUserName,
     currentUserInitials,
@@ -201,6 +207,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const lastCutAtRef = useRef(0);
 
   const versionsRef = useRef<SlideVersions>(new Map());
+  /** This viewer's vote row per image, so changing a vote patches rather than duplicates. */
+  const voteRowsRef = useRef<Map<string, string>>(new Map());
   const [lockedSlideIds, setLockedSlideIds] = useState<ReadonlySet<string>>(new Set());
   const pdf = useExportPdf(onError);
 
@@ -228,9 +236,15 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     if (!repo || !identity) return;
     setIsLoading(true);
     try {
-      const { board: loaded, versions, lockedSlideIds: locked } = await repo.load(identity);
+      const {
+        board: loaded,
+        versions,
+        lockedSlideIds: locked,
+        voteRowIds,
+      } = await repo.load(identity, currentUserId);
       versionsRef.current = versions;
       setLockedSlideIds(locked);
+      voteRowsRef.current = voteRowIds;
       boardRef.current = loaded;
       setBoard(loaded);
       setPast([]);
@@ -247,7 +261,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [repo, identity, onError, onLoaded]);
+  }, [repo, identity, currentUserId, onError, onLoaded]);
   loadBoardRef.current = loadBoard;
 
   useEffect(() => {
@@ -323,6 +337,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    */
   const runStructural = useCallback(
     async (write: () => Promise<void>): Promise<boolean> => {
+      if (!canEditRef.current) return false;
       await saverRef.current.flush();
       try {
         await write();
@@ -351,6 +366,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    */
   const applyStructural = useCallback(
     (updater: (prev: Board) => Board) => {
+      if (!canEditRef.current) return;
       const prev = boardRef.current;
       const next = updater(prev);
       if (next === prev) return;
@@ -363,7 +379,65 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     [repo]
   );
 
+  /**
+   * Applies a change that isn't a board edit — a comment, a pin, a vote — to local state.
+   *
+   * Comments are written the moment they are made, so they must not enter the undo stack:
+   * rewinding local state can't take back a row that is already in Bubble, and the next
+   * reload would silently undo the undo. Undo carries the live pins forward instead, which
+   * keeps the two independent — see `withLivePins`. Unlike a board edit this doesn't mark
+   * the slide dirty either: comments live in their own rows, not in the slide's elements.
+   */
+  const applyComments = useCallback((updater: (prev: Board) => Board) => {
+    const prev = boardRef.current;
+    const next = updater(prev);
+    if (next === prev) return;
+    boardRef.current = next;
+    setBoard(next);
+  }, []);
+
+  /**
+   * Writes first, then updates the screen with what the database actually returned.
+   *
+   * The alternative — draw it immediately and reconcile the id afterwards — buys a few
+   * hundred milliseconds and pays for it with a whole class of bug where a comment or vote
+   * is changed again before it has a real id. Both are deliberate, one-at-a-time actions,
+   * so the wait lands where a person already expects one.
+   */
+  const writeThrough = useCallback(
+    async <T,>(write: () => Promise<T>, apply: (result: T) => void, failure: string) => {
+      try {
+        apply(await write());
+      } catch (err) {
+        onError(err instanceof Error ? err.message : failure);
+        // Local state and the database have diverged; the database wins.
+        await loadBoardRef.current?.();
+      }
+    },
+    [onError]
+  );
+
+  /**
+   * Two permissions, because locking is per slide.
+   *
+   * `canManage` is whether this viewer may shape the board at all — add sections and
+   * slides, set a status, write the vision brief. A client can't; they review.
+   * `canEdit` is that plus the active slide being unlocked, and covers the canvas itself.
+   * Locking one slide freezes its contents without taking away the ability to add another.
+   *
+   * Comments and votes sit outside both. They are how a client takes part, and a locked
+   * slide is closed for redesign, not for discussion.
+   */
+  const canManage = !readOnly;
+  const canEdit = canManage && !lockedSlideIds.has(activeSlideId);
+  const canEditRef = useRef(canEdit);
+  canEditRef.current = canEdit;
+
   const commit = useCallback((updater: (prev: Board) => Board) => {
+    // Every board mutation funnels through here, applyStructural or runStructural. Gating
+    // the three of them beats gating twenty callers, because a mutation added later can't
+    // forget to ask.
+    if (!canEditRef.current) return;
     const prev = boardRef.current;
     const next = updater(prev);
     if (next === prev) return;
@@ -394,7 +468,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const undo = useCallback(() => {
     setPast((stack) => {
       if (stack.length === 0) return stack;
-      const restored = stack[stack.length - 1];
+      // Undo rewinds the canvas, not the conversation. Comments are written the moment
+      // they're made, so a snapshot from before one was posted must not take it off the
+      // screen — it would still be in Bubble, and reappear on the next load.
+      const restored = withLivePins(stack[stack.length - 1], boardRef.current);
       boardRef.current = restored;
       setBoard(restored);
       saverRef.current.noteChange();
@@ -470,26 +547,62 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       const pinId = `pin-${Date.now()}`;
       const newPin: CommentPin = { id: pinId, x, y, comments: [] };
 
-      commit((prev) =>
+      // Local only: the thread row is written with the first comment, not on pin-drop.
+      applyComments((prev) =>
         updateSlidePins(prev, activeSlideId, (pins) => [...pins, newPin])
       );
       setSelectedCommentPinId(pinId);
       setPlacingComment(false);
     },
-    [activeSlideId, commit]
+    [activeSlideId, applyComments]
   );
 
-  const voteImage = useCallback((imageId: string, vote: ImageVote) => {
-    commit((prev) => ({
-      ...prev,
-      images: prev.images.map((img) => {
-        if (img.id !== imageId) return img;
-        // Clicking the active vote again clears it
-        const nextVote = img.clientVote === vote ? undefined : vote;
-        return { ...img, clientVote: nextVote };
-      }),
-    }));
-  }, [commit]);
+  /**
+   * Voting is not a board edit. A client is read-only over the canvas and still votes —
+   * that is what they are there to do — so this goes around `commit` rather than through it.
+   */
+  const voteImage = useCallback(
+    (imageId: string, vote: ImageVote) => {
+      const current = boardRef.current.images.find((img) => img.id === imageId)?.clientVote;
+      // Clicking the active vote again clears it.
+      const next = current === vote ? undefined : vote;
+
+      const apply = () =>
+        applyComments((prev) => ({
+          ...prev,
+          images: prev.images.map((img) =>
+            img.id === imageId ? { ...img, clientVote: next } : img
+          ),
+        }));
+
+      if (!repo) {
+        apply();
+        return;
+      }
+
+      const existing = voteRowsRef.current.get(imageId);
+      void writeThrough(
+        async () => {
+          if (!next) {
+            if (existing) await repo.clearVote(existing);
+            return undefined;
+          }
+          if (existing) {
+            await repo.changeVote(existing, next);
+            return existing;
+          }
+          return repo.castVote(imageId, next);
+        },
+        (rowId) => {
+          if (rowId) voteRowsRef.current.set(imageId, rowId);
+          else voteRowsRef.current.delete(imageId);
+          apply();
+        },
+        'Could not record that vote.'
+      );
+    },
+    [repo, applyComments, writeThrough]
+  );
 
   const updateElement = useCallback(
     (slideId: string, elementId: string, patch: Partial<CanvasElement>) => {
@@ -904,44 +1017,6 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
 
   /**
-   * Applies a comment change to local state.
-   *
-   * Comments are written the moment they are made, so they must not enter the undo stack:
-   * rewinding local state can't take back a row that is already in Bubble, and the next
-   * reload would silently undo the undo. Unlike a board edit this doesn't mark the slide
-   * dirty either — comments live in their own rows, not in the slide's elements.
-   */
-  const applyComments = useCallback((updater: (prev: Board) => Board) => {
-    const prev = boardRef.current;
-    const next = updater(prev);
-    if (next === prev) return;
-    boardRef.current = next;
-    setBoard(next);
-    if (repo) setPast([]);
-  }, [repo]);
-
-  /**
-   * Writes first, then updates the screen with what the database actually returned.
-   *
-   * The alternative — draw it immediately and reconcile the id afterwards — buys a few
-   * hundred milliseconds and pays for it with a whole class of bug where a comment is
-   * edited or deleted before it has a real id. Comments are typed and submitted, so the
-   * wait is where a person already expects one.
-   */
-  const writeComment = useCallback(
-    async <T,>(write: () => Promise<T>, apply: (result: T) => void, failure: string) => {
-      try {
-        apply(await write());
-      } catch (err) {
-        onError(err instanceof Error ? err.message : failure);
-        // Local state and the database have diverged; the database wins.
-        await loadBoardRef.current?.();
-      }
-    },
-    [onError]
-  );
-
-  /**
    * Resolution belongs to the thread, not to one comment inside it.
    *
    * The drawer only offers resolve on a thread's first comment and treats a pin as resolved
@@ -970,13 +1045,13 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         apply();
         return;
       }
-      void writeComment(
+      void writeThrough(
         () => repo.setThreadResolved(pinId, resolved, currentUserId),
         apply,
         resolved ? 'Could not resolve that thread.' : 'Could not reopen that thread.'
       );
     },
-    [repo, applyComments, writeComment, currentUserId, currentUserName]
+    [repo, applyComments, writeThrough, currentUserId, currentUserName]
   );
 
   const resolveComment = useCallback(
@@ -1021,7 +1096,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       if (!found) return;
       const isPending = found.pin.comments.length === 0;
 
-      void writeComment(
+      void writeThrough(
         async () => {
           // The thread row is created with its first comment, so an abandoned pin never
           // becomes a permanent empty thread that everyone afterwards has to look at.
@@ -1043,7 +1118,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       repo,
       identity,
       applyComments,
-      writeComment,
+      writeThrough,
       currentUserId,
       currentUserName,
       currentUserInitials,
@@ -1079,13 +1154,13 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         apply();
         return;
       }
-      void writeComment(
+      void writeThrough(
         () => repo.updateComment(commentId, trimmed),
         apply,
         'Could not save that edit.'
       );
     },
-    [repo, applyComments, writeComment]
+    [repo, applyComments, writeThrough]
   );
 
   const reopenComment = useCallback(
@@ -1120,7 +1195,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         apply();
         return;
       }
-      void writeComment(
+      void writeThrough(
         async () => {
           await repo.deleteComment(commentId);
           if (isLast) await repo.deleteThread(pinId);
@@ -1132,7 +1207,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         'Could not delete that comment.'
       );
     },
-    [repo, applyComments, writeComment]
+    [repo, applyComments, writeThrough]
   );
 
   const pinSuggestion = useCallback(
@@ -1462,6 +1537,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         isDirty: saver.isDirty,
         saveNow: saver.flush,
         lockedSlideIds,
+        canEdit,
+        canManage,
         beginInteraction,
         endInteraction,
         canUndo: past.length > 0,
