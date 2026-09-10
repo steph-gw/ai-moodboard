@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Circle, Minus, Pentagon, Shapes, Square, Triangle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Circle, Minus, Pentagon, Shapes, Square, Triangle } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import type { ShapeKind } from '../types';
 
@@ -43,6 +43,12 @@ export function AddElementsMenu() {
       >
         <Shapes size={13} strokeWidth={1.5} />
         Add elements
+        {/* Points the way the menu will move, the same as the status pill. */}
+        {open ? (
+          <ChevronUp size={11} strokeWidth={1.8} />
+        ) : (
+          <ChevronDown size={11} strokeWidth={1.8} />
+        )}
       </button>
 
       {open && (

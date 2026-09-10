@@ -53,7 +53,16 @@ export interface ImageElement extends CanvasElementBase {
   imageId: string;
 }
 
-export type TextFontFamily = 'sans' | 'display';
+export type TextFontFamily =
+  | 'sans'
+  | 'display'
+  | 'inter'
+  | 'roboto'
+  | 'openSans'
+  | 'montserrat'
+  | 'poppins'
+  | 'lato'
+  | 'lora';
 
 export interface TextElement extends CanvasElementBase {
   type: 'text';

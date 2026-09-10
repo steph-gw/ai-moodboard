@@ -17,6 +17,7 @@ import type { Section } from '../types';
 function SectionMeta({ section }: { section: Section }) {
   return (
     <div className="canvas-bar-left">
+      <VisionBrief />
       <SectionStatusSelect section={section} />
     </div>
   );
@@ -59,7 +60,6 @@ export function MainCanvas() {
             </div>
           )}
           <div className="canvas-bar-right">
-            <VisionBrief />
             <CanvasToolbar />
           </div>
         </div>

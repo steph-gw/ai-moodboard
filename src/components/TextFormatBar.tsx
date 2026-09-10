@@ -1,5 +1,6 @@
 import { Bold, Italic, Minus, Plus } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
+import { ColorField } from './ColorField';
 import type { TextElement } from '../types';
 import { TEXT_FONT_OPTIONS } from '../utils/textFonts';
 
@@ -14,7 +15,7 @@ export function TextFormatControls({
   element: TextElement;
   slideId: string;
 }) {
-  const { updateElement, board } = useBoard();
+  const { updateElement } = useBoard();
 
   const patch = (updates: Partial<TextElement>) => {
     updateElement(slideId, text.id, updates);
@@ -95,29 +96,11 @@ export function TextFormatControls({
 
       <span className="text-format-divider" />
 
-      <div className="text-format-colors">
-        <label className="text-format-color-picker" aria-label="Text color">
-          <input
-            type="color"
-            value={text.color}
-            onChange={(e) => patch({ color: e.target.value })}
-          />
-          <span
-            className="text-format-color-swatch current"
-            style={{ backgroundColor: text.color }}
-          />
-        </label>
-        {board.palette.map((color) => (
-          <button
-            key={color}
-            type="button"
-            className={`text-format-color-swatch ${text.color === color ? 'active' : ''}`}
-            style={{ backgroundColor: color }}
-            onClick={() => patch({ color })}
-            aria-label={`Set color ${color}`}
-          />
-        ))}
-      </div>
+      <ColorField
+        label="Text colour"
+        value={text.color}
+        onChange={(color) => patch({ color })}
+      />
     </>
   );
 }

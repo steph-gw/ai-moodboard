@@ -32,7 +32,17 @@ export function serializeElements(elements: readonly CanvasElement[]): string {
   return JSON.stringify(elements);
 }
 
-const FONTS: readonly TextFontFamily[] = ['sans', 'display'];
+const FONTS: readonly TextFontFamily[] = [
+  'sans',
+  'display',
+  'inter',
+  'roboto',
+  'openSans',
+  'montserrat',
+  'poppins',
+  'lato',
+  'lora',
+];
 const ALIGNS = ['left', 'center', 'right'] as const;
 const SHAPES: readonly ShapeKind[] = ['line', 'rect', 'ellipse', 'triangle', 'polygon'];
 const STROKES: readonly StrokeStyle[] = ['solid', 'dashed', 'dotted'];

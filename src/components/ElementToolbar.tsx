@@ -6,6 +6,8 @@ import { ShapeFormatControls } from './ShapeFormatControls';
 
 const GAP = 10;
 const EDGE = 8;
+/** Room the rotate handle needs on whichever side of the element it is drawn. */
+const HANDLE = 34;
 
 /**
  * Quick actions for the selected element, floating beside it.
@@ -54,16 +56,26 @@ export function ElementToolbar() {
     const width = bar?.width ?? 180;
     const height = bar?.height ?? 34;
 
-    // Above the element by default; underneath when there isn't room, which is the case
-    // for anything sitting against the top of the slide.
-    const wantTop = box.top - frame.top - height - GAP;
-    const below = wantTop < EDGE;
-    const top = below ? box.bottom - frame.top + GAP : wantTop;
+    // Sit opposite the rotate handle. The handle is drawn above the element unless the
+    // element is near the top of the slide, in which case it flips below — so rather than
+    // repeating that rule, ask which side it actually ended up on.
+    const handleBelow = !!node.querySelector('.rotate-handle.is-below');
+    const above = box.top - frame.top - height - GAP - (handleBelow ? 0 : HANDLE);
+    const below = box.bottom - frame.top + GAP + (handleBelow ? HANDLE : 0);
+
+    const preferAbove = handleBelow;
+    let top = preferAbove ? above : below;
+    // Fall back to the other side, then clamp — a toolbar half off the stage is worse
+    // than one that overlaps the handle it was avoiding.
+    if (preferAbove ? top < EDGE : top + height > frame.height - EDGE) {
+      top = preferAbove ? below : above;
+    }
+    top = Math.min(Math.max(top, EDGE), Math.max(frame.height - height - EDGE, EDGE));
 
     const centred = box.left - frame.left + box.width / 2 - width / 2;
-    const left = Math.min(Math.max(centred, EDGE), frame.width - width - EDGE);
+    const left = Math.min(Math.max(centred, EDGE), Math.max(frame.width - width - EDGE, EDGE));
 
-    setAt({ left, top: Math.min(top, frame.height - height - EDGE), below });
+    setAt({ left, top, below: !preferAbove });
   }, [
     visible,
     selectedElementId,

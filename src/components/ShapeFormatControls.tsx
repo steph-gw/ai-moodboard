@@ -1,4 +1,6 @@
+import { CornerUpLeft, Hexagon, Minus } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
+import { ColorField } from './ColorField';
 import type { ShapeElement, StrokeStyle } from '../types';
 
 const STROKE_STYLES: { value: StrokeStyle; label: string; dash: string }[] = [
@@ -8,8 +10,12 @@ const STROKE_STYLES: { value: StrokeStyle; label: string; dash: string }[] = [
 ];
 
 /**
- * Shape controls for the floating toolbar. What's offered follows the shape: a line has no
- * interior to fill, and only a rectangle has corners to round.
+ * Shape controls for the floating toolbar.
+ *
+ * What's offered follows the shape: only a line is a line, so only a line gets dash
+ * styles; only a rectangle has corners to round; only a polygon has a side count. Labels
+ * are icons — the toolbar sits beside the element and words like "Radius" pushed it wider
+ * than most of the shapes it was labelling.
  */
 export function ShapeFormatControls({
   element,
@@ -18,18 +24,14 @@ export function ShapeFormatControls({
   element: ShapeElement;
   slideId: string;
 }) {
-  const { updateElement, board } = useBoard();
+  const { updateElement } = useBoard();
   const patch = (updates: Partial<ShapeElement>) => updateElement(slideId, element.id, updates);
-
   const isLine = element.shape === 'line';
-  // `transparent` is the no-fill value: a colour input can't express "none", so the swatch
-  // that clears the fill sets it and the renderer treats it as nothing.
-  const fill = element.fill ?? 'transparent';
 
   return (
     <>
-      <div className="shape-format-group" role="group" aria-label="Line style">
-        {STROKE_STYLES.map(({ value, label, dash }) => (
+      {isLine &&
+        STROKE_STYLES.map(({ value, label, dash }) => (
           <button
             key={value}
             type="button"
@@ -53,137 +55,92 @@ export function ShapeFormatControls({
             </svg>
           </button>
         ))}
-      </div>
+      {isLine && <span className="text-format-divider" />}
 
-      <span className="text-format-divider" />
-
-      <div className="text-format-size">
-        <span className="shape-format-label">Width</span>
-        <input
-          type="number"
-          className="text-format-size-input"
-          value={element.strokeWidth}
-          min={0}
-          max={40}
-          onChange={(e) => {
-            const n = Number(e.target.value);
-            if (!Number.isNaN(n)) patch({ strokeWidth: Math.min(40, Math.max(0, n)) });
-          }}
-          aria-label="Line width"
-        />
-      </div>
+      <NumberField
+        icon={<Minus size={13} strokeWidth={2.4} />}
+        label={isLine ? 'Line width' : 'Outline width'}
+        value={element.strokeWidth}
+        min={0}
+        max={40}
+        onChange={(strokeWidth) => patch({ strokeWidth })}
+      />
 
       {element.shape === 'rect' && (
-        <>
-          <span className="text-format-divider" />
-          <div className="text-format-size">
-            <span className="shape-format-label">Radius</span>
-            <input
-              type="number"
-              className="text-format-size-input"
-              value={element.radius ?? 0}
-              min={0}
-              max={200}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (!Number.isNaN(n)) patch({ radius: Math.min(200, Math.max(0, n)) });
-              }}
-              aria-label="Corner radius"
-            />
-          </div>
-        </>
+        <NumberField
+          icon={<CornerUpLeft size={13} strokeWidth={1.8} />}
+          label="Corner radius"
+          value={element.radius ?? 0}
+          min={0}
+          max={200}
+          onChange={(radius) => patch({ radius })}
+        />
       )}
 
       {element.shape === 'polygon' && (
-        <>
-          <span className="text-format-divider" />
-          <div className="text-format-size">
-            <span className="shape-format-label">Sides</span>
-            <input
-              type="number"
-              className="text-format-size-input"
-              value={element.sides ?? 5}
-              min={3}
-              max={12}
-              onChange={(e) => {
-                const n = Number(e.target.value);
-                if (!Number.isNaN(n)) patch({ sides: Math.min(12, Math.max(3, Math.round(n))) });
-              }}
-              aria-label="Number of sides"
-            />
-          </div>
-        </>
+        <NumberField
+          icon={<Hexagon size={13} strokeWidth={1.8} />}
+          label="Number of sides"
+          value={element.sides ?? 5}
+          min={3}
+          max={12}
+          onChange={(sides) => patch({ sides: Math.round(sides) })}
+        />
       )}
 
       <span className="text-format-divider" />
 
-      <SwatchRow
+      <ColorField
         label={isLine ? 'Line colour' : 'Outline colour'}
         value={element.stroke}
-        palette={board.palette}
         onChange={(stroke) => patch({ stroke })}
       />
 
       {!isLine && (
-        <>
-          <span className="text-format-divider" />
-          <SwatchRow
-            label="Fill colour"
-            value={fill === 'transparent' ? '#ffffff' : fill}
-            palette={board.palette}
-            onChange={(next) => patch({ fill: next })}
-            onClear={() => patch({ fill: 'transparent' })}
-            cleared={fill === 'transparent'}
-          />
-        </>
+        <ColorField
+          label="Fill colour"
+          value={element.fill ?? 'transparent'}
+          onChange={(fill) => patch({ fill })}
+          allowNone
+          onNone={() => patch({ fill: 'transparent' })}
+        />
       )}
     </>
   );
 }
 
-function SwatchRow({
+function NumberField({
+  icon,
   label,
   value,
-  palette,
+  min,
+  max,
   onChange,
-  onClear,
-  cleared,
 }: {
+  icon: React.ReactNode;
   label: string;
-  value: string;
-  palette: string[];
-  onChange: (color: string) => void;
-  onClear?: () => void;
-  cleared?: boolean;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
 }) {
   return (
-    <div className="text-format-colors" role="group" aria-label={label}>
-      <label className="text-format-color-picker" aria-label={label}>
-        <input type="color" value={value} onChange={(e) => onChange(e.target.value)} />
-        <span
-          className={`text-format-color-swatch current ${cleared ? 'is-none' : ''}`}
-          style={{ backgroundColor: cleared ? 'transparent' : value }}
-        />
-      </label>
-      {onClear && (
-        <button
-          type="button"
-          className={`text-format-color-swatch is-none ${cleared ? 'active' : ''}`}
-          onClick={onClear}
-          data-tooltip="No fill"
-          aria-label="No fill"
-        />
-      )}
-      {palette.map((color) => (
-        <button
-          key={color}
-          type="button"
-          className={`text-format-color-swatch ${!cleared && value === color ? 'active' : ''}`}
-          style={{ backgroundColor: color }}
-          onClick={() => onChange(color)}
-          aria-label={`${label} ${color}`}
-        />
-      ))}
+    <div className="num-field" data-tooltip={label}>
+      <span className="num-field-icon" aria-hidden>
+        {icon}
+      </span>
+      <input
+        type="number"
+        className="num-field-input"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => {
+          const n = Number(e.target.value);
+          if (!Number.isNaN(n)) onChange(Math.min(max, Math.max(min, n)));
+        }}
+        aria-label={label}
+      />
     </div>
   );
 }
