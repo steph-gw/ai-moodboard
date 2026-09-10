@@ -4,6 +4,10 @@ import { CanvasElementView } from './CanvasElementView';
 import { CommentPinMarker } from './CommentPinMarker';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 
+/** Small enough never to clip a real column; large enough that a zero-width measure
+ *  doesn't render an invisible slide. */
+const MIN_SCALE = 0.08;
+
 interface SlideCanvasProps {
   fullWidth?: boolean;
   readOnly?: boolean;
@@ -38,28 +42,42 @@ export function SlideCanvas({
       const width = container.clientWidth;
       const height = container.clientHeight;
 
+      // The floor only exists to stop a container that momentarily measures zero from
+      // collapsing the slide to nothing. It used to be 0.3, which is 288px wide — so in a
+      // narrow column the slide stopped shrinking and spilled out of it instead.
       if (fitMode === 'contain') {
         const scaleX = width / SLIDE_WIDTH;
         const scaleY = height / SLIDE_HEIGHT;
-        setScale(Math.max(0.3, Math.min(scaleX, scaleY)));
+        setScale(Math.max(MIN_SCALE, Math.min(scaleX, scaleY)));
         return;
       }
 
       if (fullWidth) {
-        setScale(Math.max(width / SLIDE_WIDTH, 0.3));
+        setScale(Math.max(width / SLIDE_WIDTH, MIN_SCALE));
         return;
       }
 
       const maxHeight = Math.max(height - 24, 150);
       const scaleX = width / SLIDE_WIDTH;
       const scaleY = maxHeight / SLIDE_HEIGHT;
-      setScale(Math.max(0.3, Math.min(scaleX, scaleY)));
+      setScale(Math.max(MIN_SCALE, Math.min(scaleX, scaleY)));
     };
 
     updateScale();
     const observer = new ResizeObserver(updateScale);
     observer.observe(container);
-    return () => observer.disconnect();
+
+    // ResizeObserver only delivers while the document is rendering, so a board that is
+    // resized while hidden — a Bubble group that is toggled, a background tab — comes back
+    // with the scale it had when it went away. Remeasuring on resize and on becoming
+    // visible costs nothing and closes that gap.
+    window.addEventListener('resize', updateScale);
+    document.addEventListener('visibilitychange', updateScale);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateScale);
+      document.removeEventListener('visibilitychange', updateScale);
+    };
   }, [activeSlideId, fullWidth, fitMode]);
 
   useEffect(() => {

@@ -377,35 +377,66 @@
   flex-shrink: 0;
 }
 
-.locked-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: 999px;
-  background: var(--gold-light);
-  border: 1px solid var(--gold-border);
-  color: var(--gold-active);
-  font-family: var(--font-sans);
-  font-size: 10.5px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
+/* A stacked column would push its tooltips off the right edge, so they open leftwards. */
+.slide-actions [data-tooltip]::after {
+  top: 50%;
+  right: calc(100% + 7px);
+  transform: translateY(-50%);
 }
 
-.slide-tab-lock {
+.canvas-lock {
   position: absolute;
-  top: 4px;
-  left: 4px;
+  top: 8px;
+  left: 8px;
+  z-index: 320;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  background: rgba(26, 23, 20, 0.62);
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--gold-active);
+  border: 1px solid var(--gold-active);
   color: #fff;
+  box-shadow: 0 4px 14px rgba(26, 23, 20, 0.18);
+  cursor: default;
+}
+
+.canvas-lock[data-tooltip]::after {
+  top: calc(100% + 7px);
+  left: 0;
+  right: auto;
+}
+
+/* Sits on a corner of the thumbnail in the section's own gold, with the whole thumbnail
+   dimmed behind it — a small grey square was too easy to read as an artefact. */
+.slide-tab-lock {
+  position: absolute;
+  top: 5px;
+  left: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: var(--gold-active);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(26, 23, 20, 0.25);
+}
+
+.slide-tab.is-locked .slide-tab-hit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(196, 163, 90, 0.14);
+  pointer-events: none;
+}
+
+.slide-tab.is-locked .slide-tab-hit {
+  outline: 1.5px solid var(--gold-border);
+  outline-offset: -1px;
 }
 
 .slide-tab.is-locked .slide-tab-hit {
@@ -493,9 +524,10 @@
 .slide-actions {
   position: absolute;
   top: 8px;
-  right: 12px;
+  right: 8px;
   z-index: 320;
   display: flex;
+  flex-direction: column;
   align-items: center;
   gap: 2px;
   padding: 3px;
@@ -2705,4 +2737,61 @@
   white-space: pre-wrap;
   word-break: break-word;
   overflow: hidden;
+}
+
+/* ── Narrow windows ──
+   Token overrides are written against `:root`, which the build's prefixer replaces with
+   `.gw-mb`. Writing `.gw-mb` here instead compiles to `.gw-mb .gw-mb` and silently matches
+   nothing — the breakpoints look present and do nothing.
+   Three columns, two of them fixed width, so past a point the middle is all that gives —
+   and the slide is the thing that shouldn't. These hand width back to the canvas in the
+   order the columns are worth least, and everything stays in flow: a drawer that floats
+   over the canvas hides the slide it is a comment about. */
+
+@media (max-width: 1200px) {
+  :root {
+    --slide-strip-w: 160px;
+    --comment-panel-w: 300px;
+  }
+
+  /* The counts are the first thing to go; the section name and status are not. */
+  .section-meta {
+    display: none;
+  }
+}
+
+@media (max-width: 1000px) {
+  :root {
+    --slide-strip-w: 128px;
+    --comment-panel-w: 264px;
+  }
+
+  .canvas {
+    padding: 12px 12px 64px;
+  }
+}
+
+@media (max-width: 860px) {
+  /* Below this the filmstrip is thumbnails too small to tell apart, and it costs the slide
+     more than it gives. The section tabs still move between slides. */
+  .slide-strip {
+    display: none;
+  }
+
+  .canvas-bar {
+    gap: 8px;
+  }
+
+  .section-title {
+    max-width: 38vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 700px) {
+  :root {
+    --comment-panel-w: min(240px, 52vw);
+  }
 }

@@ -69,12 +69,6 @@ export function MainCanvas() {
             </div>
           )}
           <div className="canvas-bar-right">
-            {locked && (
-              <span className="locked-chip" title="This slide is locked">
-                <Lock size={11} strokeWidth={1.8} />
-                Locked
-              </span>
-            )}
             <VisionBrief />
             <CanvasToolbar />
           </div>
@@ -85,6 +79,12 @@ export function MainCanvas() {
           artboard scales to its container, so anything that appears in the layout above it
           shrinks the slide — which is what selecting a text box used to do. */}
       <div className="canvas-stage">
+        {/* On the slide itself, where someone wondering why they can't edit is looking. */}
+        {locked && (
+          <span className="canvas-lock" data-tooltip="This slide is locked" tabIndex={0}>
+            <Lock size={15} strokeWidth={2} />
+          </span>
+        )}
         <ElementToolbar />
         <SlideActions />
         <SlideCanvas fullWidth fitMode="contain" onWidthChange={onWidthChange} />

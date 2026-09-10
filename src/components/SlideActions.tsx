@@ -2,11 +2,11 @@ import { Copy, Lock, Plus, Unlock } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 
 /**
- * Per-slide actions, floating over the top-right of the stage.
+ * Per-slide actions: a column down the right of the stage, starting at the top.
  *
- * Overlaid rather than placed in the header on purpose: anything that takes layout space
- * above the artboard changes its height, and the artboard is scaled to fit — so a bar that
- * appears and disappears would resize the slide under the cursor.
+ * Overlaid rather than placed in the header on purpose. Anything that takes layout space
+ * above the artboard changes the height the artboard is scaled to fit, so a bar that came
+ * and went would resize the slide under the cursor.
  */
 export function SlideActions() {
   const {
