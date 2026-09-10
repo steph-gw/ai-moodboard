@@ -4,6 +4,7 @@ import { useBoard } from '../context/BoardContext';
 import type { Comment, CommentPin } from '../types';
 import { avatarColor } from '../utils/avatarColor';
 import { isPinResolved } from '../utils/commentHelpers';
+import { formatTimestamp } from '../utils/formatTime';
 
 type ThreadFilter = 'all' | 'open' | 'resolved';
 
@@ -52,7 +53,7 @@ function CommentActions({
               className="thread-menu-item"
               onClick={() => {
                 setOpen(false);
-                reopenComment(pinId, comment.id);
+                reopenComment(pinId);
               }}
             >
               <RotateCcw size={13} strokeWidth={1.6} />
@@ -128,7 +129,7 @@ function CommentRow({
         </span>
         <span className="thread-author">{comment.authorName}</span>
         <span className="thread-time">
-          {comment.timestamp}
+          {formatTimestamp(comment.timestamp)}
           {comment.edited && ' · edited'}
         </span>
         <div className="thread-item-actions">
@@ -139,7 +140,7 @@ function CommentRow({
               className="thread-icon-btn"
               data-tooltip="Mark as resolved and hide discussion"
               aria-label="Mark as resolved and hide discussion"
-              onClick={() => resolveComment(pinId, comment.id)}
+              onClick={() => resolveComment(pinId)}
             >
               <CheckCircle2 size={15} strokeWidth={1.6} />
             </button>

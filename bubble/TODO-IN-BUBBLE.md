@@ -76,6 +76,31 @@ Full click-by-click in [PRIVACY-RULES-WALKTHROUGH.md](PRIVACY-RULES-WALKTHROUGH.
 
 No client write rule on `Moodboard` or `Moodboard Section`.
 
+## 7. One field: `Moodboard Comment` → `Author name`
+
+**Data → Data types → Moodboard Comment → Create a new field**
+
+| Setting | Value |
+|---|---|
+| Field name | `Author name` |
+| Field type | text |
+
+Nothing else — not a list, no default.
+
+**Why, given the plan said the author is `Creator`.** It still is: `Created By` remains the
+record of who wrote a comment, it's set by Bubble server-side, and the drawer uses it to
+decide whether to offer Edit and Delete. But the Data API returns it as a *user id*, and
+turning ids into "Stephanie Chang" means exposing your `User` type on the Data API — the
+one type where a mistaken privacy rule leaks real people's details. One denormalised text
+field avoids opening that door at all.
+
+The trade is that the stored name doesn't follow a later rename, and that someone
+hand-crafting an API call could write a false one. Both are display-only: `Created By`
+still says who it really was, and it's the field the permission checks use.
+
+Written only at create time, alongside the comment itself. Comments already in the database
+without it render as "Someone" rather than breaking.
+
 ---
 
 ## Then tell me and I'll verify in about a minute

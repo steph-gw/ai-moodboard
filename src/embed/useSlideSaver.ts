@@ -148,6 +148,10 @@ export function useSlideSaver({ repo, boardRef, versionsRef, onError, onConflict
 
   const noteChange = useCallback(() => {
     if (!repo || awaitingReloadRef.current) return;
+    // Ask rather than assume. Mutations that touch only comments, votes or selection leave
+    // every element array identical, and a chip reading "Unsaved changes" when nothing is
+    // unsaved teaches people to ignore the one time it matters.
+    if (!collectDirty().length) return;
     // Each change pushes the idle save further out. Anything the user would notice losing is
     // captured by a boundary flush long before this fires.
     setIsDirty(true);
@@ -156,7 +160,7 @@ export function useSlideSaver({ repo, boardRef, versionsRef, onError, onConflict
       timerRef.current = null;
       void writeNow();
     }, IDLE_MS);
-  }, [repo, writeNow]);
+  }, [repo, collectDirty, writeNow]);
 
   // Leaving the page or hiding the tab has to take unsaved work with it. beforeunload can't
   // await, so that one is best-effort.

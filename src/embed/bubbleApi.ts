@@ -58,6 +58,12 @@ export const K = {
     parent: 'parent_comment_custom_moodboard_comment',
     text: 'text_text',
     edited: 'edited__boolean',
+    /**
+     * Denormalised so the drawer can render a name without the User type being on the
+     * Data API. `Created By` is still the record of who wrote it — this is a display
+     * label, and the two are only ever set together, at create time.
+     */
+    authorName: 'author_name_text',
   },
 } as const;
 

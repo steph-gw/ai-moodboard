@@ -1,6 +1,7 @@
-import type { Board, BoardImage, Section, SectionStatus, Slide } from '../types';
+import type { Board, BoardImage, Comment, CommentPin, Section, SectionStatus, Slide } from '../types';
 import { BubbleApi, K, TYPE, type BubbleRow } from './bubbleApi';
 import { parseElements, serializeElements } from './serialize';
+import { initialsFrom } from '../utils/initials';
 
 /**
  * Translates between Bubble rows and the shape the app already works in. Everything that
@@ -57,6 +58,19 @@ export class BoardRepo {
         )
       : [];
 
+    // Threads and their comments: two more queries for the whole board, not per slide.
+    const threadRows = await this.api.list(TYPE.thread, [
+      { key: K.thread.moodboard, constraint_type: 'equals', value: moodboardId },
+    ]);
+    const commentRows = threadRows.length
+      ? await this.api.list(
+          TYPE.comment,
+          [{ key: K.comment.thread, constraint_type: 'in', value: threadRows.map((r) => r._id) }],
+          'Created Date'
+        )
+      : [];
+    const pinsBySlide = buildPins(threadRows, commentRows);
+
     const images: BoardImage[] = imageRows
       .filter((r) => r[K.image.inUse] !== false)
       .map((r) => ({
@@ -76,7 +90,7 @@ export class BoardRepo {
         sectionId,
         name: str(row[K.slide.name]) || 'Slide',
         elements: parseElements(row[K.slide.elementsJson], knownImageIds),
-        commentPins: [], // merged in from threads/comments in phase 7
+        commentPins: pinsBySlide.get(row._id) ?? [],
       };
       versions.set(row._id, str(row['Modified Date']));
       const list = slidesBySection.get(sectionId);
@@ -192,6 +206,146 @@ export class BoardRepo {
   async setBoardVisionBrief(moodboardId: string, text: string): Promise<void> {
     await this.api.patch(TYPE.moodboard, moodboardId, { [K.moodboard.visionBrief]: text });
   }
+
+  /**
+   * A thread is created with its first comment, never before it.
+   *
+   * Dropping a pin and then thinking better of it is a normal thing to do, and if the row
+   * were written on pin-drop every abandoned pin would be a permanent empty thread that
+   * everyone afterwards has to look at.
+   */
+  async createThread(
+    moodboardId: string,
+    slideId: string,
+    x: number,
+    y: number
+  ): Promise<string> {
+    return this.api.create(TYPE.thread, {
+      [K.thread.moodboard]: moodboardId,
+      [K.thread.slide]: slideId,
+      [K.thread.x]: Math.round(x),
+      [K.thread.y]: Math.round(y),
+      [K.thread.resolved]: false,
+    });
+  }
+
+  async deleteThread(threadId: string): Promise<void> {
+    await this.api.remove(TYPE.thread, threadId);
+  }
+
+  /** Resolution lives on the thread, which is what the interface has always meant by it. */
+  async setThreadResolved(threadId: string, resolved: boolean, userId: string): Promise<void> {
+    await this.api.patch(TYPE.thread, threadId, {
+      [K.thread.resolved]: resolved,
+      // Bubble has no way to clear a field through the Data API, so reopening leaves the
+      // previous resolver behind. Harmless: nothing reads it while Resolved? is no.
+      ...(resolved
+        ? { [K.thread.resolvedBy]: userId, [K.thread.resolvedDate]: new Date().toISOString() }
+        : {}),
+    });
+  }
+
+  async createComment(
+    threadId: string,
+    text: string,
+    authorName: string,
+    parentId?: string
+  ): Promise<string> {
+    return this.api.create(TYPE.comment, {
+      [K.comment.thread]: threadId,
+      [K.comment.text]: text,
+      [K.comment.authorName]: authorName,
+      ...(parentId ? { [K.comment.parent]: parentId } : {}),
+    });
+  }
+
+  async updateComment(commentId: string, text: string): Promise<void> {
+    await this.api.patch(TYPE.comment, commentId, {
+      [K.comment.text]: text,
+      [K.comment.edited]: true,
+    });
+  }
+
+  async deleteComment(commentId: string): Promise<void> {
+    await this.api.remove(TYPE.comment, commentId);
+  }
+}
+
+/**
+ * Rebuilds the pin tree the components expect from two flat lists.
+ *
+ * The local model puts `resolved` on each comment while Bubble puts it on the thread; the
+ * drawer only ever offers resolve on a thread's first comment and treats a pin as resolved
+ * when all of them are, so the thread's flag is copied onto every comment in it. Reading
+ * it back out is `isPinResolved`, unchanged.
+ */
+function buildPins(threadRows: BubbleRow[], commentRows: BubbleRow[]): Map<string, CommentPin[]> {
+  const byThread = new Map<string, BubbleRow[]>();
+  for (const row of commentRows) {
+    const threadId = str(row[K.comment.thread]);
+    const list = byThread.get(threadId);
+    if (list) list.push(row);
+    else byThread.set(threadId, [row]);
+  }
+
+  const pinsBySlide = new Map<string, CommentPin[]>();
+  for (const thread of threadRows) {
+    const slideId = str(thread[K.thread.slide]);
+    if (!slideId) continue;
+    const resolved = thread[K.thread.resolved] === true;
+    const rows = byThread.get(thread._id) ?? [];
+
+    const tops: Comment[] = [];
+    const byId = new Map<string, Comment>();
+    for (const row of rows) {
+      const comment = toComment(row, resolved);
+      byId.set(row._id, comment);
+      if (!str(row[K.comment.parent])) tops.push(comment);
+    }
+    // Second pass: a reply can be listed before its parent only if Created Date ties, but
+    // the walk is cheap and removes the ordering assumption entirely.
+    for (const row of rows) {
+      const parentId = str(row[K.comment.parent]);
+      if (!parentId) continue;
+      const parent = byId.get(parentId);
+      const child = byId.get(row._id);
+      if (!parent || !child) continue; // parent deleted; the reply is dropped rather than orphaned
+      parent.replies = [...(parent.replies ?? []), child];
+    }
+
+    // A thread whose comments were all deleted has nothing to show. Skip it rather than
+    // rendering a pin that opens an empty drawer.
+    if (!tops.length) continue;
+
+    const pin: CommentPin = {
+      id: thread._id,
+      x: num(thread[K.thread.x]),
+      y: num(thread[K.thread.y]),
+      comments: tops,
+    };
+    const list = pinsBySlide.get(slideId);
+    if (list) list.push(pin);
+    else pinsBySlide.set(slideId, [pin]);
+  }
+  return pinsBySlide;
+}
+
+function toComment(row: BubbleRow, threadResolved: boolean): Comment {
+  const authorName = str(row[K.comment.authorName]);
+  return {
+    id: row._id,
+    authorId: str(row['Created By']),
+    authorName: authorName || 'Someone',
+    authorInitials: initialsFrom(authorName),
+    text: str(row[K.comment.text]),
+    timestamp: str(row['Created Date']),
+    resolved: threadResolved,
+    edited: row[K.comment.edited] === true,
+  };
+}
+
+function num(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
 }
 
 function str(value: unknown): string {

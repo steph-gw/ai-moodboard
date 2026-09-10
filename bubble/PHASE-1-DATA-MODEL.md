@@ -171,8 +171,12 @@ single query instead of an `in` constraint listing every slide id.
 | `Parent comment` | Moodboard Comment | empty = top level, set = a reply |
 | `Text` | text | |
 | `Edited?` | yes / no | |
+| `Author name` | text | display only — see below |
 
-Author is `Creator`, timestamp is `Created Date` — both server-set and unspoofable. Your existing
+Author is `Creator`, timestamp is `Created Date` — both server-set and unspoofable. `Author name`
+is a denormalised copy for display: the Data API returns `Created By` as a user id, and resolving
+ids to names would mean exposing the `User` type on the Data API. `Created By` stays the record of
+who wrote it and is what the edit/delete check reads. Your existing
 `T-Thread` / `T-Message` are untouched and stay off the Data API.
 
 ---

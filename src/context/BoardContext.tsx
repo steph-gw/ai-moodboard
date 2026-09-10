@@ -27,6 +27,7 @@ import {
   findPinInBoard,
   removePinComment,
   updatePinComments,
+  markResolved,
 } from '../utils/commentHelpers';
 import { inferSectionIcon } from '../utils/sectionIcons';
 import { useHost } from '../embed/HostProvider';
@@ -73,10 +74,11 @@ interface BoardContextValue {
   setPresenting: (value: boolean) => void;
   goToNextSlide: () => void;
   goToPrevSlide: () => void;
-  resolveComment: (pinId: string, commentId: string) => void;
+  /** Resolution is a property of the thread; every comment in it flips together. */
+  resolveComment: (pinId: string) => void;
   addComment: (pinId: string, text: string) => void;
   editComment: (pinId: string, commentId: string, text: string) => void;
-  reopenComment: (pinId: string, commentId: string) => void;
+  reopenComment: (pinId: string) => void;
   deleteComment: (pinId: string, commentId: string) => void;
   currentUserId: string;
   undo: () => void;
@@ -901,115 +903,237 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
 
 
-  const resolveComment = useCallback((pinId: string, commentId: string) => {
-    commit((prev) => {
-      const found = findPinInBoard(prev.sections, pinId);
-      if (!found) return prev;
-      return updateSlidePins(prev, found.slideId, (pins) =>
-        pins.map((pin) => {
-          if (pin.id !== pinId) return pin;
-          return {
-            ...pin,
-            comments: updatePinComments(pin.comments, commentId, (c) => ({
-              ...c,
-              resolved: true,
-              resolvedBy: currentUserName,
-            })),
-          };
-        })
+  /**
+   * Applies a comment change to local state.
+   *
+   * Comments are written the moment they are made, so they must not enter the undo stack:
+   * rewinding local state can't take back a row that is already in Bubble, and the next
+   * reload would silently undo the undo. Unlike a board edit this doesn't mark the slide
+   * dirty either — comments live in their own rows, not in the slide's elements.
+   */
+  const applyComments = useCallback((updater: (prev: Board) => Board) => {
+    const prev = boardRef.current;
+    const next = updater(prev);
+    if (next === prev) return;
+    boardRef.current = next;
+    setBoard(next);
+    if (repo) setPast([]);
+  }, [repo]);
+
+  /**
+   * Writes first, then updates the screen with what the database actually returned.
+   *
+   * The alternative — draw it immediately and reconcile the id afterwards — buys a few
+   * hundred milliseconds and pays for it with a whole class of bug where a comment is
+   * edited or deleted before it has a real id. Comments are typed and submitted, so the
+   * wait is where a person already expects one.
+   */
+  const writeComment = useCallback(
+    async <T,>(write: () => Promise<T>, apply: (result: T) => void, failure: string) => {
+      try {
+        apply(await write());
+      } catch (err) {
+        onError(err instanceof Error ? err.message : failure);
+        // Local state and the database have diverged; the database wins.
+        await loadBoardRef.current?.();
+      }
+    },
+    [onError]
+  );
+
+  /**
+   * Resolution belongs to the thread, not to one comment inside it.
+   *
+   * The drawer only offers resolve on a thread's first comment and treats a pin as resolved
+   * when every comment in it is, so thread-level is what the interface has always meant.
+   * Marking them all keeps `isPinResolved` working untouched.
+   */
+  const setThreadResolved = useCallback(
+    (pinId: string, resolved: boolean) => {
+      const apply = () =>
+        applyComments((prev) => {
+          const found = findPinInBoard(prev.sections, pinId);
+          if (!found) return prev;
+          return updateSlidePins(prev, found.slideId, (pins) =>
+            pins.map((pin) =>
+              pin.id === pinId
+                ? {
+                    ...pin,
+                    comments: markResolved(pin.comments, resolved, currentUserName),
+                  }
+                : pin
+            )
+          );
+        });
+
+      if (!repo) {
+        apply();
+        return;
+      }
+      void writeComment(
+        () => repo.setThreadResolved(pinId, resolved, currentUserId),
+        apply,
+        resolved ? 'Could not resolve that thread.' : 'Could not reopen that thread.'
       );
-    });
-  }, [commit, currentUserName]);
+    },
+    [repo, applyComments, writeComment, currentUserId, currentUserName]
+  );
+
+  const resolveComment = useCallback(
+    (pinId: string) => setThreadResolved(pinId, true),
+    [setThreadResolved]
+  );
 
   const addComment = useCallback(
     (pinId: string, text: string) => {
-      const newComment: Comment = {
-        id: `c-${Date.now()}`,
+      const body = text.trim();
+      if (!body) return;
+
+      const makeComment = (id: string): Comment => ({
+        id,
         authorId: currentUserId,
         authorName: currentUserName,
         authorInitials: currentUserInitials,
-        text,
-        timestamp: 'Just now',
-      };
-
-      commit((prev) => {
-        const found = findPinInBoard(prev.sections, pinId);
-        if (!found) return prev;
-        return updateSlidePins(prev, found.slideId, (pins) =>
-          pins.map((pin) =>
-            pin.id === pinId
-              ? { ...pin, comments: [...pin.comments, newComment] }
-              : pin
-          )
-        );
+        text: body,
+        // Real rows carry Created Date; this is what the drawer shows until the next load.
+        timestamp: new Date().toISOString(),
       });
+
+      const appendTo = (targetPinId: string, comment: Comment, threadId?: string) =>
+        applyComments((prev) => {
+          const found = findPinInBoard(prev.sections, targetPinId);
+          if (!found) return prev;
+          return updateSlidePins(prev, found.slideId, (pins) =>
+            pins.map((pin) =>
+              pin.id === targetPinId
+                ? { ...pin, id: threadId ?? pin.id, comments: [...pin.comments, comment] }
+                : pin
+            )
+          );
+        });
+
+      if (!repo || !identity) {
+        appendTo(pinId, makeComment(`c-${Date.now()}`));
+        return;
+      }
+
+      const found = findPinInBoard(boardRef.current.sections, pinId);
+      if (!found) return;
+      const isPending = found.pin.comments.length === 0;
+
+      void writeComment(
+        async () => {
+          // The thread row is created with its first comment, so an abandoned pin never
+          // becomes a permanent empty thread that everyone afterwards has to look at.
+          const threadId = isPending
+            ? await repo.createThread(identity.moodboardId, found.slideId, found.pin.x, found.pin.y)
+            : pinId;
+          const commentId = await repo.createComment(threadId, body, currentUserName);
+          return { threadId, commentId };
+        },
+        ({ threadId, commentId }) => {
+          appendTo(pinId, makeComment(commentId), isPending ? threadId : undefined);
+          // The pin's id becomes the thread's, so the open drawer keeps pointing at it.
+          if (isPending) setSelectedCommentPinId(threadId);
+        },
+        'Could not post that comment.'
+      );
     },
-    [currentUserId, currentUserName, currentUserInitials, commit]
+    [
+      repo,
+      identity,
+      applyComments,
+      writeComment,
+      currentUserId,
+      currentUserName,
+      currentUserInitials,
+    ]
   );
 
-  const editComment = useCallback((pinId: string, commentId: string, text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    commit((prev) => {
-      const found = findPinInBoard(prev.sections, pinId);
-      if (!found) return prev;
-      return updateSlidePins(prev, found.slideId, (pins) =>
-        pins.map((pin) =>
-          pin.id === pinId
-            ? {
-                ...pin,
-                comments: updatePinComments(pin.comments, commentId, (c) => ({
-                  ...c,
-                  text: trimmed,
-                  edited: true,
-                })),
-              }
-            : pin
-        )
+  const editComment = useCallback(
+    (pinId: string, commentId: string, text: string) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+
+      const apply = () =>
+        applyComments((prev) => {
+          const found = findPinInBoard(prev.sections, pinId);
+          if (!found) return prev;
+          return updateSlidePins(prev, found.slideId, (pins) =>
+            pins.map((pin) =>
+              pin.id === pinId
+                ? {
+                    ...pin,
+                    comments: updatePinComments(pin.comments, commentId, (c) => ({
+                      ...c,
+                      text: trimmed,
+                      edited: true,
+                    })),
+                  }
+                : pin
+            )
+          );
+        });
+
+      if (!repo) {
+        apply();
+        return;
+      }
+      void writeComment(
+        () => repo.updateComment(commentId, trimmed),
+        apply,
+        'Could not save that edit.'
       );
-    });
-  }, [commit]);
+    },
+    [repo, applyComments, writeComment]
+  );
 
   const reopenComment = useCallback(
-    (pinId: string, commentId: string) => {
-      commit((prev) => {
-        const found = findPinInBoard(prev.sections, pinId);
-        if (!found) return prev;
-        return updateSlidePins(prev, found.slideId, (pins) =>
-          pins.map((pin) =>
-            pin.id === pinId
-              ? {
-                  ...pin,
-                  comments: updatePinComments(pin.comments, commentId, (c) => ({
-                    ...c,
-                    resolved: false,
-                    resolvedBy: undefined,
-                  })),
-                }
-              : pin
-          )
-        );
-      });
-    },
-    [commit]
+    (pinId: string) => setThreadResolved(pinId, false),
+    [setThreadResolved]
   );
 
-  const deleteComment = useCallback((pinId: string, commentId: string) => {
-    commit((prev) => {
-      const found = findPinInBoard(prev.sections, pinId);
-      if (!found) return prev;
-      return updateSlidePins(prev, found.slideId, (pins) =>
-        pins
-          .map((pin) =>
-            pin.id === pinId
-              ? { ...pin, comments: removePinComment(pin.comments, commentId) }
-              : pin
-          )
-          // A thread with nothing left in it loses its pin too.
-          .filter((pin) => pin.id !== pinId || pin.comments.length > 0)
+  const deleteComment = useCallback(
+    (pinId: string, commentId: string) => {
+      const found = findPinInBoard(boardRef.current.sections, pinId);
+      // Deleting the only comment takes the pin with it — an empty thread is a pin that
+      // opens onto nothing.
+      const isLast =
+        !!found && found.pin.comments.length === 1 && found.pin.comments[0].id === commentId;
+
+      const apply = () =>
+        applyComments((prev) => {
+          const at = findPinInBoard(prev.sections, pinId);
+          if (!at) return prev;
+          return updateSlidePins(prev, at.slideId, (pins) =>
+            pins
+              .map((pin) =>
+                pin.id === pinId
+                  ? { ...pin, comments: removePinComment(pin.comments, commentId) }
+                  : pin
+              )
+              .filter((pin) => pin.id !== pinId || pin.comments.length > 0)
+          );
+        });
+
+      if (!repo) {
+        apply();
+        return;
+      }
+      void writeComment(
+        async () => {
+          await repo.deleteComment(commentId);
+          if (isLast) await repo.deleteThread(pinId);
+        },
+        () => {
+          apply();
+          if (isLast) setSelectedCommentPinId(null);
+        },
+        'Could not delete that comment.'
       );
-    });
-  }, [commit]);
+    },
+    [repo, applyComments, writeComment]
+  );
 
   const pinSuggestion = useCallback(
     (suggestionId: string) => {

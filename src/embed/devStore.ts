@@ -22,6 +22,13 @@ export class DevBubbleApi extends BubbleApi {
     if (!localStorage.getItem(STORAGE_KEY)) this.reset();
   }
 
+  /**
+   * Who the fake is acting as. Bubble stamps `Created By` server-side from the session, and
+   * the drawer decides whether to offer Edit and Delete by comparing it to the current user
+   * — so without this the harness silently hides controls that work in the real app.
+   */
+  actingUserId = '';
+
   reset(): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(seed()));
   }
@@ -77,7 +84,10 @@ export class DevBubbleApi extends BubbleApi {
     const store = this.read();
     const now = new Date().toISOString();
     const id = `${type}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    store[type] = [...(store[type] ?? []), { _id: id, 'Created Date': now, 'Modified Date': now, ...fields }];
+    store[type] = [
+      ...(store[type] ?? []),
+      { _id: id, 'Created Date': now, 'Modified Date': now, 'Created By': this.actingUserId, ...fields },
+    ];
     this.write(store);
     return this.settle(id);
   }

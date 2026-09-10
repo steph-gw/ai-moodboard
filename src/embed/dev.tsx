@@ -35,6 +35,7 @@ const uploadFile = (file: File) =>
 // Talks to a localStorage-backed stand-in for Bubble, through the real repo — so the
 // save loop, the version guard and the row mapping are all the production code paths.
 const devApi = new DevBubbleApi();
+devApi.actingUserId = PEOPLE[role].id;
 const devRepo = new BoardRepo(devApi);
 // Mirrors what the Bubble element publishes as states, so the host-facing contract is
 // exercised here rather than first discovered inside the plugin.
@@ -64,6 +65,7 @@ document.getElementById('role-switch')?.addEventListener('click', (e) => {
   const target = e.target as HTMLElement;
   if (target.tagName !== 'BUTTON') return;
   role = target.dataset.role as UserRole;
+  devApi.actingUserId = PEOPLE[role].id;
   GWMoodboard.update(id, {
     role,
     currentUserId: PEOPLE[role].id,

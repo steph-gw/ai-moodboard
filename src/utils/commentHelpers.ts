@@ -58,3 +58,23 @@ export function removePinComment(comments: Comment[], commentId: string): Commen
       c.replies ? { ...c, replies: removePinComment(c.replies, commentId) } : c
     );
 }
+
+/**
+ * Sets resolution on every comment in a thread.
+ *
+ * Bubble stores `Resolved?` once, on the thread. The local model stores it per comment, and
+ * `isPinResolved` asks whether they all are — so the two agree as long as a thread's
+ * comments are only ever flipped together.
+ */
+export function markResolved(
+  comments: Comment[],
+  resolved: boolean,
+  resolvedBy: string
+): Comment[] {
+  return comments.map((c) => ({
+    ...c,
+    resolved,
+    resolvedBy: resolved ? resolvedBy : undefined,
+    replies: c.replies ? markResolved(c.replies, resolved, resolvedBy) : c.replies,
+  }));
+}
