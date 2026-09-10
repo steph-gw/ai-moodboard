@@ -3,6 +3,8 @@ import type {
   CanvasElement,
   CommentPin,
   ImageElement,
+  ShapeElement,
+  ShapeKind,
   Slide,
   TextElement,
   TextFontFamily,
@@ -690,6 +692,33 @@ export function defaultTextElement(): TextElement {
     align: 'center',
     bold: false,
     italic: false,
+  };
+}
+
+/**
+ * A new shape, centred on the slide. Outlined rather than filled by default: an empty
+ * outline reads as "a shape you are about to style", while a solid block reads as a
+ * mistake and has to be undone before it can be used.
+ */
+export function defaultShapeElement(shape: ShapeKind): ShapeElement {
+  const isLine = shape === 'line';
+  const width = isLine ? 320 : 220;
+  const height = isLine ? 2 : 180;
+  return {
+    id: `el-shape-${Date.now()}`,
+    type: 'shape',
+    shape,
+    x: SLIDE_WIDTH / 2 - width / 2,
+    y: SLIDE_HEIGHT / 2 - height / 2,
+    width,
+    height,
+    zIndex: 10,
+    stroke: '#1a1714',
+    strokeWidth: 2,
+    strokeStyle: 'solid',
+    fill: isLine ? undefined : 'transparent',
+    ...(shape === 'rect' ? { radius: 0 } : {}),
+    ...(shape === 'polygon' ? { sides: 5 } : {}),
   };
 }
 

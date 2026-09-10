@@ -19,10 +19,11 @@ import type {
   SectionStatus,
   Slide,
   UserRole,
+  ShapeKind,
 } from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 import { mockBoard, AI_VISION_BRIEF } from '../data/mockData';
-import { defaultImageElement, defaultTextElement } from '../data/slideHelpers';
+import { defaultImageElement, defaultShapeElement, defaultTextElement } from '../data/slideHelpers';
 import {
   findPinInBoard,
   removePinComment,
@@ -107,6 +108,7 @@ interface BoardContextValue {
   bringToFront: (slideId: string, elementId: string) => void;
   sendToBack: (slideId: string, elementId: string) => void;
   addTextElement: (content?: string) => void;
+  addShapeElement: (shape: ShapeKind) => void;
   addSection: (name: string, visionBrief: string, icon?: string) => void;
   updateSection: (
     sectionId: string,
@@ -751,6 +753,31 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     }));
     setSelectedElementId(el.id);
   }, [activeSlide, activeSectionId, activeSlideId, commit]);
+
+  const addShapeElement = useCallback(
+    (shape: ShapeKind) => {
+      if (!activeSlide) return;
+      const el = defaultShapeElement(shape);
+      el.zIndex = activeSlide.elements.reduce((m, e) => Math.max(m, e.zIndex), 0) + 1;
+
+      commit((prev) => ({
+        ...prev,
+        sections: prev.sections.map((section) => {
+          if (section.id !== activeSectionId) return section;
+          return {
+            ...section,
+            slides: section.slides.map((slide) =>
+              slide.id === activeSlideId
+                ? { ...slide, elements: [...slide.elements, el] }
+                : slide
+            ),
+          };
+        }),
+      }));
+      setSelectedElementId(el.id);
+    },
+    [activeSlide, activeSectionId, activeSlideId, commit]
+  );
 
   const addSection = useCallback(
     async (name: string, brief: string, icon?: string) => {
@@ -1600,6 +1627,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         bringToFront,
         sendToBack,
         addTextElement,
+        addShapeElement,
         addSection,
         updateSection,
         deleteSection,

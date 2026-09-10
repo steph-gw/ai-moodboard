@@ -3,6 +3,7 @@ import { useBoard } from '../context/BoardContext';
 import type { CanvasElement } from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 import { textFontCss } from '../utils/textFonts';
+import { ShapeView } from './ShapeView';
 
 /**
  * One slide element, rendered flat at full size — no selection chrome, comment
@@ -29,6 +30,14 @@ function StaticElement({
     return (
       <div className="export-image" style={style}>
         {imageUrl ? <img src={imageUrl} alt="" /> : null}
+      </div>
+    );
+  }
+
+  if (element.type === 'shape') {
+    return (
+      <div className="export-shape" style={style}>
+        <ShapeView element={element} />
       </div>
     );
   }

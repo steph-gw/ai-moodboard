@@ -10,10 +10,13 @@ import { SectionStatusSelect } from './SectionStatusSelect';
 import { TextFormatControls } from './TextFormatBar';
 import type { Section } from '../types';
 
+/**
+ * Just the status. The section name is already the selected tab directly above this row,
+ * and repeating it cost the row width that the text controls now use.
+ */
 function SectionMeta({ section }: { section: Section }) {
   return (
     <div className="canvas-bar-left">
-      <h2 className="section-title">{section.name}</h2>
       <SectionStatusSelect section={section} />
     </div>
   );

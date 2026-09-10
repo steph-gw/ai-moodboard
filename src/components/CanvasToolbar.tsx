@@ -2,6 +2,14 @@ import { useRef } from 'react';
 import { Image as ImageIcon, ImagePlus, Type, Undo2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { useHost } from '../embed/HostProvider';
+import { AddElementsMenu } from './AddElementsMenu';
+import { compressImage } from '../utils/compressImage';
+
+/** Base64 inflates a file by about a third on the way to Bubble, so the real ceiling is
+ *  lower than it looks. Anything near this is a photo that should have been resized. */
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+const mb = (bytes: number) => Math.round((bytes / (1024 * 1024)) * 10) / 10;
 
 export function CanvasToolbar() {
   const {
@@ -40,7 +48,18 @@ export function CanvasToolbar() {
     // Sequential rather than parallel: each upload creates a Moodboard Image row and places
     // an element, and running them together would race over the same slide's elements.
     void (async () => {
-      for (const file of images) await uploadAndAddImage(file);
+      for (const file of images) {
+        const ready = await compressImage(file);
+        // The cap is checked after compression, since that is what most oversized photos
+        // need to get under it. What is still too big is genuinely too big.
+        if (ready.size > MAX_UPLOAD_BYTES) {
+          onError(
+            `${file.name} is ${mb(ready.size)}MB, over the ${mb(MAX_UPLOAD_BYTES)}MB limit.`
+          );
+          continue;
+        }
+        await uploadAndAddImage(ready);
+      }
     })();
   };
 
@@ -64,6 +83,7 @@ export function CanvasToolbar() {
           <Type size={13} strokeWidth={1.5} />
           Add text
         </button>
+        <AddElementsMenu />
         {features.pinterest && (
           <button
             type="button"

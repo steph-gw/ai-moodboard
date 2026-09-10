@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { DraggableBox } from './DraggableBox';
-import type { CanvasElement, ImageElement, TextElement } from '../types';
+import { ShapeView } from './ShapeView';
+import type { CanvasElement, ImageElement, ShapeElement, TextElement } from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 import { textFontCss } from '../utils/textFonts';
 import { ElementContextMenu } from './ElementContextMenu';
@@ -275,6 +276,17 @@ export function CanvasElementView({
     );
   }
 
+  if (element.type === 'shape') {
+    return (
+      <ShapeElementView
+        element={element}
+        slideId={slideId}
+        scale={scale}
+        readOnly={frozen}
+      />
+    );
+  }
+
   return (
     <TextElementView
       element={element}
@@ -282,5 +294,71 @@ export function CanvasElementView({
       scale={scale}
       readOnly={frozen}
     />
+  );
+}
+
+function ShapeElementView({
+  element,
+  slideId,
+  scale,
+  readOnly,
+}: {
+  element: ShapeElement;
+  slideId: string;
+  scale: number;
+  readOnly?: boolean;
+}) {
+  const {
+    selectedElementId,
+    selectElement,
+    updateElement,
+    bringToFront,
+    beginInteraction,
+    endInteraction,
+  } = useBoard();
+  const isSelected = selectedElementId === element.id;
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
+
+  return (
+    <DraggableBox
+      elementId={element.id}
+      onInteractionStart={beginInteraction}
+      onInteractionEnd={endInteraction}
+      x={element.x}
+      y={element.y}
+      width={element.width}
+      height={element.height}
+      scale={scale}
+      selected={isSelected}
+      readOnly={readOnly}
+      boundsWidth={SLIDE_WIDTH}
+      boundsHeight={SLIDE_HEIGHT}
+      minWidth={8}
+      minHeight={8}
+      className="canvas-element-shape"
+      style={{ zIndex: element.zIndex }}
+      rotation={element.rotation}
+      onSelect={() => {
+        selectElement(element.id);
+        if (!readOnly) bringToFront(slideId, element.id);
+      }}
+      onChange={(patch) => updateElement(slideId, element.id, patch)}
+      onContextMenu={(e) => {
+        if (readOnly) return;
+        e.preventDefault();
+        selectElement(element.id);
+        setMenu({ x: e.clientX, y: e.clientY });
+      }}
+    >
+      <ShapeView element={element} />
+      {menu && (
+        <ElementContextMenu
+          slideId={slideId}
+          elementId={element.id}
+          at={menu}
+          onClose={() => setMenu(null)}
+        />
+      )}
+    </DraggableBox>
   );
 }

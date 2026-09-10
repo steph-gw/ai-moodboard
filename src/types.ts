@@ -66,7 +66,25 @@ export interface TextElement extends CanvasElementBase {
   italic?: boolean;
 }
 
-export type CanvasElement = ImageElement | TextElement;
+/** Straight line, or a closed shape drawn to fill its box. */
+export type ShapeKind = 'line' | 'rect' | 'ellipse' | 'triangle' | 'polygon';
+export type StrokeStyle = 'solid' | 'dashed' | 'dotted';
+
+export interface ShapeElement extends CanvasElementBase {
+  type: 'shape';
+  shape: ShapeKind;
+  /** Interior colour. Undefined means no fill — a line never has one. */
+  fill?: string;
+  stroke: string;
+  strokeWidth: number;
+  strokeStyle: StrokeStyle;
+  /** Corner radius, rect only. */
+  radius?: number;
+  /** Sides, polygon only. */
+  sides?: number;
+}
+
+export type CanvasElement = ImageElement | TextElement | ShapeElement;
 
 export interface Slide {
   id: string;

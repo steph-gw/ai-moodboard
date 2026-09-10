@@ -2,6 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react';
 import { BringToFront, Download, SendToBack, Trash2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { downloadImage, imageFilename } from '../utils/downloadImage';
+import { ShapeFormatControls } from './ShapeFormatControls';
 
 const GAP = 10;
 const EDGE = 8;
@@ -86,6 +87,13 @@ export function ElementToolbar() {
       style={at ? { left: at.left, top: at.top } : { opacity: 0 }}
       onPointerDown={(e) => e.stopPropagation()}
     >
+      {element.type === 'shape' && (
+        <>
+          <ShapeFormatControls element={element} slideId={activeSlideId} />
+          <span className="text-format-divider" />
+        </>
+      )}
+
       <button
         type="button"
         className="text-format-btn"

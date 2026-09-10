@@ -1,4 +1,11 @@
-import { SLIDE_HEIGHT, SLIDE_WIDTH, type CanvasElement, type TextFontFamily } from '../types';
+import {
+  SLIDE_HEIGHT,
+  SLIDE_WIDTH,
+  type CanvasElement,
+  type ShapeKind,
+  type StrokeStyle,
+  type TextFontFamily,
+} from '../types';
 
 /**
  * Reads a slide's `Elements JSON`. Never throws: a board that fails to parse should render
@@ -27,6 +34,8 @@ export function serializeElements(elements: readonly CanvasElement[]): string {
 
 const FONTS: readonly TextFontFamily[] = ['sans', 'display'];
 const ALIGNS = ['left', 'center', 'right'] as const;
+const SHAPES: readonly ShapeKind[] = ['line', 'rect', 'ellipse', 'triangle', 'polygon'];
+const STROKES: readonly StrokeStyle[] = ['solid', 'dashed', 'dotted'];
 
 function coerceElement(item: unknown, knownImageIds: ReadonlySet<string>): CanvasElement | null {
   if (!item || typeof item !== 'object') return null;
@@ -69,6 +78,25 @@ function coerceElement(item: unknown, knownImageIds: ReadonlySet<string>): Canva
         : 'left',
       bold: o.bold === true,
       italic: o.italic === true,
+    };
+  }
+
+  if (o.type === 'shape') {
+    // An unknown shape name would render as nothing at all, which looks like data loss.
+    // Falling back to a rectangle keeps the element visible and movable.
+    const shape = SHAPES.includes(o.shape as ShapeKind) ? (o.shape as ShapeKind) : 'rect';
+    return {
+      ...base,
+      type: 'shape',
+      shape,
+      fill: typeof o.fill === 'string' ? o.fill : undefined,
+      stroke: typeof o.stroke === 'string' ? o.stroke : '#1a1714',
+      strokeWidth: clamp(num(o.strokeWidth, 2), 0, 40),
+      strokeStyle: STROKES.includes(o.strokeStyle as StrokeStyle)
+        ? (o.strokeStyle as StrokeStyle)
+        : 'solid',
+      radius: shape === 'rect' ? clamp(num(o.radius, 0), 0, 200) : undefined,
+      sides: shape === 'polygon' ? clamp(Math.round(num(o.sides, 5)), 3, 12) : undefined,
     };
   }
 
