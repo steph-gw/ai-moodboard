@@ -3,21 +3,25 @@ import { useBoard } from '../context/BoardContext';
 import type { TextElement } from '../types';
 import { TEXT_FONT_OPTIONS } from '../utils/textFonts';
 
-export function TextFormatBar() {
-  const { activeSlide, activeSlideId, selectedElementId, updateElement, board } =
-    useBoard();
-
-  const element = activeSlide?.elements.find((el) => el.id === selectedElementId);
-  if (!element || element.type !== 'text' || !activeSlideId) return null;
-
-  const text = element as TextElement;
+/**
+ * The text controls on their own, so the floating element toolbar can hold them without
+ * inheriting the old bar's own box — which used to sit in the header and resize the stage.
+ */
+export function TextFormatControls({
+  element: text,
+  slideId,
+}: {
+  element: TextElement;
+  slideId: string;
+}) {
+  const { updateElement, board } = useBoard();
 
   const patch = (updates: Partial<TextElement>) => {
-    updateElement(activeSlideId, text.id, updates);
+    updateElement(slideId, text.id, updates);
   };
 
   return (
-    <div className="text-format-bar">
+    <>
       <select
         className="text-format-select"
         value={text.fontFamily}
@@ -114,6 +118,6 @@ export function TextFormatBar() {
           />
         ))}
       </div>
-    </div>
+    </>
   );
 }

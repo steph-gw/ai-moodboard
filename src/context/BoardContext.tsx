@@ -93,6 +93,7 @@ interface BoardContextValue {
   lockedSlideIds: ReadonlySet<string>;
   /** False for a client, or when the planner has locked this slide. */
   canEdit: boolean;
+  toggleSlideLock: (slideId: string) => void;
   /** False for a client. Structure — sections, slides, status, vision brief. */
   canManage: boolean;
   beginInteraction: () => void;
@@ -432,6 +433,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const canEdit = canManage && !lockedSlideIds.has(activeSlideId);
   const canEditRef = useRef(canEdit);
   canEditRef.current = canEdit;
+  const canManageRef = useRef(canManage);
+  canManageRef.current = canManage;
+  const lockedSlideIdsRef = useRef(lockedSlideIds);
+  lockedSlideIdsRef.current = lockedSlideIds;
 
   const commit = useCallback((updater: (prev: Board) => Board) => {
     // Every board mutation funnels through here, applyStructural or runStructural. Gating
@@ -905,6 +910,39 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       }
     },
     [activeSection, activeSectionId, activeSlideId, applyStructural, repo, runStructural]
+  );
+
+  /**
+   * Freezes one slide's canvas. Comments and votes carry on — a locked slide is closed for
+   * redesign, not for discussion.
+   *
+   * Deliberately not routed through `canEdit`: locking a slide is what makes canEdit false,
+   * so gating it there would make a lock impossible to undo.
+   */
+  const toggleSlideLock = useCallback(
+    (slideId: string) => {
+      if (!canManageRef.current) return;
+      const next = new Set(lockedSlideIdsRef.current);
+      if (next.has(slideId)) next.delete(slideId);
+      else next.add(slideId);
+
+      const section = boardRef.current.sections.find((sec) =>
+        sec.slides.some((sl) => sl.id === slideId)
+      );
+      if (!section) return;
+
+      setLockedSlideIds(next);
+      if (!repo) return;
+
+      // Only this section's ids: the field lives on the section, and writing every
+      // section's locks into one of them would be nonsense.
+      const forSection = section.slides.filter((sl) => next.has(sl.id)).map((sl) => sl.id);
+      void repo.setLockedSlides(section.id, forSection).catch((err: unknown) => {
+        setLockedSlideIds(lockedSlideIdsRef.current);
+        onError(err instanceof Error ? err.message : 'Could not change the lock.');
+      });
+    },
+    [repo, onError]
   );
 
   const duplicateSlide = useCallback(
@@ -1539,6 +1577,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         lockedSlideIds,
         canEdit,
         canManage,
+        toggleSlideLock,
         beginInteraction,
         endInteraction,
         canUndo: past.length > 0,

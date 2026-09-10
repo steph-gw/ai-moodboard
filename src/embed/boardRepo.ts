@@ -227,6 +227,19 @@ export class BoardRepo {
     if (Object.keys(fields).length) await this.api.patch(TYPE.section, sectionId, fields);
   }
 
+  /**
+   * Locked slides are a list on the section, so this writes the whole list.
+   *
+   * Read-modify-write, which two planners locking different slides at the same second could
+   * race — the loser's lock is dropped, not corrupted, and re-locking fixes it. Not worth a
+   * version check for a control one person uses at a time.
+   */
+  async setLockedSlides(sectionId: string, slideIds: readonly string[]): Promise<void> {
+    await this.api.patch(TYPE.section, sectionId, {
+      [K.section.lockedSlides]: [...slideIds],
+    });
+  }
+
   /** Sections are archived rather than deleted, so their slides and comments survive. */
   async archiveSection(sectionId: string): Promise<void> {
     await this.api.patch(TYPE.section, sectionId, { [K.section.archived]: true });

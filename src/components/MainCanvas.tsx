@@ -1,7 +1,8 @@
 import { useBoard } from '../context/BoardContext';
 import { SlideCanvas } from './SlideCanvas';
+import { ElementToolbar } from './ElementToolbar';
+import { SlideActions } from './SlideActions';
 import { CanvasToolbar } from './CanvasToolbar';
-import { TextFormatBar } from './TextFormatBar';
 import { VisionBrief } from './VisionBrief';
 import { SectionStatusSelect } from './SectionStatusSelect';
 import { countOpenPinThreads } from '../utils/commentHelpers';
@@ -29,13 +30,10 @@ function SectionMeta({ section }: { section: Section }) {
 }
 
 export function MainCanvas() {
-  const { board, activeSectionId, activeSlide, selectedElementId } = useBoard();
+  const { board, activeSectionId } = useBoard();
 
   const activeSection = board.sections.find((s) => s.id === activeSectionId);
   if (!activeSection) return null;
-
-  const selectedIsText =
-    activeSlide?.elements.find((el) => el.id === selectedElementId)?.type === 'text';
 
   return (
     <main className="canvas">
@@ -47,10 +45,14 @@ export function MainCanvas() {
           <SectionMeta section={activeSection} />
           <CanvasToolbar />
         </div>
-        {selectedIsText && <TextFormatBar />}
       </div>
 
+      {/* Both overlays float above the artboard rather than sitting in the header. The
+          artboard scales to its container, so anything that appears in the layout above it
+          shrinks the slide — which is what selecting a text box used to do. */}
       <div className="canvas-stage">
+        <ElementToolbar />
+        <SlideActions />
         <SlideCanvas fullWidth fitMode="contain" />
       </div>
     </main>

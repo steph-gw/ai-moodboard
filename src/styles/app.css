@@ -295,7 +295,7 @@
 }
 
 .section-tab-menu-item.is-danger {
-  color: #b04a3a;
+  color: var(--danger, #b04a3a);
 }
 
 .section-tab-menu-item.is-danger:hover {
@@ -356,10 +356,79 @@
 
 /* The artboard gets whatever height is left, so nothing scrolls. */
 .canvas-stage {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
   overflow: hidden;
+}
+
+/* Both overlays sit above the artboard without taking layout space. The artboard is scaled
+   to fit its container, so a bar that appears in the flow above it would resize the slide
+   the moment something is selected. */
+.element-toolbar {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 320;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* Absolutely positioned at left:50%, so the shrink-to-fit width would resolve against
+     half the stage and wrap the row. max-content sizes it to its buttons instead. */
+  width: max-content;
+  max-width: calc(100% - 24px);
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 6px 8px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(26, 23, 20, 0.12);
+}
+
+.slide-actions {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  z-index: 320;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(26, 23, 20, 0.1);
+}
+
+.slide-action-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+
+.slide-action-btn:hover {
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.slide-action-btn.is-locked {
+  color: var(--gold-active);
+}
+
+.text-format-btn.is-danger:hover {
+  color: #b04a3a;
 }
 
 .canvas::-webkit-scrollbar {
