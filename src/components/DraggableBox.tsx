@@ -13,6 +13,8 @@ interface BoxPatch {
 }
 
 interface DraggableBoxProps {
+  /** Lets the floating toolbar find this box's rendered position. */
+  elementId?: string;
   x: number;
   y: number;
   width: number;
@@ -69,6 +71,7 @@ export function DraggableBox({
   className = '',
   style,
   onSelect,
+  elementId,
   onChange,
   onInteractionStart,
   onInteractionEnd,
@@ -208,6 +211,7 @@ export function DraggableBox({
 
   return (
     <div
+      data-el-id={elementId}
       className={`canvas-element ${className} ${selected ? 'selected' : ''}`}
       style={{
         position: 'absolute',

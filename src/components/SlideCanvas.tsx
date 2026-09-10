@@ -8,12 +8,15 @@ interface SlideCanvasProps {
   fullWidth?: boolean;
   readOnly?: boolean;
   fitMode?: 'width' | 'contain';
+  /** Rendered artboard width in px, so the header above can line up with the slide. */
+  onWidthChange?: (width: number) => void;
 }
 
 export function SlideCanvas({
   fullWidth = true,
   readOnly = false,
   fitMode = 'width',
+  onWidthChange,
 }: SlideCanvasProps) {
   const {
     activeSlide,
@@ -58,6 +61,10 @@ export function SlideCanvas({
     observer.observe(container);
     return () => observer.disconnect();
   }, [activeSlideId, fullWidth, fitMode]);
+
+  useEffect(() => {
+    onWidthChange?.(SLIDE_WIDTH * scale);
+  }, [scale, onWidthChange]);
 
   const handleArtboardClick = (e: MouseEvent<HTMLDivElement>) => {
     if (readOnly || !isPlacingComment || !artboardRef.current) return;

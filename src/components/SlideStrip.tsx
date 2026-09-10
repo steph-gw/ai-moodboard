@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Copy, Trash2 } from 'lucide-react';
+import { Plus, Copy, Lock, Trash2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import type { CanvasElement, Slide } from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
@@ -111,11 +111,13 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
     canManage,
     deleteSlide,
     duplicateSlide,
+    lockedSlideIds,
   } = useBoard();
 
   const section = board.sections.find((s) => s.id === activeSectionId);
   const slide = section?.slides.find((s) => s.id === slideId);
   const isActive = activeSlideId === slideId;
+  const locked = lockedSlideIds.has(slideId);
     const canDelete = canManage && (section?.slides.length ?? 0) > 1;
 
   if (!slide) return null;
@@ -128,7 +130,7 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
 
   return (
     <div
-      className={`slide-tab ${isActive ? 'active' : ''}`}
+      className={`slide-tab ${isActive ? 'active' : ''} ${locked ? 'is-locked' : ''}`}
       onKeyDown={(e) => {
         // Focus is inside the filmstrip, so Delete/Backspace removes the whole
         // slide rather than the element selected on the canvas.
@@ -149,6 +151,13 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
           onClick={select}
         >
           <SlideMiniPreview slide={slide} />
+          {/* A lock is easy to forget you set, and the only other sign of it is a toolbar
+              that isn't there. Mark it where the slides are listed. */}
+          {locked && (
+            <span className="slide-tab-lock" title="Locked">
+              <Lock size={10} strokeWidth={2} />
+            </span>
+          )}
         </button>
         {canManage && (
           <div className="slide-tab-actions">

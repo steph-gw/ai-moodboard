@@ -86,6 +86,7 @@ function ImageElementView({
 
   return (
     <DraggableBox
+      elementId={element.id}
       onInteractionStart={beginInteraction}
       onInteractionEnd={endInteraction}
       x={element.x}
@@ -173,6 +174,7 @@ function TextElementView({
 
   return (
     <DraggableBox
+      elementId={element.id}
       onInteractionStart={beginInteraction}
       onInteractionEnd={endInteraction}
       x={element.x}

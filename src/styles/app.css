@@ -345,6 +345,113 @@
   justify-content: space-between;
   gap: 16px;
   margin-bottom: 10px;
+  /* Width is set inline from the artboard's rendered width, so the header and the slide
+     share an edge. Centred, because the artboard is. */
+  max-width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.canvas-bar-mid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  /* Takes the space between the section name and the buttons and centres itself in it,
+     rather than being pinned to the row's true centre — which would overlap both of them
+     as soon as the window narrows. */
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.canvas-bar-mid::-webkit-scrollbar {
+  display: none;
+}
+
+.canvas-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.locked-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--gold-light);
+  border: 1px solid var(--gold-border);
+  color: var(--gold-active);
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.slide-tab-lock {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: rgba(26, 23, 20, 0.62);
+  color: #fff;
+}
+
+.slide-tab.is-locked .slide-tab-hit {
+  position: relative;
+}
+
+.vision-brief-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 9400;
+}
+
+.vision-brief-pop {
+  position: fixed;
+  z-index: 9401;
+  width: min(420px, calc(100vw - 24px));
+  padding: 12px 14px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(26, 23, 20, 0.16);
+}
+
+.vision-brief-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.vision-brief-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.vision-brief-close:hover {
+  background: var(--surface);
+  color: var(--text-primary);
 }
 
 .canvas-bar-left {
@@ -368,19 +475,14 @@
    the moment something is selected. */
 .element-toolbar {
   position: absolute;
-  top: 8px;
-  left: 50%;
-  transform: translateX(-50%);
   z-index: 320;
   display: flex;
   align-items: center;
-  gap: 6px;
-  /* Absolutely positioned at left:50%, so the shrink-to-fit width would resolve against
-     half the stage and wrap the row. max-content sizes it to its buttons instead. */
+  gap: 4px;
+  /* Placed by script against the selected element's box; max-content keeps the row from
+     wrapping, since shrink-to-fit would resolve against whatever `left` happens to be. */
   width: max-content;
-  max-width: calc(100% - 24px);
-  flex-wrap: wrap;
-  justify-content: center;
+  flex-wrap: nowrap;
   padding: 6px 8px;
   background: var(--white);
   border: 1px solid var(--border);
