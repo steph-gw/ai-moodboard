@@ -623,16 +623,6 @@
   flex-shrink: 0;
 }
 
-.section-meta {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  font-weight: 300;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
 /* ── Section status pill / dropdown ── */
 .status-pill {
   display: inline-flex;
@@ -2752,11 +2742,6 @@
   :root {
     --slide-strip-w: 160px;
     --comment-panel-w: 300px;
-  }
-
-  /* The counts are the first thing to go; the section name and status are not. */
-  .section-meta {
-    display: none;
   }
 }
 

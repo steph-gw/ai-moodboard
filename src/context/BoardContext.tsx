@@ -214,7 +214,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const pdf = useExportPdf(onError);
 
   // Declared before the saver, which closes over it to reload after a conflict.
-  const loadBoardRef = useRef<(() => Promise<void>) | null>(null);
+  const loadBoardRef = useRef<((silent?: boolean) => Promise<void>) | null>(null);
 
   const saver = useSlideSaver({
     repo,
@@ -233,9 +233,17 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const saverRef = useRef(saver);
   saverRef.current = saver;
 
-  const loadBoard = useCallback(async () => {
+  /**
+   * `silent` refreshes in place, without the loading state.
+   *
+   * The board re-reads itself whenever the tab regains focus, so it is never stale. Showing
+   * "Loading moodboard…" for that makes coming back from another tab feel like the board
+   * was thrown away and fetched again — when in almost every case nothing has changed and
+   * the same board is about to be redrawn. The spinner belongs to the first load only.
+   */
+  const loadBoard = useCallback(async (silent = false) => {
     if (!repo || !identity) return;
-    setIsLoading(true);
+    if (!silent) setIsLoading(true);
     try {
       const {
         board: loaded,
@@ -255,12 +263,15 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       setActiveSlideId((id) =>
         loaded.sections.some((s) => s.slides.some((sl) => sl.id === id)) ? id : first?.slides[0]?.id ?? ''
       );
-      setSelectedElementId(null);
+      // A refresh keeps whatever the person had selected; only a first load clears it.
+      if (!silent) setSelectedElementId(null);
       onLoaded?.();
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Could not load the moodboard.');
+      // A background refresh that fails is not worth interrupting anyone over: the board
+      // on screen is still the last thing the server confirmed.
+      if (!silent) onError(err instanceof Error ? err.message : 'Could not load the moodboard.');
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, [repo, identity, currentUserId, onError, onLoaded]);
   loadBoardRef.current = loadBoard;
@@ -312,7 +323,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       try {
         // Waits for any in-flight save too, so a reload can't land on top of one.
         await saverRef.current.flush();
-        await loadBoardRef.current?.();
+        await loadBoardRef.current?.(true);
       } finally {
         running = false;
       }

@@ -8,26 +8,13 @@ import { CanvasToolbar } from './CanvasToolbar';
 import { VisionBrief } from './VisionBrief';
 import { SectionStatusSelect } from './SectionStatusSelect';
 import { TextFormatControls } from './TextFormatBar';
-import { countOpenPinThreads } from '../utils/commentHelpers';
 import type { Section } from '../types';
 
 function SectionMeta({ section }: { section: Section }) {
-  const { board } = useBoard();
-
-  const sectionImages = board.images.filter((img) => img.sectionId === section.id);
-  const openThreads = countOpenPinThreads(section.slides);
-
   return (
     <div className="canvas-bar-left">
       <h2 className="section-title">{section.name}</h2>
       <SectionStatusSelect section={section} />
-      <p className="section-meta">
-        {sectionImages.length} image{sectionImages.length !== 1 ? 's' : ''}
-        {section.slides.length > 0 &&
-          ` · ${section.slides.length} slide${section.slides.length !== 1 ? 's' : ''}`}
-        {openThreads > 0 &&
-          ` · ${openThreads} open thread${openThreads !== 1 ? 's' : ''}`}
-      </p>
     </div>
   );
 }
