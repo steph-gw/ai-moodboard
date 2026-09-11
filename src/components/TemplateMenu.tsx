@@ -20,6 +20,8 @@ export function TemplateMenu() {
   const [mode, setMode] = useState<'save' | 'start' | null>(null);
   const [name, setName] = useState('');
   const [templates, setTemplates] = useState<Template[] | null>(null);
+  /** The template the planner has picked and is being asked to confirm. */
+  const [pending, setPending] = useState<Template | null>(null);
   const [saved, setSaved] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -47,6 +49,19 @@ export function TemplateMenu() {
     return () => window.removeEventListener('keydown', onKeyDown);
   });
 
+  // Fetched when the menu opens rather than on every board load: it decides whether
+  // "Start from a template" is worth offering, and that answer is only needed here.
+  useEffect(() => {
+    if (!open || templates !== null) return;
+    let live = true;
+    void listTemplates().then((list) => {
+      if (live) setTemplates(list);
+    });
+    return () => {
+      live = false;
+    };
+  }, [open, templates, listTemplates]);
+
   useEffect(() => {
     if (mode !== 'start') return;
     let live = true;
@@ -63,7 +78,7 @@ export function TemplateMenu() {
   const close = () => {
     setMode(null);
     setName('');
-    setTemplates(null);
+    setPending(null);
     setSaved(false);
   };
 
@@ -82,7 +97,10 @@ export function TemplateMenu() {
         </button>
         {open && (
           <div className="template-menu" role="menu">
-            {isEmpty && (
+            {/* Offered whenever this business has templates — not only on an empty board.
+                Replacing a board that already has work on it is a real thing to want; the
+                confirm step is what makes it safe, not hiding the option. */}
+            {templates !== null && templates.length > 0 && (
               <button
                 type="button"
                 className="template-menu-item"
@@ -121,7 +139,11 @@ export function TemplateMenu() {
               <div className="modal-head">
                 <p className="modal-eyebrow">Templates</p>
                 <h2 className="modal-title modal-title-sm">
-                  {mode === 'save' ? 'Save as template' : 'Start from a template'}
+                  {mode === 'save'
+                    ? 'Save as template'
+                    : pending
+                      ? 'Replace this moodboard?'
+                      : 'Start from a template'}
                 </h2>
               </div>
 
@@ -129,7 +151,8 @@ export function TemplateMenu() {
                 {mode === 'save' ? (
                   saved ? (
                     <p className="modal-copy">
-                      Saved. It will show up under Start from a template on any new board.
+                      Saved. It will show up under Start from a template on any of this
+                      business's boards.
                     </p>
                   ) : (
                     <>
@@ -160,6 +183,21 @@ export function TemplateMenu() {
                   <p className="modal-copy">
                     No templates yet. Build a board, then save it as one.
                   </p>
+                ) : pending ? (
+                  // Second step, because this rewrites a board someone may have spent
+                  // hours on. Naming what goes and what survives is the difference between
+                  // a confirm people read and one they click through.
+                  <>
+                    <p className="modal-copy">
+                      <strong>{pending.name}</strong> will replace what is on
+                      {board.weddingName ? ` ${board.weddingName}'s` : ' this'} moodboard.
+                    </p>
+                    <p className="modal-copy is-quiet">
+                      The current sections are archived rather than deleted, so their
+                      slides, comments and images are all still there if you want them
+                      back. Unsaved changes are saved first.
+                    </p>
+                  </>
                 ) : (
                   <ul className="template-list">
                     {templates.map((t) => (
@@ -168,10 +206,7 @@ export function TemplateMenu() {
                           type="button"
                           className="template-list-item"
                           disabled={isCloning}
-                          onClick={async () => {
-                            await applyTemplate(t.id);
-                            close();
-                          }}
+                          onClick={() => setPending(t)}
                         >
                           <span className="template-list-name">{t.name}</span>
                           {t.system && (
@@ -199,6 +234,30 @@ export function TemplateMenu() {
                     onClick={() => void submitSave()}
                   >
                     {isCloning ? 'Saving…' : 'Save template'}
+                  </button>
+                </div>
+              )}
+
+              {mode === 'start' && pending && (
+                <div className="modal-foot">
+                  <button
+                    type="button"
+                    className="modal-btn-cancel"
+                    disabled={isCloning}
+                    onClick={() => setPending(null)}
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    className="modal-btn-save"
+                    disabled={isCloning}
+                    onClick={async () => {
+                      await applyTemplate(pending.id);
+                      close();
+                    }}
+                  >
+                    {isCloning ? 'Replacing…' : 'Replace moodboard'}
                   </button>
                 </div>
               )}

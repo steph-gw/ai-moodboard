@@ -3623,3 +3623,10 @@
   margin-top: 18px;
   margin-bottom: 6px;
 }
+
+/* Secondary line in a dialog — the consequence, under the headline. */
+.modal-copy.is-quiet {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}

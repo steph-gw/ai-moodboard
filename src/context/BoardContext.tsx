@@ -80,7 +80,7 @@ interface BoardContextValue {
   goToPin: (sectionId: string, slideId: string, pinId: string) => void;
   /** Saves the board as a reusable template. Resolves with the template's id. */
   saveAsTemplate: (name: string) => Promise<string | null>;
-  /** Forks a template into this board. Only offered while the board is empty. */
+  /** Replaces this board's contents with a fork of a template. */
   applyTemplate: (templateId: string) => Promise<void>;
   listTemplates: () => Promise<{ id: string; name: string; system: boolean }[]>;
   isCloning: boolean;
@@ -855,7 +855,12 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       if (!repo || !identity) return;
       setIsCloning(true);
       try {
-        await repo.cloneInto(templateId, identity.moodboardId);
+        // Anything still only in the browser is written first. The board is about to be
+        // rebuilt from the server, so unflushed edits would simply disappear — and the
+        // sections they belong to are archived, not deleted, so a flushed edit is
+        // recoverable where a lost one is not.
+        await saverRef.current.flush();
+        await repo.replaceWithTemplate(templateId, identity.moodboardId);
         await loadBoardRef.current?.();
       } catch (err) {
         onError(err instanceof Error ? err.message : 'Could not apply that template.');

@@ -341,6 +341,39 @@ export class BoardRepo {
     return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  /**
+   * Replaces a board's contents with a fork of a template.
+   *
+   * Nothing is destroyed. The board's existing sections are archived — the same thing
+   * deleting a section already does — and its images retired to `In use? = no`, so the
+   * slides, comments and files all survive and an archived section can be brought back.
+   * Then the template is forked in on top.
+   *
+   * That matters for a one-click action on a board someone may have spent hours on: the
+   * word "replace" should not mean "gone".
+   */
+  async replaceWithTemplate(templateId: string, targetMoodboardId: string): Promise<void> {
+    const [sections, images] = await Promise.all([
+      this.api.list(TYPE.section, [
+        { key: K.section.moodboard, constraint_type: 'equals', value: targetMoodboardId },
+      ]),
+      this.api.list(TYPE.image, [
+        { key: K.image.moodboard, constraint_type: 'equals', value: targetMoodboardId },
+      ]),
+    ]);
+
+    for (const section of sections) {
+      if (section[K.section.archived] === true) continue;
+      await this.archiveSection(section._id);
+    }
+    for (const image of images) {
+      if (image[K.image.inUse] === false) continue;
+      await this.retireImage(image._id);
+    }
+
+    await this.cloneInto(templateId, targetMoodboardId);
+  }
+
   async createImage(moodboardId: string, url: string): Promise<string> {
     return this.api.create(TYPE.image, {
       [K.image.moodboard]: moodboardId,
