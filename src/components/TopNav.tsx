@@ -21,11 +21,14 @@ export function TopNav() {
   return (
     <header className="topnav">
       <div className="topnav-left">
-        <img
-          className="topnav-logo"
-          src={logoUrl}
-          alt="GatherWise"
-          />
+        {/* No logo configured is a normal state — the host may simply not have set one —
+            and an <img> with an empty src renders as a broken-image icon, which reads as
+            a bug. Fall back to the wordmark as text. */}
+        {logoUrl ? (
+          <img className="topnav-logo" src={logoUrl} alt="GatherWise" />
+        ) : (
+          <span className="topnav-wordmark">GatherWise</span>
+        )}
         <span className="topnav-sep">/</span>
         <span className="topnav-event">{board.weddingName}</span>
         <span className="topnav-date">{formatEventDate(board.weddingDate)}</span>
