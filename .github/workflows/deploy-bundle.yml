@@ -1,0 +1,76 @@
+# Publishes the built bundle to GitHub Pages on every push to main.
+#
+# The point is the URL, not the automation: Bubble's File Manager mints a new URL per
+# upload, so every rebuild also meant editing the plugin element's Headers — and a stale
+# URL there serves the old bundle silently, with no error to notice. Pages serves from a
+# fixed path, so the Headers are set once and never touched again.
+#
+#   https://steph-gw.github.io/ai-moodboard/gw-moodboard.js
+#   https://steph-gw.github.io/ai-moodboard/gw-moodboard.css
+#
+# Pages also sends the correct Content-Type, which the manual route did not: a stylesheet
+# served as application/octet-stream is refused by Chrome in standards mode, with nothing
+# in the console naming the cause.
+name: Deploy bundle
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'build.mjs'
+      - 'postcss.config.mjs'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/deploy-bundle.yml'
+  # So a deploy can be forced without a code change — re-pointing after a Pages settings
+  # change, mainly.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race; the later push is the one that should win.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # Typecheck before building, so a broken bundle can't reach the CDN that every
+      # moodboard in the app loads from.
+      - run: npm run typecheck
+
+      - run: node build.mjs
+
+      # The source map is 1.6 MB and only useful to someone already reading the source,
+      # which is public anyway — but there is no reason to serve it to every board.
+      - run: rm -f dist/*.map
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
