@@ -29,6 +29,7 @@ export function ElementToolbar() {
     bringToFront,
     sendToBack,
     deleteSelection,
+    canDeleteElement,
     getImageById,
     activeSectionName,
   } = useBoard();
@@ -44,6 +45,9 @@ export function ElementToolbar() {
   // Format controls need every member to be the same kind of thing — there is no sensible
   // corner radius for a mixture of a rectangle and a photograph.
   const sameType = !!element && selected.every((el) => el.type === element.type);
+  // A client may delete only what they added, so the button appears only when something in
+  // the selection actually is theirs — and counts just that part.
+  const deletable = selected.filter(canDeleteElement);
   const visible = !!element && !!activeSlideId && canEdit;
 
   // Reads the element's rendered box rather than recomputing x*scale, so rotation and the
@@ -160,17 +164,23 @@ export function ElementToolbar() {
         </button>
       )}
 
-      <span className="text-format-divider" />
+      {deletable.length > 0 && (
+        <>
+          <span className="text-format-divider" />
 
-      <button
-        type="button"
-        className="text-format-btn is-danger"
-        onClick={deleteSelection}
-        data-tooltip={many ? `Delete ${selected.length}` : 'Delete'}
-        aria-label={many ? `Delete ${selected.length} elements` : 'Delete'}
-      >
-        <Trash2 size={14} strokeWidth={1.7} />
-      </button>
+          <button
+            type="button"
+            className="text-format-btn is-danger"
+            onClick={deleteSelection}
+            data-tooltip={deletable.length > 1 ? `Delete ${deletable.length}` : 'Delete'}
+            aria-label={
+              deletable.length > 1 ? `Delete ${deletable.length} elements` : 'Delete'
+            }
+          >
+            <Trash2 size={14} strokeWidth={1.7} />
+          </button>
+        </>
+      )}
     </div>
   );
 }

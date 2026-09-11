@@ -93,6 +93,8 @@ function coerceElement(item: unknown, knownImageIds: ReadonlySet<string>): Canva
     height,
     rotation: num(o.rotation, 0),
     zIndex: num(o.zIndex, 1),
+    // Absent on anything placed before ownership was recorded, and on a template fork.
+    ...(typeof o.createdBy === 'string' && o.createdBy ? { createdBy: o.createdBy } : {}),
   };
 
   if (o.type === 'image') {

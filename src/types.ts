@@ -51,6 +51,14 @@ export interface CanvasElementBase {
   height: number;
   rotation?: number;
   zIndex: number;
+  /**
+   * Bubble user id of whoever placed this, stamped at creation.
+   *
+   * Only clients are held to it: they may delete what they added and nothing else. Elements
+   * that predate the field have none, which reads as "not yours" — the safe way round, since
+   * everything already on a board was put there by the planner.
+   */
+  createdBy?: string;
 }
 
 export interface ImageElement extends CanvasElementBase {

@@ -105,7 +105,12 @@ export function SlideCanvas({
   }, [scale, onWidthChange]);
 
   /**
-   * Rubber-band selection: press on bare artboard and drag a rectangle.
+   * Rubber-band selection: press and drag a rectangle.
+   *
+   * It starts on bare artboard *or* in the margin around it. The margin used to select the
+   * slide the instant it was pressed, which meant the one place with guaranteed empty space
+   * — the only place left to start from on a full collage — was the one place you could not
+   * drag a selection from.
    *
    * Anything the rectangle touches is selected, rather than only what it fully encloses —
    * on a dense collage the enclosing rule means dragging across four overlapping photos
@@ -124,19 +129,34 @@ export function SlideCanvas({
       x: (cx - rect.left) / scale,
       y: (cy - rect.top) / scale,
     });
+    // A press that began in the margin sits outside the slide. Measure the gesture in raw
+    // slide space so the drag threshold is honest, and clamp only the rectangle — it is
+    // drawn inside the artboard, and an unclamped one would spill past its edges.
+    const clamp = (p: { x: number; y: number }) => ({
+      x: Math.min(Math.max(p.x, 0), SLIDE_WIDTH),
+      y: Math.min(Math.max(p.y, 0), SLIDE_HEIGHT),
+    });
     const origin = toSlide(e.clientX, e.clientY);
     let moved = false;
 
     const onMove = (ev: PointerEvent) => {
-      const at = toSlide(ev.clientX, ev.clientY);
-      const box = {
-        x: Math.min(origin.x, at.x),
-        y: Math.min(origin.y, at.y),
-        width: Math.abs(at.x - origin.x),
-        height: Math.abs(at.y - origin.y),
-      };
-      if (!moved && Math.max(box.width, box.height) * scale < MARQUEE_THRESHOLD) return;
+      const raw = toSlide(ev.clientX, ev.clientY);
+      if (
+        !moved &&
+        Math.max(Math.abs(raw.x - origin.x), Math.abs(raw.y - origin.y)) * scale <
+          MARQUEE_THRESHOLD
+      ) {
+        return;
+      }
       moved = true;
+      const from = clamp(origin);
+      const at = clamp(raw);
+      const box = {
+        x: Math.min(from.x, at.x),
+        y: Math.min(from.y, at.y),
+        width: Math.abs(at.x - from.x),
+        height: Math.abs(at.y - from.y),
+      };
       setMarquee(box);
       selectElements(
         activeSlide.elements
@@ -193,12 +213,8 @@ export function SlideCanvas({
       // Selecting the slide by clicking bare artboard only works while there is bare
       // artboard left. On a full collage every pixel belongs to an element, so the slide —
       // and with it the background control — became unreachable. The margin around the
-      // artboard is always there, so it selects the slide too.
-      onPointerDown={(e) => {
-        if (readOnly || isPlacingComment) return;
-        if (e.target !== e.currentTarget) return;
-        selectSlide();
-      }}
+      // artboard is always there: a click there selects the slide, a drag rubber-bands.
+      onPointerDown={startMarquee}
     >
       <div
         ref={artboardRef}

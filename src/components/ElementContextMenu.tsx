@@ -25,7 +25,12 @@ export function ElementContextMenu({
   at,
   onClose,
 }: ElementContextMenuProps) {
-  const { bringToFront, sendToBack, deleteElement, activeSectionName } = useBoard();
+  const { bringToFront, sendToBack, deleteElement, canDeleteElement, activeSectionName, activeSlide } =
+    useBoard();
+  // Offering a Delete that silently refuses is worse than not offering it: a client sees
+  // only their own elements as removable.
+  const target = activeSlide?.elements.find((el) => el.id === elementId);
+  const mayDelete = !!target && canDeleteElement(target);
   const { portalHost } = useHost();
 
   useEffect(() => {
@@ -88,18 +93,22 @@ export function ElementContextMenu({
           </button>
         </>
       )}
-      <span className="canvas-context-divider" />
-      <button
-        type="button"
-        className="canvas-context-item is-danger"
-        onClick={() => {
-          onClose();
-          deleteElement(slideId, elementId);
-        }}
-      >
-        <Trash2 size={13} strokeWidth={1.6} />
-        Delete
-      </button>
+      {mayDelete && (
+        <>
+          <span className="canvas-context-divider" />
+          <button
+            type="button"
+            className="canvas-context-item is-danger"
+            onClick={() => {
+              onClose();
+              deleteElement(slideId, elementId);
+            }}
+          >
+            <Trash2 size={13} strokeWidth={1.6} />
+            Delete
+          </button>
+        </>
+      )}
     </div>,
     portalHost
   );

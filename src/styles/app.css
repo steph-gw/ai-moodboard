@@ -2832,7 +2832,10 @@
 }
 
 .btn-ghost:disabled {
-  opacity: 0.4;
+  /* Deliberately not `opacity`. Opacity groups the element and everything it draws,
+     and a tooltip is this button's own ::after — so a disabled Undo faded its own
+     tooltip to 40% along with the icon. Dimming the color leaves the tooltip solid. */
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 

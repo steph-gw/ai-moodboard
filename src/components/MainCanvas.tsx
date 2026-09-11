@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Lock } from 'lucide-react';
+import { Check, Lock } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { SlideCanvas } from './SlideCanvas';
 import { ElementToolbar } from './ElementToolbar';
@@ -53,7 +53,11 @@ export function MainCanvas() {
   );
   const allText = selectedTexts.length > 0 && selectedTexts.length === selectedElementIds.length;
   const selectedText = allText ? selectedTexts[selectedTexts.length - 1] : undefined;
+  // Two ways a slide stops taking edits, and they need different words on the badge:
+  // a lock is one slide someone froze on purpose, approval freezes the whole section and
+  // is lifted by setting the status back rather than by unlocking anything.
   const locked = lockedSlideIds.has(activeSlideId);
+  const approved = activeSection.status === 'approved';
 
   return (
     <main className="canvas">
@@ -106,9 +110,17 @@ export function MainCanvas() {
           shrinks the slide — which is what selecting a text box used to do. */}
       <div className="canvas-stage">
         {/* On the slide itself, where someone wondering why they can't edit is looking. */}
-        {locked && (
-          <span className="canvas-lock" data-tooltip="This slide is locked" tabIndex={0}>
-            <Lock size={15} strokeWidth={2} />
+        {(locked || approved) && (
+          <span
+            className="canvas-lock"
+            data-tooltip={
+              locked
+                ? 'This slide is locked'
+                : 'This section is approved — set it back to Open to edit'
+            }
+            tabIndex={0}
+          >
+            {locked ? <Lock size={15} strokeWidth={2} /> : <Check size={15} strokeWidth={2.4} />}
           </span>
         )}
         <ElementToolbar />

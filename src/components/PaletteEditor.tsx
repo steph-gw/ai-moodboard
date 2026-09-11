@@ -21,7 +21,7 @@ const NEW_COLOR = '#c4a35a';
  * shape is a `Moodboard Palette` type rather than more strings in this field.
  */
 export function PaletteEditor() {
-  const { board, setPalette, canManage } = useBoard();
+  const { board, setPalette, canWrite } = useBoard();
   const { portalHost } = useHost();
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
@@ -60,12 +60,12 @@ export function PaletteEditor() {
       <button
         ref={anchorRef}
         type="button"
-        className={`palette-strip ${open ? 'is-open' : ''} ${canManage ? '' : 'is-static'}`}
-        onClick={canManage ? () => setOpen((v) => !v) : undefined}
-        data-tooltip={canManage ? 'Edit wedding colors' : 'Wedding colors'}
-        aria-label={canManage ? 'Edit wedding colors' : 'Wedding colors'}
-        aria-expanded={canManage ? open : undefined}
-        disabled={!canManage}
+        className={`palette-strip ${open ? 'is-open' : ''} ${canWrite ? '' : 'is-static'}`}
+        onClick={canWrite ? () => setOpen((v) => !v) : undefined}
+        data-tooltip={canWrite ? 'Edit wedding colors' : 'Wedding colors'}
+        aria-label={canWrite ? 'Edit wedding colors' : 'Wedding colors'}
+        aria-expanded={canWrite ? open : undefined}
+        disabled={!canWrite}
       >
         <Palette size={12} strokeWidth={1.6} className="palette-strip-icon" />
         <span className="palette-strip-swatches">

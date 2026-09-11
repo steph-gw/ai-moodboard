@@ -65,7 +65,7 @@ editor-time toggles rather than data, stay checkboxes.
 | Current user name | `current_user_name` | Dynamic value / text | — | `Current User's Name` |
 | Current user initials | `current_user_initials` | Dynamic value / text | — | leave blank — derived from the name |
 | Is planner | `is_planner` | Dynamic value / yes-no | — | `Current User's Business is not empty` |
-| Read only | `read_only` | Dynamic value / yes-no | — | — |
+| Read only | `read_only` | Dynamic value / yes-no | — | `Current page Event's Collaborator Access for Current User's Moodboard access is not Write` — the tab permission, inverted. Leave it **no** for an admin. |
 | Logo url | `logo_url` | Dynamic value / text | — | your wordmark's file URL |
 | Height css | `height_css` | Dynamic value / text | `100%` | — |
 | API base | `api_base` | Dynamic value / text | — | leave blank |
@@ -82,6 +82,32 @@ editor-time toggles rather than data, stay checkboxes.
 | Collaborator photos | `collaborator_photos` | Dynamic value / text, **list** | — | `…Collaborator Accesses:each item's User's Profile picture` |
 | Template moodboard id | `template_moodboard_id` | Dynamic value / text | — | the template to fork on first open; blank for an ordinary board |
 | Business id | `business_id` | Dynamic value / text | — | `Current page Event's Planner's Business's unique id` — event-derived rather than `Current User's Business`, so a client viewing the board still resolves to the right business |
+
+## Who can do what
+
+Two fields decide it, and the board derives the rest. `read_only` is the moodboard tab's
+permission for this person — bind it to the same access the tab itself uses, so the two can
+never disagree — and `is_planner` separates the planner's own team from the client side.
+An admin is simply somebody the page never marks read-only.
+
+| | read-only | write |
+|---|---|---|
+| **Client** | vote, comment | plus: canvas edits, upload, add a section, add or duplicate a slide, palette. Deletes **only what they added**. |
+| **Team member / admin** | vote, comment | everything, including approve, lock, rename and delete, and templates |
+
+Two things then freeze a slide for **everyone**, write access included:
+
+- **Lock**, per slide, set from the slide actions column. A client never sees the control.
+- **Approved**, per section. Approval is a decision about the work, so the work stops
+  moving under it — set the status back to Open to carry on. The canvas shows a badge
+  saying so, in the same spot the lock badge uses.
+
+Element ownership is recorded in the slide's own JSON (`createdBy`, the Bubble user id) and
+enforced in the bundle, not by a privacy rule — the whole canvas is one text field, so
+Bubble cannot police it per element. It stops an honest client from deleting the planner's
+work; it is not a defence against someone writing to the Data API by hand. Anything placed
+before this shipped, and anything arriving from a template fork, carries no owner and so
+reads as the planner's.
 
 The three collaborator lists are read by index and must stay in step — they are the same
 list walked three times, so they do. See PHASE-11 for why three lists rather than one.

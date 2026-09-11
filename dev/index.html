@@ -104,6 +104,12 @@
         <button data-role="planner" class="on">Planner</button>
         <button data-role="client">Client</button>
       </span>
+      <!-- The moodboard tab's read/write permission, which Bubble sends as `read only`.
+           Every tier the real app has is planner/client crossed with this. -->
+      <span id="access-switch">
+        <button data-access="write" class="on">Write</button>
+        <button data-access="read">Read only</button>
+      </span>
     </div>
 
     <div id="host-container"><div id="board"></div></div>

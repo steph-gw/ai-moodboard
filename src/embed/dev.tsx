@@ -33,6 +33,8 @@ const PEOPLE: Record<UserRole, { id: string; name: string }> = {
 };
 
 let role: UserRole = 'planner';
+/** The moodboard tab's permission for this person, as Bubble sends it. */
+let readOnly = false;
 
 /**
  * Stand-in for Bubble's context.uploadContent. Returns a data URL rather than an object
@@ -66,6 +68,7 @@ const id = GWMoodboard.mount(el, {
   currentUserId: PEOPLE[role].id,
   currentUserName: PEOPLE[role].name,
   role,
+  readOnly,
   logoUrl: './gatherwise-logo.png',
   moodboardId: DEV_MOODBOARD_ID,
   businessId: 'biz-dev',
@@ -102,4 +105,16 @@ document.getElementById('role-switch')?.addEventListener('click', (e) => {
   document
     .querySelectorAll('#role-switch button')
     .forEach((b) => b.classList.toggle('on', (b as HTMLElement).dataset.role === role));
+});
+
+document.getElementById('access-switch')?.addEventListener('click', (e) => {
+  const target = e.target as HTMLElement;
+  if (target.tagName !== 'BUTTON') return;
+  readOnly = target.dataset.access === 'read';
+  GWMoodboard.update(id, { readOnly });
+  document
+    .querySelectorAll('#access-switch button')
+    .forEach((b) =>
+      b.classList.toggle('on', ((b as HTMLElement).dataset.access === 'read') === readOnly)
+    );
 });

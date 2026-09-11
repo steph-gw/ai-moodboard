@@ -122,6 +122,7 @@ export function SectionTabs() {
   const {
     board,
     canManage,
+    canWrite,
     activeSectionId,
     setActiveSectionId,
     deleteSection,
@@ -160,7 +161,9 @@ export function SectionTabs() {
             </button>
           );
         })}
-        {canManage && (
+        {/* Adding a section is contributing, not governing — renaming or deleting one
+            someone else made is the part that stays with the planner side. */}
+        {canWrite && (
           <button
             type="button"
             className="section-tab-add"

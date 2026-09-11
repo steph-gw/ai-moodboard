@@ -120,6 +120,10 @@ interface BoardContextValue {
   toggleSlideLock: (slideId: string) => void;
   /** False for a client. Structure — sections, slides, status, vision brief. */
   canManage: boolean;
+  /** The host's read/write answer for this viewer, before locks and approval. */
+  canWrite: boolean;
+  /** Whether this viewer may remove a particular element — clients, only their own. */
+  canDeleteElement: (element: CanvasElement) => boolean;
   beginInteraction: () => void;
   endInteraction: () => void;
   canUndo: boolean;
@@ -427,7 +431,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    */
   const runStructural = useCallback(
     async (write: () => Promise<void>): Promise<boolean> => {
-      if (!canEditRef.current) return false;
+      // The weakest gate any structural change needs. Which of them a client may make, and
+      // whether a frozen section blocks it, is decided per operation below — adding a
+      // section has nothing to do with whether the section you are looking at is approved.
+      if (!canWriteRef.current) return false;
       await saverRef.current.flush();
       try {
         await write();
@@ -456,7 +463,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    */
   const applyStructural = useCallback(
     (updater: (prev: Board) => Board) => {
-      if (!canEditRef.current) return;
+      if (!canWriteRef.current) return;
       const prev = boardRef.current;
       const next = updater(prev);
       if (next === prev) return;
@@ -508,22 +515,39 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   );
 
   /**
-   * Two permissions, because locking is per slide.
+   * Three permissions, because three different things can stop an edit.
    *
-   * `canManage` is whether this viewer may shape the board at all — add sections and
-   * slides, set a status, write the vision brief. A client can't; they review.
-   * `canEdit` is that plus the active slide being unlocked, and covers the canvas itself.
-   * Locking one slide freezes its contents without taking away the ability to add another.
+   * `canWrite` is the host's answer: the moodboard tab is read/write for this person. It
+   * comes in as `readOnly`, inverted, so an admin is simply someone the host never marks
+   * read-only. Without it the board is a viewer — comments and votes still work, because
+   * that is how a client takes part.
    *
-   * Comments and votes sit outside both. They are how a client takes part, and a locked
-   * slide is closed for redesign, not for discussion.
+   * `canManage` is `canWrite` minus the client role: approving, locking, templates,
+   * renaming or deleting what someone else made. A client with write access builds on the
+   * board; they don't govern it.
+   *
+   * `canEdit` is `canWrite` plus the active slide being editable at all. Two things freeze
+   * a slide, and both override write access for everyone including the planner who holds
+   * it: an explicit lock, and the section being approved. Approval is a decision about the
+   * work, so the work stops moving under it — set the section back to Open to keep going.
+   *
+   * Deleting an element has one more rule on top, in deleteElements: a client may remove
+   * what they added and nothing else.
    */
-  const canManage = !readOnly && role === 'planner';
-  const canEdit = canManage && !lockedSlideIds.has(activeSlideId);
+  const canWrite = !readOnly;
+  const isClient = role === 'client';
+  const canManage = canWrite && !isClient;
+  const activeSectionStatus = board.sections.find((s) => s.id === activeSectionId)?.status;
+  const isSlideFrozen = lockedSlideIds.has(activeSlideId) || activeSectionStatus === 'approved';
+  const canEdit = canWrite && !isSlideFrozen;
   const canEditRef = useRef(canEdit);
   canEditRef.current = canEdit;
   const canManageRef = useRef(canManage);
   canManageRef.current = canManage;
+  const canWriteRef = useRef(canWrite);
+  canWriteRef.current = canWrite;
+  const isClientRef = useRef(isClient);
+  isClientRef.current = isClient;
   const lockedSlideIdsRef = useRef(lockedSlideIds);
   lockedSlideIdsRef.current = lockedSlideIds;
 
@@ -958,11 +982,20 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    */
   const deleteElements = useCallback((slideId: string, elementIds: readonly string[]) => {
     if (!elementIds.length) return;
-    const doomed = new Set(elementIds);
-    const removed = (boardRef.current.sections
+    const onSlide = boardRef.current.sections
       .flatMap((s) => s.slides)
       .find((s) => s.id === slideId)
-      ?.elements ?? []).filter((el) => doomed.has(el.id));
+      ?.elements ?? [];
+    // A client deletes what they added and nothing else. Filtering here rather than at the
+    // call sites covers every route at once — the toolbar, the context menu, the Delete
+    // key — and lets a mixed selection still remove the part that is theirs.
+    const asked = new Set(elementIds);
+    const mine = onSlide.filter(
+      (el) => asked.has(el.id) && (!isClientRef.current || el.createdBy === currentUserId)
+    );
+    if (!mine.length) return;
+    const doomed = new Set(mine.map((el) => el.id));
+    const removed = mine;
 
     commit((prev) => ({
       ...prev,
@@ -995,12 +1028,23 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         });
       }
     }
-  }, [commit, repo]);
+  }, [commit, repo, currentUserId]);
 
   const deleteElement = useCallback(
     (slideId: string, elementId: string) => deleteElements(slideId, [elementId]),
     [deleteElements]
   );
+
+  /**
+   * Whether this viewer may remove a given element, so the UI can leave the option out
+   * rather than offer a Delete that quietly does nothing.
+   */
+  const canDeleteElement = useCallback(
+    (element: CanvasElement) => canEdit && (!isClient || element.createdBy === currentUserId),
+    [canEdit, isClient, currentUserId]
+  );
+  const canDeleteElementRef = useRef(canDeleteElement);
+  canDeleteElementRef.current = canDeleteElement;
 
   const restack = useCallback(
     (slideId: string, elementId: string, edge: 'front' | 'back') => {
@@ -1055,6 +1099,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const addTextElement = useCallback((content?: string) => {
     if (!activeSlide) return;
     const el = defaultTextElement();
+    el.createdBy = currentUserId;
     if (content) el.content = content;
     const maxZ = activeSlide.elements.reduce((m, e) => Math.max(m, e.zIndex), 0);
     el.zIndex = maxZ + 1;
@@ -1073,7 +1118,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       }),
     }));
     setSelectedElementIds([el.id]);
-  }, [activeSlide, activeSectionId, activeSlideId, commit]);
+  }, [activeSlide, activeSectionId, activeSlideId, commit, currentUserId]);
 
   const setSlideBackground = useCallback(
     (slideId: string, background: string | undefined) => {
@@ -1094,6 +1139,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     (shape: ShapeKind) => {
       if (!activeSlide) return;
       const el = defaultShapeElement(shape);
+      el.createdBy = currentUserId;
       el.zIndex = activeSlide.elements.reduce((m, e) => Math.max(m, e.zIndex), 0) + 1;
 
       commit((prev) => ({
@@ -1112,7 +1158,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       }));
       setSelectedElementIds([el.id]);
     },
-    [activeSlide, activeSectionId, activeSlideId, commit]
+    [activeSlide, activeSectionId, activeSlideId, commit, currentUserId]
   );
 
   const addSection = useCallback(
@@ -1175,6 +1221,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         approvedDate?: string;
       }
     ) => {
+      // Renaming a section, approving it, rewriting its brief — all decisions about
+      // somebody's else work, so they stay with the planner side even when a client has
+      // write access.
+      if (!canManageRef.current) return;
       applyStructural((prev) => ({
         ...prev,
         sections: prev.sections.map((section) =>
@@ -1214,6 +1264,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
   const deleteSection = useCallback(
     (sectionId: string) => {
+      if (!canManageRef.current) return;
       const remaining = boardRef.current.sections.filter((s) => s.id !== sectionId);
       if (remaining.length === 0) return;
       applyStructural((prev) => ({
@@ -1236,6 +1287,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   );
 
   const addSlide = useCallback(async () => {
+    // canEdit, not canWrite: a slide added to an approved section changes what was
+    // approved, so approval has to stop it the same way it stops the canvas.
+    if (!canEditRef.current) return;
     let newId = `slide-${activeSectionId}-${Date.now()}`;
     const slideName = `Slide ${(activeSection?.slides.length ?? 0) + 1}`;
 
@@ -1267,6 +1321,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
   const deleteSlide = useCallback(
     (slideId: string) => {
+      // A slide holds other people's work, so removing one is a planner's call — and never
+      // one that can be made on a frozen section.
+      if (!canManageRef.current || !canEditRef.current) return;
       if (!activeSection || activeSection.slides.length <= 1) return;
       applyStructural((prev) => ({
         ...prev,
@@ -1322,6 +1379,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
   const duplicateSlide = useCallback(
     async (slideId: string) => {
+      if (!canEditRef.current) return;
       const slide = activeSection?.slides.find((s) => s.id === slideId);
       if (!slide) return;
       let newId = `slide-${activeSectionId}-${Date.now()}`;
@@ -1367,6 +1425,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
   const setSectionBrief = useCallback(
     (sectionId: string, text: string) => {
+      if (!canManageRef.current) return;
       applyStructural((prev) => ({
         ...prev,
         sections: prev.sections.map((section) =>
@@ -1403,7 +1462,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    */
   const setPalette = useCallback(
     (colors: string[]) => {
-      if (!canManageRef.current) return;
+      // The palette is working material, not governance: a client with write access picks
+      // colors like anyone else.
+      if (!canWriteRef.current) return;
       applyStructural((prev) => ({ ...prev, palette: colors }));
       if (!repo || !identity) return;
       void repo.setPalette(identity.moodboardId, colors).catch((err: unknown) => {
@@ -1661,6 +1722,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
       const maxZ = activeSlide.elements.reduce((m, e) => Math.max(m, e.zIndex), 0);
       const el = defaultImageElement(imageId, maxZ + 1);
+      el.createdBy = currentUserId;
 
       commit((prev) => ({
         ...prev,
@@ -1743,7 +1805,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
       setSelectedElementIds([el.id]);
     },
-    [activeSlide, activeSlideId, activeSectionId, commit]
+    [activeSlide, activeSlideId, activeSectionId, commit, currentUserId]
   );
 
   const [isUploading, setIsUploading] = useState(false);
@@ -1791,6 +1853,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       if (!selectedElementId || !activeSlideId) return false;
       const element = activeSlide?.elements.find((el) => el.id === selectedElementId);
       if (!element) return false;
+      // Cut is a delete with a copy on the side, so it answers to the same rule: a client
+      // cannot take someone else's element off the slide.
+      if (!canDeleteElementRef.current(element)) return false;
       // Chrome can deliver both keydown and the native cut event for one
       // gesture; only the first should actually remove anything.
       if (Date.now() - lastCutAtRef.current < 300) return false;
@@ -1828,6 +1893,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       const copy = {
         ...element,
         id: `el-paste-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        // A pasted copy belongs to whoever pasted it, not to whoever made the original.
+        createdBy: currentUserId,
         x: Math.min(element.x + PASTE_OFFSET, SLIDE_WIDTH - element.width),
         y: Math.min(element.y + PASTE_OFFSET, SLIDE_HEIGHT - element.height),
         zIndex: maxZ + 1,
@@ -1846,7 +1913,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       }));
       setSelectedElementIds([copy.id]);
     },
-    [activeSlide, activeSlideId, commit]
+    [activeSlide, activeSlideId, commit, currentUserId]
   );
 
   // Paste: an image on the clipboard lands as an image element, text as a text
@@ -2004,6 +2071,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         lockedSlideIds,
         canEdit,
         canManage,
+        canWrite,
+        canDeleteElement,
         toggleSlideLock,
         beginInteraction,
         endInteraction,

@@ -118,6 +118,7 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
     setActiveSlideId,
     selectElement,
     canManage,
+    canEdit,
     deleteSlide,
     duplicateSlide,
     lockedSlideIds,
@@ -127,7 +128,9 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
   const slide = section?.slides.find((s) => s.id === slideId);
   const isActive = activeSlideId === slideId;
   const locked = lockedSlideIds.has(slideId);
-    const canDelete = canManage && (section?.slides.length ?? 0) > 1;
+  // Removing a slide takes other people's work with it, so it stays a planner action —
+  // and a frozen section (locked slide or approved) refuses it like any other edit.
+  const canDelete = canManage && canEdit && (section?.slides.length ?? 0) > 1;
 
   if (!slide) return null;
 
@@ -168,7 +171,7 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
             </span>
           )}
         </button>
-        {canManage && (
+        {canEdit && (
           <div className="slide-tab-actions">
             <button
               type="button"
@@ -204,7 +207,7 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
 }
 
 export function SlideStrip() {
-  const { board, activeSectionId, canManage, addSlide } = useBoard();
+  const { board, activeSectionId, canEdit, addSlide } = useBoard();
   
   const section = board.sections.find((s) => s.id === activeSectionId);
   if (!section) return null;
@@ -215,7 +218,7 @@ export function SlideStrip() {
         {section.slides.map((slide, index) => (
           <SlideThumbnail key={slide.id} slideId={slide.id} index={index} />
         ))}
-        {canManage && (
+        {canEdit && (
           <button type="button" className="slide-tab-add" onClick={addSlide}>
             <Plus size={16} strokeWidth={1.5} />
           </button>
