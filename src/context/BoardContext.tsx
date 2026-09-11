@@ -286,10 +286,23 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    * was thrown away and fetched again — when in almost every case nothing has changed and
    * the same board is about to be redrawn. The spinner belongs to the first load only.
    */
+  /** Guards the fork so a slow first load can't start it twice. */
+  const forkingRef = useRef(false);
+
   const loadBoard = useCallback(async (silent = false) => {
     if (!repo || !identity) return;
     if (!silent) setIsLoading(true);
     try {
+      // An empty board with a template behind it is forked before anything is shown, so
+      // nobody sees the "add your first section" state for a board that is about to have
+      // five. Guarded on emptiness, so a reload after the fork is an ordinary load.
+      if (identity.templateMoodboardId && !forkingRef.current) {
+        const existing = await repo.load(identity, currentUserId);
+        if (existing.board.sections.length === 0) {
+          forkingRef.current = true;
+          await repo.cloneInto(identity.templateMoodboardId, identity.moodboardId);
+        }
+      }
       const {
         board: loaded,
         versions,

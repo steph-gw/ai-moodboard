@@ -11,6 +11,7 @@ function(instance, properties, context) {
   // and React reconciles. Diffing here would only move the bookkeeping, not save work.
   var props = {
     moodboardId: properties.moodboard_id || '',
+    templateMoodboardId: properties.template_moodboard_id || '',
     eventName: properties.event_name || '',
     eventDate: properties.event_date
       ? new Date(properties.event_date).toISOString().slice(0, 10)

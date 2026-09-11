@@ -66,6 +66,7 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
     onStateChange,
     onLoaded,
     moodboardId,
+    templateMoodboardId,
     collaboratorIds,
     collaboratorNames,
     collaboratorPhotos,
@@ -88,12 +89,14 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
             moodboardId,
             eventName: eventName ?? '',
             eventDate: eventDate ?? '',
+            templateMoodboardId: templateMoodboardId || undefined,
             people: parsePeople(collaboratorIds, collaboratorNames, collaboratorPhotos),
           }
         : null,
     // The lists are new array identities on every host update, so compare their contents.
     [
       moodboardId,
+      templateMoodboardId,
       eventName,
       eventDate,
       (collaboratorIds ?? []).join('\u0000'),

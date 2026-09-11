@@ -47,6 +47,15 @@ export interface GWMoodboardProps {
   collaboratorNames?: string[];
   collaboratorPhotos?: string[];
 
+  /**
+   * A moodboard to fork into this one, the first time this one opens empty.
+   *
+   * Set by the host when the planner picks a template (or, for a brand-new board, the
+   * system starter). It is only ever read once: a board with any section already in it
+   * ignores this, so a page reload can never re-copy on top of someone's work.
+   */
+  templateMoodboardId?: string;
+
   currentUserId: string;
   currentUserName: string;
   /** Optional. Derived from currentUserName when blank. */

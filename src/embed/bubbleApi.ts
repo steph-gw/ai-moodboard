@@ -19,6 +19,10 @@ export const K = {
     visionBrief: 'vision_brief_text',
     palette: 'palette_list_text',
     event: 'event_custom_wedding', // "1 Project / Event" is internally `wedding`
+    /** A reusable board a planner saved. The Name field doubles as the template's name. */
+    template: 'template__boolean',
+    /** Authored by Gatherwise and offered to everyone. */
+    systemTemplate: 'system_template__boolean',
   },
   section: {
     moodboard: 'moodboard_custom_moodboard',

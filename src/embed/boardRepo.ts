@@ -1,5 +1,6 @@
 import type {
   Board,
+  CanvasElement,
   BoardImage,
   Comment,
   CommentPin,
@@ -34,6 +35,8 @@ export interface BoardIdentity {
   moodboardId: string;
   /** Everyone with access, keyed by user id. Supplies comment authors and the avatar stack. */
   people?: Map<string, Viewer>;
+  /** Forked into this board on first open, when this board is still empty. */
+  templateMoodboardId?: string;
   /** Shown in the top nav. Comes from the host, not the API — the Event type isn't exposed. */
   eventName: string;
   eventDate: string;
@@ -192,6 +195,101 @@ export class BoardRepo {
     ]);
     for (const row of rows) versions.set(row._id, str(row['Modified Date']));
     return versions;
+  }
+
+  /**
+   * Copies a whole moodboard into another one: sections, slides, canvas, images, palette
+   * and vision brief. Nothing else comes across — no threads, no comments, no votes, no
+   * approval state, no locks. A template is what the board looked like, not what was said
+   * about it.
+   *
+   * The copy is a fork, not a reference. New Image rows are written and every slide's
+   * elements JSON is rewritten through an old-id → new-id map, so deleting an image in
+   * the copy can never reach the original and editing the original never reaches the copy.
+   *
+   * The one thing still shared is the file behind each image: Bubble's CDN sends no CORS
+   * headers, so the bundle cannot read a file's bytes to re-upload them. Re-hosting has to
+   * happen server-side — see bubble/PHASE-11-TEMPLATES.md. Until it runs the rows are
+   * independent and the files are shared, which is the right order: the board opens at
+   * once and separates behind the scenes.
+   */
+  async cloneInto(sourceMoodboardId: string, targetMoodboardId: string): Promise<void> {
+    const [source, sectionRows, imageRows] = await Promise.all([
+      this.api.get(TYPE.moodboard, sourceMoodboardId),
+      this.api.list(TYPE.section, [
+        { key: K.section.moodboard, constraint_type: 'equals', value: sourceMoodboardId },
+      ]),
+      this.api.list(TYPE.image, [
+        { key: K.image.moodboard, constraint_type: 'equals', value: sourceMoodboardId },
+      ]),
+    ]);
+
+    // Images first: the slides about to be written reference them.
+    const imageIdMap = new Map<string, string>();
+    for (const row of imageRows) {
+      if (row[K.image.inUse] === false) continue; // retired in the source; don't carry it over
+      const newId = await this.createImage(targetMoodboardId, str(row[K.image.image]));
+      imageIdMap.set(row._id, newId);
+    }
+
+    const ordered = [...sectionRows].sort(
+      (a, b) => num(a[K.section.order]) - num(b[K.section.order])
+    );
+    for (const section of ordered) {
+      if (section[K.section.archived] === true) continue;
+      const newSectionId = await this.createSection(
+        targetMoodboardId,
+        str(section[K.section.name]) || 'Section',
+        str(section[K.section.icon]),
+        num(section[K.section.order])
+      );
+      // Status deliberately left at its default: a copy has been approved by nobody.
+      const brief = str(section[K.section.visionBrief]);
+      if (brief) {
+        await this.api.patch(TYPE.section, newSectionId, {
+          [K.section.visionBrief]: brief,
+        });
+      }
+
+      const slideRows = await this.api.list(TYPE.slide, [
+        { key: K.slide.section, constraint_type: 'equals', value: section._id },
+      ]);
+      slideRows.sort((a, b) => num(a[K.slide.order]) - num(b[K.slide.order]));
+      for (const slide of slideRows) {
+        const newSlideId = await this.createSlide(
+          newSectionId,
+          str(slide[K.slide.name]) || 'Slide',
+          num(slide[K.slide.order])
+        );
+        // Every image the source had is a known id here — the map was just built from
+        // exactly those rows — so nothing is dropped for being unrecognised.
+        const content = parseSlideContent(
+          str(slide[K.slide.elementsJson]),
+          new Set(imageIdMap.keys())
+        );
+        const elements: CanvasElement[] = [];
+        for (const el of content.elements) {
+          if (el.type !== 'image') {
+            elements.push(el);
+            continue;
+          }
+          const mapped = imageIdMap.get(el.imageId);
+          // An element pointing at an image that didn't come across would render as a
+          // hole. Dropping it is the honest outcome.
+          if (mapped) elements.push({ ...el, imageId: mapped });
+        }
+        await this.saveSlide(newSlideId, elements, content.background);
+      }
+    }
+
+    const palette = asList(source[K.moodboard.palette]);
+    const visionBrief = str(source[K.moodboard.visionBrief]);
+    if (palette.length || visionBrief) {
+      await this.api.patch(TYPE.moodboard, targetMoodboardId, {
+        ...(palette.length ? { [K.moodboard.palette]: palette } : {}),
+        ...(visionBrief ? { [K.moodboard.visionBrief]: visionBrief } : {}),
+      });
+    }
   }
 
   async createImage(moodboardId: string, url: string): Promise<string> {
