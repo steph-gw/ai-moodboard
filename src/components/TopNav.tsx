@@ -39,13 +39,12 @@ export function TopNav() {
         <div className="viewer-stack">
           {board.viewers.map((v) =>
             v.photoUrl ? (
-              <img
-                key={v.id}
-                className="viewer-avatar is-photo"
-                src={v.photoUrl}
-                alt={v.name}
-                data-tooltip={v.name}
-              />
+              // The tooltip lives on the wrapper, not the image: ::before/::after never
+              // render on a replaced element, so a data-tooltip on the <img> was silently
+              // doing nothing.
+              <span key={v.id} className="viewer-avatar is-photo" data-tooltip={v.name}>
+                <img src={v.photoUrl} alt={v.name} />
+              </span>
             ) : (
               <div key={v.id} className="viewer-avatar" data-tooltip={v.name}>
                 {v.initials}
@@ -72,6 +71,7 @@ export function TopNav() {
             <button
               type="button"
               className="btn-ghost btn-sm"
+              data-tooltip="Present"
               onClick={() => {
                 // Requested from the click itself so the user gesture is still valid.
                 void requestFullscreen();
@@ -79,7 +79,7 @@ export function TopNav() {
               }}
             >
               <Presentation size={13} strokeWidth={1.5} />
-              Present
+              <span className="btn-label">Present</span>
             </button>
           </>
         )}
@@ -87,11 +87,12 @@ export function TopNav() {
           <button
             type="button"
             className="btn-ghost btn-sm"
+            data-tooltip="Export PDF"
             onClick={() => void exportPdf()}
             disabled={isExporting}
           >
             <Download size={13} strokeWidth={1.5} />
-            {isExporting ? 'Preparing…' : 'Export PDF'}
+            <span className="btn-label">{isExporting ? 'Preparing…' : 'Export PDF'}</span>
           </button>
         )}
         {features.summarizeVision && (

@@ -131,7 +131,9 @@ function CommentRow({
         {/* A photo when the host knows one, initials otherwise — a comment from someone
             no longer on the event still has to render. */}
         {comment.authorPhotoUrl ? (
-          <img className="thread-avatar is-photo" src={comment.authorPhotoUrl} alt="" />
+          <span className="thread-avatar is-photo" aria-hidden>
+            <img src={comment.authorPhotoUrl} alt="" />
+          </span>
         ) : (
           <span
             className="thread-avatar"

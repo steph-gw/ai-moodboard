@@ -514,7 +514,12 @@
   flex: 1;
   min-height: 0;
   display: flex;
-  overflow: hidden;
+  /* Was overflow:hidden, which cut the top and bottom off the slide's selection ring —
+     the ring and its halo are drawn outside the artboard's own box. The artboard is
+     centred and sized to fit, so there is nothing here that needs clipping; the small
+     padding keeps the ring off the edges at tight heights. */
+  overflow: visible;
+  padding: 8px 0;
 }
 
 /* Both overlays sit above the artboard without taking layout space. The artboard is scaled
@@ -3295,6 +3300,61 @@
   }
 }
 
+/* ── The top bar under pressure ──
+   The right-hand group never shrinks, so once its contents are wider than what the title
+   leaves it, the two collide and overlap. Rather than let that happen, the bar sheds the
+   things that carry least: first the button labels (each one keeps a tooltip, so an
+   icon-only bar is still readable), then the date, then the avatar stack. */
+@media (max-width: 1000px) {
+  .topnav {
+    gap: 10px;
+    padding: 0 12px;
+  }
+
+  .topnav .btn-label {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .topnav-date {
+    display: none;
+  }
+
+  /* The canvas bar has the same problem the top bar had: three groups that each refuse to
+     shrink, laid across a row narrower than their sum, so they end up sitting on top of
+     one another. Scroll the row instead — every control keeps its tooltip, and the
+     popovers these open are portalled out, so scrolling here cannot clip them. */
+  .canvas-bar {
+    justify-content: flex-start;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .canvas-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .canvas-bar-left,
+  .canvas-bar-mid,
+  .canvas-bar-right {
+    flex: none;
+  }
+
+  /* Pushes the editing controls to the far end, so the row reads left-to-right as
+     section, then slide, then tools, rather than collapsing together. */
+  .canvas-bar-right {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 620px) {
+  .viewer-stack {
+    display: none;
+  }
+}
+
 @media (max-width: 860px) {
   /* Below this the filmstrip is thumbnails too small to tell apart, and it costs the slide
      more than it gives. The section tabs still move between slides. */
@@ -3371,18 +3431,31 @@
   color: var(--text-primary);
 }
 
-/* Photo avatars. Same footprint as the initials they replace, so a mixed stack of
-   people with and without photos still lines up. */
+/* Photo avatars. A wrapper rather than a bare <img>, because ::before/::after — which is
+   how every tooltip in here is drawn — never render on a replaced element. Same footprint
+   as the initials they replace, so a mixed stack still lines up. */
 .thread-avatar.is-photo,
 .viewer-avatar.is-photo {
-  object-fit: cover;
   padding: 0;
   background: var(--surface-2);
+  /* Not overflow:hidden: that would clip the tooltip this element exists to carry. The
+     image rounds itself instead. */
+  overflow: visible;
+}
+
+.thread-avatar.is-photo img,
+.viewer-avatar.is-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 /* A light ring so a photo reads as an avatar rather than as a floating cutout, and so
    overlapping faces in the stack stay separable. */
-.viewer-avatar.is-photo {
+.viewer-avatar.is-photo,
+.thread-avatar.is-photo {
   border: 1.5px solid var(--white);
   box-shadow: 0 0 0 1px var(--border-strong);
 }

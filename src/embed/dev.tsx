@@ -7,6 +7,13 @@ import type { UserRole } from './types';
  * Stand-in for the host page. The surrounding chrome in dev/index.html is
  * deliberately unstyled-by-us: if the moodboard's CSS leaks, it shows up there.
  */
+/** A flat-colour avatar as a data URI, so the harness pulls nothing off the network. */
+function swatch(color: string) {
+  return `data:image/svg+xml,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64"><rect width="64" height="64" fill="${color}"/></svg>`
+  )}`;
+}
+
 /** Stand-in for Bubble's list property object. See collaboratorIds below. */
 function bubbleList(values: string[]) {
   return {
@@ -70,7 +77,10 @@ const id = GWMoodboard.mount(el, {
   // is supposed to end up with; the point is to prove it survives the wrong thing.
   collaboratorIds: bubbleList(['u-planner', 'u-client']),
   collaboratorNames: bubbleList(['Stephanie Chang', 'Alexander Lee']),
-  collaboratorPhotos: bubbleList([]),
+  // Data URIs, not remote images: the harness should make no network calls of its own,
+  // and an empty photo list meant the photo-avatar path — where the tooltip bug lived —
+  // was never rendered locally at all.
+  collaboratorPhotos: bubbleList([swatch('#8a9a7b'), swatch('#c4a35a')]),
   eventName: 'The Ashworth–Linden Wedding',
   eventDate: '2026-06-14',
   uploadFile,

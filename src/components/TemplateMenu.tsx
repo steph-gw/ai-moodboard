@@ -78,7 +78,7 @@ export function TemplateMenu() {
           aria-expanded={open}
         >
           <LayoutTemplate size={13} strokeWidth={1.5} />
-          Templates
+          <span className="btn-label">Templates</span>
         </button>
         {open && (
           <div className="template-menu" role="menu">
