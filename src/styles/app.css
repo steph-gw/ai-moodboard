@@ -338,7 +338,7 @@
 }
 
 /* The stage below is positioned and this row was not, so the stage painted over anything
-   escaping this row — tooltips and the colour popover both disappeared behind the slide.
+   escaping this row — tooltips and the color popover both disappeared behind the slide.
    A layer of its own, above the floating element toolbar, keeps them on top. */
 .canvas-head {
   position: relative;
@@ -2752,7 +2752,7 @@
   overflow: hidden;
 }
 
-/* ── One-swatch colour field ── */
+/* ── One-swatch color field ── */
 .color-field {
   position: relative;
   display: inline-flex;
@@ -2867,7 +2867,52 @@
   margin: 0;
 }
 
-/* ── Palette editor ── */
+/* ── Palette ── */
+.palette-strip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 9px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.palette-strip.is-static {
+  cursor: default;
+}
+
+.palette-strip:not(.is-static):hover,
+.palette-strip.is-open {
+  background: var(--surface-2);
+  border-color: var(--border-strong);
+}
+
+.palette-strip-swatches {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.palette-strip-swatch {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
+.palette-strip-empty {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  color: var(--text-muted);
+}
+
+
 .palette-pop {
   position: fixed;
   z-index: 9401;

@@ -80,7 +80,7 @@ function pushImage(
 }
 
 
-/** A named colour in the palette slide, with the swatch's own label colour. */
+/** A named color in the palette slide, with the swatch's own label color. */
 interface Swatch {
   name: string;
   hex: string;
@@ -117,7 +117,7 @@ function buildPaletteSlide(): Slide {
       stroke: '#5C4A3A',
       strokeWidth: 0,
     }),
-    textElement('el-pal-title', 'COLOUR PALETTE', 40, 22, 460, 40, z++, {
+    textElement('el-pal-title', 'COLOR PALETTE', 40, 22, 460, 40, z++, {
       fontSize: 26,
       fontFamily: 'display',
       color: '#FAFAF8',
@@ -203,7 +203,7 @@ function buildPaletteSlide(): Slide {
   return {
     id: 'slide-ceremony-palette',
     sectionId: 'ceremony',
-    name: 'Colour palette',
+    name: 'Color palette',
     elements,
     commentPins: [],
     background: '#F8F3EF',

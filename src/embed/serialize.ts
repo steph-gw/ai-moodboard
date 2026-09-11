@@ -9,7 +9,7 @@ import {
 
 export interface SlideContent {
   elements: CanvasElement[];
-  /** Slide background. Undefined means the default paper colour. */
+  /** Slide background. Undefined means the default paper color. */
   background?: string;
 }
 
@@ -18,7 +18,7 @@ export interface SlideContent {
  * as an empty slide the planner can rebuild, not an error boundary over the whole app.
  *
  * Two shapes are accepted. The original is a bare array of elements; the current one wraps
- * it so the slide can carry properties of its own, starting with a background colour.
+ * it so the slide can carry properties of its own, starting with a background color.
  * Keeping the old shape readable means the field needs no migration and no second Bubble
  * field — every board written before this still opens.
  */

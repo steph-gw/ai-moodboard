@@ -82,7 +82,7 @@ export type StrokeStyle = 'solid' | 'dashed' | 'dotted';
 export interface ShapeElement extends CanvasElementBase {
   type: 'shape';
   shape: ShapeKind;
-  /** Interior colour. Undefined means no fill — a line never has one. */
+  /** Interior color. Undefined means no fill — a line never has one. */
   fill?: string;
   stroke: string;
   strokeWidth: number;
@@ -101,7 +101,7 @@ export interface Slide {
   name: string;
   elements: CanvasElement[];
   commentPins: CommentPin[];
-  /** Slide background colour. Undefined uses the default paper. */
+  /** Slide background color. Undefined uses the default paper. */
   background?: string;
 }
 

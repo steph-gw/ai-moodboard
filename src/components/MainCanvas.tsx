@@ -35,6 +35,7 @@ export function MainCanvas() {
     selectedElementId,
     lockedSlideIds,
     canEdit,
+    isSlideSelected,
     setSlideBackground,
   } = useBoard();
   // The header lines up with the slide rather than the window, so the two read as one
@@ -62,7 +63,7 @@ export function MainCanvas() {
           <SectionMeta section={activeSection} />
           {/* Text formatting rides in this row rather than a bar of its own: the row is
               already here, so using it costs the artboard no height. */}
-          {activeSlideId && (selectedText || canEdit) && (
+          {activeSlideId && (selectedText || (isSlideSelected && canEdit)) && (
             <div className="canvas-bar-mid">
               {selectedText ? (
                 <TextFormatControls
@@ -70,7 +71,7 @@ export function MainCanvas() {
                   slideId={activeSlideId}
                 />
               ) : (
-                // Nothing selected means the slide itself is what you are editing.
+                // Only once the slide has actually been clicked — see isSlideSelected.
                 <>
                   <span className="shape-format-label">Background</span>
                   <ColorField

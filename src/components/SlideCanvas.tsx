@@ -25,8 +25,7 @@ export function SlideCanvas({
   const {
     activeSlide,
     activeSlideId,
-    selectElement,
-    selectCommentPin,
+    selectSlide,
     isPlacingComment,
     placeCommentPin,
   } = useBoard();
@@ -119,11 +118,10 @@ export function SlideCanvas({
           height: SLIDE_HEIGHT * scale,
           ...(activeSlide.background ? { background: activeSlide.background } : {}),
         }}
-        onMouseDown={() => {
-          if (!isPlacingComment && !readOnly) {
-            selectElement(null);
-            selectCommentPin(null);
-          }
+        onMouseDown={(e) => {
+          // Only a click on the artboard itself, not on something standing on it.
+          if (isPlacingComment || readOnly || e.target !== e.currentTarget) return;
+          selectSlide();
         }}
         onClick={handleArtboardClick}
       >

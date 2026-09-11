@@ -9,7 +9,12 @@ import { serializeSlideContent } from './serialize';
  * the row/board mapping, the dirty diffing, the version guard — is the same code that
  * runs against Bubble. Only the transport changes.
  */
-const STORAGE_KEY = 'gw-moodboard-dev-store';
+/**
+ * Versioned, because the seed is example content that keeps changing. Without the suffix a
+ * harness that has been opened once keeps the board it first saw, and new seed data looks
+ * like it was never written.
+ */
+const STORAGE_KEY = 'gw-moodboard-dev-store-v2';
 const LATENCY_MS = 120;
 
 type Store = Record<string, BubbleRow[]>;

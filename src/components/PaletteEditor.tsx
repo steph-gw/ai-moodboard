@@ -8,12 +8,12 @@ const MAX_COLORS = 12;
 const NEW_COLOR = '#c4a35a';
 
 /**
- * Edits the board's working colours.
+ * Edits the board's working colors.
  *
  * Lives beside the brief because it is the same kind of thing: a decision about the whole
- * moodboard rather than about the slide in front of you. Every colour control on the
+ * moodboard rather than about the slide in front of you. Every color control on the
  * canvas — text, outline, fill, background — offers this list, so it is the one place that
- * decides what a board's colours are.
+ * decides what a board's colors are.
  *
  * One list per board, not several. A second palette would need somewhere to live in the
  * database and a rule for which one a control offers; if that becomes wanted, the honest
@@ -44,8 +44,6 @@ export function PaletteEditor() {
     };
   }, [open]);
 
-  if (!canManage) return null;
-
   const colors = board.palette;
   const replace = (i: number, color: string) =>
     setPalette(colors.map((c, n) => (n === i ? color : c)));
@@ -53,16 +51,30 @@ export function PaletteEditor() {
 
   return (
     <>
+      {/* The palette is the wedding's, so it is on screen rather than behind a button:
+          it is read at a glance far more often than it is edited. Clicking opens the
+          editor — for a planner. A client sees the same strip and can't change it. */}
       <button
         ref={anchorRef}
         type="button"
-        className={`btn-ghost btn-sm ${open ? 'active' : ''}`}
-        onClick={() => setOpen((v) => !v)}
-        data-tooltip="Board colours"
-        aria-expanded={open}
+        className={`palette-strip ${open ? 'is-open' : ''} ${canManage ? '' : 'is-static'}`}
+        onClick={canManage ? () => setOpen((v) => !v) : undefined}
+        data-tooltip={canManage ? 'Edit wedding colors' : 'Wedding colors'}
+        aria-label={canManage ? 'Edit wedding colors' : 'Wedding colors'}
+        aria-expanded={canManage ? open : undefined}
+        disabled={!canManage}
       >
-        <Palette size={13} strokeWidth={1.5} />
-        Palette
+        <Palette size={12} strokeWidth={1.6} className="palette-strip-icon" />
+        <span className="palette-strip-swatches">
+          {colors.length === 0 && <span className="palette-strip-empty">No colors yet</span>}
+          {colors.map((color, i) => (
+            <span
+              key={`${color}-${i}`}
+              className="palette-strip-swatch"
+              style={{ backgroundColor: color }}
+            />
+          ))}
+        </span>
       </button>
 
       {open &&
@@ -72,7 +84,7 @@ export function PaletteEditor() {
             <div className="vision-brief-scrim" onPointerDown={() => setOpen(false)} />
             <div className="palette-pop" style={{ left: at.left, top: at.top }}>
               <div className="vision-brief-pop-head">
-                <p className="vision-brief-label">Board colours</p>
+                <p className="vision-brief-label">Wedding colors</p>
                 <button
                   type="button"
                   className="vision-brief-close"
@@ -84,7 +96,8 @@ export function PaletteEditor() {
               </div>
 
               <p className="palette-hint">
-                Offered everywhere a colour is chosen — text, outlines, fills, backgrounds.
+                The wedding's colors. Offered everywhere one is chosen — text, outlines,
+                fills, backgrounds.
               </p>
 
               <div className="palette-rows">
@@ -95,7 +108,7 @@ export function PaletteEditor() {
                         type="color"
                         value={color}
                         onChange={(e) => replace(i, e.target.value)}
-                        aria-label={`Colour ${i + 1}`}
+                        aria-label={`Color ${i + 1}`}
                       />
                     </label>
                     <input
@@ -105,10 +118,10 @@ export function PaletteEditor() {
                       onChange={(e) => {
                         const next = e.target.value.trim();
                         // Typing a hex passes through half-written values, so only commit
-                        // once it is one — otherwise every keystroke writes a broken colour.
+                        // once it is one — otherwise every keystroke writes a broken color.
                         if (/^#[0-9a-f]{6}$/i.test(next)) replace(i, next);
                       }}
-                      aria-label={`Colour ${i + 1} hex`}
+                      aria-label={`Color ${i + 1} hex`}
                     />
                     <button
                       type="button"
@@ -129,7 +142,7 @@ export function PaletteEditor() {
                   onClick={() => setPalette([...colors, NEW_COLOR])}
                 >
                   <Plus size={12} strokeWidth={1.8} />
-                  Add colour
+                  Add color
                 </button>
               )}
             </div>

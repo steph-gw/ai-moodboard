@@ -40,7 +40,7 @@ export async function compressImage(file: File): Promise<File> {
     // black background. Ask the pixels.
     const type = hasTransparency(ctx, width, height) ? 'image/png' : 'image/jpeg';
     const blob = await toBlob(canvas, type, QUALITY);
-    // Flat-colour images can come out bigger after a re-encode; keep whichever wins.
+    // Flat-color images can come out bigger after a re-encode; keep whichever wins.
     if (!blob || blob.size >= file.size) return file;
 
     return new File([blob], renameFor(file.name, type), { type, lastModified: Date.now() });

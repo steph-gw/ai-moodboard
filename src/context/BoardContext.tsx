@@ -62,6 +62,8 @@ interface BoardContextValue {
   selectedCommentPinId: string | null;
   selectedCommentPin: CommentPin | null;
   selectElement: (elementId: string | null) => void;
+  isSlideSelected: boolean;
+  selectSlide: () => void;
   selectCommentPin: (pinId: string | null) => void;
   isPlacingComment: boolean;
   setPlacingComment: (value: boolean) => void;
@@ -196,6 +198,14 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const [activeSlideId, setActiveSlideId] = useState(() => mockBoard.sections[0]?.slides[0]?.id ?? '');
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [selectedCommentPinId, setSelectedCommentPinId] = useState<string | null>(null);
+  /**
+   * The slide itself is selected — clicked on, with nothing on it selected.
+   *
+   * Distinct from "nothing is selected", which is also the state on first load and after a
+   * reload. Slide controls appear because someone asked for them, not because they
+   * happened not to have clicked anything yet.
+   */
+  const [isSlideSelected, setSlideSelected] = useState(false);
   const [isPlacingComment, setPlacingComment] = useState(false);
   const [isCommentsOpen, setCommentsOpenState] = useState(false);
 
@@ -545,6 +555,14 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
   const selectElement = useCallback((elementId: string | null) => {
     setSelectedElementId(elementId);
+    // Selecting an element is the opposite of selecting the slide.
+    if (elementId) setSlideSelected(false);
+  }, []);
+
+  const selectSlide = useCallback(() => {
+    setSelectedElementId(null);
+    setSelectedCommentPinId(null);
+    setSlideSelected(true);
   }, []);
 
   // Only one right-hand drawer at a time: opening one closes the other.
@@ -849,6 +867,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       setActiveSlideId(firstSlideId);
       setSelectedElementId(null);
       setSelectedCommentPinId(null);
+      setSlideSelected(false);
       setPlacingComment(false);
     },
     [applyStructural, repo, identity, runStructural]
@@ -1086,7 +1105,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   );
 
   /**
-   * The board's working colours, shared by every colour control on the canvas.
+   * The board's working colors, shared by every color control on the canvas.
    *
    * Written immediately rather than left to the autosave: it belongs to the moodboard row,
    * not to a slide's canvas, so the slide saver never looks at it.
@@ -1629,6 +1648,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         selectedCommentPinId,
         selectedCommentPin,
         selectElement,
+        isSlideSelected,
+        selectSlide,
         selectCommentPin: selectCommentPinExclusive,
         isPlacingComment,
         setPlacingComment,

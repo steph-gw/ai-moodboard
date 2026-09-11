@@ -91,14 +91,14 @@ export function ShapeFormatControls({
       <span className="text-format-divider" />
 
       <ColorField
-        label={isLine ? 'Line colour' : 'Outline colour'}
+        label={isLine ? 'Line color' : 'Outline color'}
         value={element.stroke}
         onChange={(stroke) => patch({ stroke })}
       />
 
       {!isLine && (
         <ColorField
-          label="Fill colour"
+          label="Fill color"
           value={element.fill ?? 'transparent'}
           onChange={(fill) => patch({ fill })}
           allowNone

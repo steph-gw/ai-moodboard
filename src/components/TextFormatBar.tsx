@@ -101,7 +101,7 @@ export function TextFormatControls({
       <span className="text-format-divider" />
 
       <ColorField
-        label="Text colour"
+        label="Text color"
         value={text.color}
         onChange={(color) => patch({ color })}
       />

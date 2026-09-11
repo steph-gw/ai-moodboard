@@ -7,8 +7,8 @@ import { useHost } from '../embed/HostProvider';
  * One swatch that opens the palette, rather than the whole palette inline.
  *
  * The toolbar floats beside the element, so every control in it competes with the slide
- * for space — five swatches per colour meant two colours ate half the bar. This shows the
- * current colour and puts the choices one click away.
+ * for space — five swatches per color meant two colors ate half the bar. This shows the
+ * current color and puts the choices one click away.
  */
 export function ColorField({
   label,
