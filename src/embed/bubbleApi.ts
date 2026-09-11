@@ -121,7 +121,11 @@ export class BubbleApiError extends Error {
  * nothing to do with the actual problem.
  */
 export function resolveApiBase(pathname = window.location.pathname): string {
-  const version = pathname.match(/^\/(version-[a-z0-9-]+)\//)?.[1];
+  // Anything up to the next slash, not just [a-z0-9-]: a branch named `Feature_QA` is a
+  // perfectly ordinary Bubble version, and the narrower pattern quietly failed to match it
+  // and sent the board to live — the same silent wrong-app failure this function exists to
+  // prevent, hiding inside the fix for it.
+  const version = pathname.match(/^\/(version-[^/]+)\//)?.[1];
   return `${version ? `/${version}` : ''}/api/1.1/obj`;
 }
 
