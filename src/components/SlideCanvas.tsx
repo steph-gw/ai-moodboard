@@ -8,6 +8,7 @@ import {
 import { useBoard } from '../context/BoardContext';
 import { CanvasElementView } from './CanvasElementView';
 import { CommentPinMarker } from './CommentPinMarker';
+import { PinComposer } from './PinComposer';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 
 /** Small enough never to clip a real column; large enough that a zero-width measure
@@ -37,6 +38,7 @@ export function SlideCanvas({
     selectElements,
     isPlacingComment,
     placeCommentPin,
+    selectedCommentPinId,
   } = useBoard();
   const containerRef = useRef<HTMLDivElement>(null);
   const [marquee, setMarquee] = useState<{
@@ -223,6 +225,12 @@ export function SlideCanvas({
               scale={scale}
             />
           ))}
+        {/* Only for a pin with nothing on it yet: once there is a conversation, the
+            drawer is the place for it. */}
+        {!readOnly &&
+          activeSlide.commentPins
+            .filter((pin) => pin.id === selectedCommentPinId && pin.comments.length === 0)
+            .map((pin) => <PinComposer key={pin.id} pin={pin} scale={scale} />)}
       </div>
     </div>
   );

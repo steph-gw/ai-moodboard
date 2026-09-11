@@ -76,6 +76,8 @@ interface BoardContextValue {
   placeCommentPin: (x: number, y: number) => void;
   /** Drags a pin to a new spot on its slide. Board coordinates, not screen. */
   moveCommentPin: (pinId: string, x: number, y: number) => void;
+  /** Brings a thread on another slide into view and selects its pin. */
+  goToPin: (sectionId: string, slideId: string, pinId: string) => void;
   /** The section whose editor should be open, and the way to ask for it. */
   editingSectionId: string | null;
   requestEditSection: (sectionId: string | null) => void;
@@ -765,6 +767,15 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       });
     },
     [applyComments, repo, onError]
+  );
+
+  const goToPin = useCallback(
+    (sectionId: string, slideId: string, pinId: string) => {
+      setActiveSectionIdState(sectionId);
+      setActiveSlideId(slideId);
+      setSelectedCommentPinId(pinId);
+    },
+    []
   );
 
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
@@ -1855,6 +1866,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         setPlacingComment,
         placeCommentPin,
         moveCommentPin,
+        goToPin,
         editingSectionId,
         requestEditSection,
         voteImage,

@@ -153,12 +153,14 @@ function CommentRow({
               <CheckCircle2 size={15} strokeWidth={1.6} />
             </button>
           )}
-          {(isOwn || canReopen) && (
+          {/* A resolved thread offers exactly one thing: reopening it. Edit and delete
+              belong to a live conversation, so the menu goes away with the thread. */}
+          {isOwn && !comment.resolved && (
             <CommentActions
               pinId={pinId}
               comment={comment}
               canEdit={isOwn}
-              canReopen={canReopen}
+              canReopen={false}
               onStartEdit={() => {
                 setDraft(comment.text);
                 setEditing(true);
@@ -211,16 +213,36 @@ function CommentRow({
   );
 }
 
+interface ThreadEntry {
+  pin: CommentPin;
+  index: number;
+  sectionId: string;
+  sectionName: string;
+  slideId: string;
+  slideName: string;
+}
+
 function Thread({
   pin,
   pinIndex,
   isSelected,
+  sectionId,
+  sectionName,
+  slideId,
+  slideName,
+  isElsewhere,
 }: {
   pin: CommentPin;
   pinIndex: number;
   isSelected: boolean;
+  sectionId: string;
+  sectionName: string;
+  slideId: string;
+  slideName: string;
+  /** The thread lives on a slide other than the one on screen. */
+  isElsewhere: boolean;
 }) {
-  const { addComment, selectCommentPin, role } = useBoard();
+  const { addComment, selectCommentPin, reopenComment, goToPin, role } = useBoard();
   const [draft, setDraft] = useState('');
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -248,9 +270,36 @@ function Thread({
     <div
       ref={cardRef}
       className={`thread-card ${isSelected ? 'is-selected' : ''} ${resolved ? 'is-resolved' : ''}`}
-      onClick={() => !isSelected && selectCommentPin(pin.id)}
+      onClick={() => {
+        if (isSelected) return;
+        // Selecting a thread that lives elsewhere takes you to it — otherwise the drawer
+        // would be showing a conversation about a slide you cannot see.
+        if (isElsewhere) goToPin(sectionId, slideId, pin.id);
+        else selectCommentPin(pin.id);
+      }}
     >
-      <span className="thread-pin-badge">Pin {pinIndex}</span>
+      <div className="thread-card-head">
+        <span className="thread-pin-badge">Pin {pinIndex}</span>
+        <span className="thread-where">
+          {sectionName} · {slideName}
+        </span>
+        {/* Reopen belongs to the thread, not to a comment inside it, and it is the only
+            action a resolved thread has — so it sits on the thread's own row rather than
+            behind an ellipsis that is hidden once resolved. */}
+        {resolved && (
+          <button
+            type="button"
+            className="thread-reopen-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              reopenComment(pin.id);
+            }}
+          >
+            <RotateCcw size={12} strokeWidth={1.7} />
+            Reopen
+          </button>
+        )}
+      </div>
       {hasComments ? (
         pin.comments.map((comment, i) => (
           <CommentRow
@@ -291,14 +340,35 @@ function Thread({
 }
 
 export function CommentDrawer() {
-  const { selectedCommentPinId, activeSlide, isCommentsOpen, setCommentsOpen } =
-    useBoard();
+  const {
+    selectedCommentPinId,
+    board,
+    activeSlideId,
+    isCommentsOpen,
+    setCommentsOpen,
+  } = useBoard();
   const [filter, setFilter] = useState<ThreadFilter>('all');
 
-  if (!isCommentsOpen || !activeSlide) return null;
+  if (!isCommentsOpen) return null;
 
-  const pins = activeSlide.commentPins;
-  const numbered = pins.map((pin, index) => ({ pin, index: index + 1 }));
+  // Every thread on the board, not just this slide's. The drawer is how you find a
+  // conversation you half-remember — which is no use if you have to already be standing
+  // on the right slide. Each entry carries where it lives so selecting it can go there.
+  const numbered = board.sections.flatMap((section) =>
+    section.slides.flatMap((slide) =>
+      slide.commentPins.map((pin, index) => ({
+        pin,
+        index: index + 1,
+        sectionId: section.id,
+        sectionName: section.name,
+        slideId: slide.id,
+        slideName: slide.name,
+      }))
+    )
+  );
+  // Newest first: the thread you want is nearly always the one that just appeared.
+  numbered.reverse();
+  const pins = numbered;
   const open = numbered.filter(({ pin }) => !isPinResolved(pin));
   const resolved = numbered.filter(({ pin }) => isPinResolved(pin));
 
@@ -307,12 +377,17 @@ export function CommentDrawer() {
   const nothingToShow =
     (!showOpen || open.length === 0) && (!showResolved || resolved.length === 0);
 
-  const renderThread = ({ pin, index }: { pin: CommentPin; index: number }) => (
+  const renderThread = (entry: ThreadEntry) => (
     <Thread
-      key={pin.id}
-      pin={pin}
-      pinIndex={index}
-      isSelected={pin.id === selectedCommentPinId}
+      key={entry.pin.id}
+      pin={entry.pin}
+      pinIndex={entry.index}
+      isSelected={entry.pin.id === selectedCommentPinId}
+      sectionId={entry.sectionId}
+      sectionName={entry.sectionName}
+      slideId={entry.slideId}
+      slideName={entry.slideName}
+      isElsewhere={entry.slideId !== activeSlideId}
     />
   );
 

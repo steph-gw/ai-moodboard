@@ -14,7 +14,9 @@ import { serializeSlideContent } from './serialize';
  * harness that has been opened once keeps the board it first saw, and new seed data looks
  * like it was never written.
  */
-const STORAGE_KEY = 'gw-moodboard-dev-store-v2';
+// v3: the slide rows' section pointer changed key when K.slide.section was corrected
+// against the real schema, so a v2 store has slides that belong to no section.
+const STORAGE_KEY = 'gw-moodboard-dev-store-v3';
 const LATENCY_MS = 120;
 
 type Store = Record<string, BubbleRow[]>;
