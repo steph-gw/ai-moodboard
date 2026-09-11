@@ -346,10 +346,10 @@ export function CommentDrawer() {
         {pins.length === 0 ? (
           <div className="drawer-empty">
             <MessageSquarePlus size={26} strokeWidth={1.3} aria-hidden />
-            <p className="drawer-empty-title">No comments on this slide yet.</p>
+            <p className="drawer-empty-title">No comments yet</p>
             <p className="drawer-empty-hint">
               Choose <strong>Add comment</strong> at the bottom of the slide, then click
-              where the note belongs.
+              where to add the comment
             </p>
           </div>
         ) : nothingToShow ? (
