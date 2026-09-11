@@ -247,6 +247,13 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   // Declared before the saver, which closes over it to reload after a conflict.
   const loadBoardRef = useRef<((silent?: boolean) => Promise<void>) | null>(null);
 
+  /**
+   * Async writes that have already started but whose result isn't on the server yet.
+   * A background refresh during one would read a board that is missing the very thing
+   * being added, and overwrite it.
+   */
+  const inFlightWritesRef = useRef(0);
+
   const saver = useSlideSaver({
     repo,
     boardRef,
@@ -359,6 +366,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     let running = false;
     const refresh = async () => {
       if (document.visibilityState !== 'visible' || running) return;
+      // An upload holds the window's focus in a native file picker, so picking a file
+      // fires this the moment the picker closes — while the upload is still running.
+      // Reloading then reads a board without the new image and throws the local one away.
+      if (inFlightWritesRef.current > 0) return;
       running = true;
       try {
         // Waits for any in-flight save too, so a reload can't land on top of one.
@@ -1601,7 +1612,12 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    */
   const uploadAndAddImage = useCallback(
     async (file: File, tags: string[] = ['Uploaded']) => {
+      // Checked before the upload, not after: the file and the Moodboard Image row are
+      // created first, so a refusal at the end would leave both behind with no element
+      // pointing at them, and say nothing.
+      if (!canEditRef.current) return;
       setIsUploading(true);
+      inFlightWritesRef.current += 1;
       try {
         const url = await uploadFile(file);
         const id = repo && identity ? await repo.createImage(identity.moodboardId, url) : undefined;
@@ -1609,6 +1625,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       } catch (err) {
         onError(err instanceof Error ? err.message : 'Could not upload that image.');
       } finally {
+        inFlightWritesRef.current -= 1;
         setIsUploading(false);
       }
     },
