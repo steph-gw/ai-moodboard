@@ -71,7 +71,7 @@ function ImageElementView({
   /** Present mode or the export sheet: nothing interactive, votes included. */
   isStatic?: boolean;
 }) {
-  const { selectedElementIds, selectElement, updateElement, getImageById, beginInteraction, endInteraction } =
+  const { selectedElementIds, selectElement, collapseSelectionTo, updateElement, getImageById, moveSelectionBy, beginInteraction, endInteraction } =
     useBoard();
   const isSelected = selectedElementIds.includes(element.id);
   // Resize and rotate handles belong to one element at a time. With several selected the
@@ -107,6 +107,8 @@ function ImageElementView({
       style={{ zIndex: element.zIndex }}
       rotation={element.rotation}
       onSelect={handleSelect}
+      onMoveBy={isSelected && !isOnly ? (dx, dy) => moveSelectionBy(slideId, dx, dy) : undefined}
+      onClickWithoutDrag={(additive) => !additive && collapseSelectionTo(element.id)}
       onChange={(patch) => updateElement(slideId, element.id, patch)}
       onContextMenu={(e) => {
         if (readOnly) return;
@@ -143,7 +145,7 @@ function TextElementView({
   scale: number;
   readOnly?: boolean;
 }) {
-  const { selectedElementIds, selectElement, updateElement, beginInteraction, endInteraction } =
+  const { selectedElementIds, selectElement, collapseSelectionTo, updateElement, moveSelectionBy, beginInteraction, endInteraction } =
     useBoard();
   const [editing, setEditing] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
@@ -197,6 +199,8 @@ function TextElementView({
       style={{ zIndex: element.zIndex }}
       rotation={element.rotation}
       onSelect={handleSelect}
+      onMoveBy={isSelected && !isOnly ? (dx, dy) => moveSelectionBy(slideId, dx, dy) : undefined}
+      onClickWithoutDrag={(additive) => !additive && collapseSelectionTo(element.id)}
       onChange={(patch) => updateElement(slideId, element.id, patch)}
       onDoubleClick={() => !readOnly && setEditing(true)}
       onContextMenu={(e) => {
@@ -315,7 +319,9 @@ function ShapeElementView({
   const {
     selectedElementIds,
     selectElement,
+    collapseSelectionTo,
     updateElement,
+    moveSelectionBy,
     beginInteraction,
     endInteraction,
   } = useBoard();
@@ -345,6 +351,8 @@ function ShapeElementView({
       style={{ zIndex: element.zIndex }}
       rotation={element.rotation}
       onSelect={(additive) => selectElement(element.id, additive)}
+      onMoveBy={isSelected && !isOnly ? (dx, dy) => moveSelectionBy(slideId, dx, dy) : undefined}
+      onClickWithoutDrag={(additive) => !additive && collapseSelectionTo(element.id)}
       onChange={(patch) => updateElement(slideId, element.id, patch)}
       onContextMenu={(e) => {
         if (readOnly) return;

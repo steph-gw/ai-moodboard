@@ -2754,6 +2754,14 @@
   overflow: hidden;
 }
 
+.marquee {
+  position: absolute;
+  z-index: 400;
+  border: 1px solid var(--gold-active);
+  background: rgba(196, 163, 90, 0.12);
+  pointer-events: none;
+}
+
 /* A member of a multiple selection: outlined, but with no handles — see isOnly. */
 .canvas-element.in-selection::after {
   content: '';

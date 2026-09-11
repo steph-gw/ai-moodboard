@@ -30,6 +30,13 @@ interface DraggableBoxProps {
   className?: string;
   style?: React.CSSProperties;
   onSelect: (additive: boolean) => void;
+  /**
+   * Takes over a move when several elements are selected, receiving the pointer delta in
+   * slide units rather than a new box — the group is positioned and clamped as a whole.
+   */
+  onMoveBy?: (dx: number, dy: number) => void;
+  /** The press turned out to be a click rather than a drag. */
+  onClickWithoutDrag?: (additive: boolean) => void;
   onChange: (patch: BoxPatch) => void;
   /** Called once at pointerdown and once at pointerup, so a whole drag is one undo step. */
   onInteractionStart?: () => void;
@@ -54,6 +61,8 @@ const HANDLES: { handle: ResizeHandle; className: string }[] = [
 const ROTATE_SNAP = 15;
 /** Arm plus handle, in screen px. Below this there isn't room above the box. */
 const ROTATE_HANDLE_CLEARANCE = 40;
+/** Screen px of travel before a press counts as a drag rather than a click. */
+const CLICK_SLOP = 3;
 
 export function DraggableBox({
   x,
@@ -71,6 +80,8 @@ export function DraggableBox({
   className = '',
   style,
   onSelect,
+  onMoveBy,
+  onClickWithoutDrag,
   elementId,
   onChange,
   onInteractionStart,
@@ -91,6 +102,7 @@ export function DraggableBox({
     centerX: number;
     centerY: number;
     startAngle: number;
+    moved: boolean;
   } | null>(null);
 
   const clamp = useCallback(
@@ -147,7 +159,11 @@ export function DraggableBox({
       const dy = (e.clientY - drag.startY) / scale;
 
       if (drag.mode === 'move') {
-        onChange(clamp(drag.origX + dx, drag.origY + dy, drag.origW, drag.origH));
+        if (Math.abs(dx * scale) > CLICK_SLOP || Math.abs(dy * scale) > CLICK_SLOP) {
+          drag.moved = true;
+        }
+        if (onMoveBy) onMoveBy(dx, dy);
+        else onChange(clamp(drag.origX + dx, drag.origY + dy, drag.origW, drag.origH));
         return;
       }
 
@@ -162,8 +178,14 @@ export function DraggableBox({
       );
     };
 
-    const onPointerUp = () => {
-      if (dragRef.current) onInteractionEnd?.();
+    const onPointerUp = (e: PointerEvent) => {
+      const drag = dragRef.current;
+      if (drag) {
+        onInteractionEnd?.();
+        if (drag.mode === 'move' && !drag.moved) {
+          onClickWithoutDrag?.(e.metaKey || e.ctrlKey);
+        }
+      }
       dragRef.current = null;
     };
 
@@ -173,7 +195,7 @@ export function DraggableBox({
       document.removeEventListener('pointermove', onPointerMove);
       document.removeEventListener('pointerup', onPointerUp);
     };
-  }, [scale, clamp, applyResize, onChange, onInteractionEnd]);
+  }, [scale, clamp, applyResize, onChange, onMoveBy, onClickWithoutDrag, onInteractionEnd]);
 
   // The rotate handle sits above the box, and the canvas stage clips anything that
   // escapes the artboard — so for a box near the top it would be invisible and
@@ -207,6 +229,7 @@ export function DraggableBox({
       centerX,
       centerY,
       startAngle: (Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180) / Math.PI,
+      moved: false,
     };
   };
 

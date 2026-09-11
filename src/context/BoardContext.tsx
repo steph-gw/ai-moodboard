@@ -62,9 +62,12 @@ interface BoardContextValue {
   selectedElementId: string | null;
   selectedElementIds: readonly string[];
   deleteSelection: () => void;
+  moveSelectionBy: (slideId: string, dx: number, dy: number) => void;
   selectedCommentPinId: string | null;
   selectedCommentPin: CommentPin | null;
   selectElement: (elementId: string | null, additive?: boolean) => void;
+  selectElements: (ids: readonly string[]) => void;
+  collapseSelectionTo: (elementId: string) => void;
   isSlideSelected: boolean;
   selectSlide: () => void;
   selectCommentPin: (pinId: string | null) => void;
@@ -207,6 +210,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    * to, even when five things are selected.
    */
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
+  // Read by beginInteraction, which is stable and must not re-create on every selection.
+  const selectedIdsRef = useRef<readonly string[]>(selectedElementIds);
+  selectedIdsRef.current = selectedElementIds;
   const [selectedCommentPinId, setSelectedCommentPinId] = useState<string | null>(null);
   /**
    * The slide itself is selected — clicked on, with nothing on it selected.
@@ -505,10 +511,76 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /** Marks the start of a pointer gesture: everything until endInteraction is one undo step. */
+  /** Where each selected element stood when the current gesture began. */
+  const moveOriginRef = useRef<Map<string, { x: number; y: number; width: number; height: number }>>(
+    new Map()
+  );
+
   const beginInteraction = useCallback(() => {
     interactionRef.current = true;
     gestureSnapshotRef.current = false;
+    // Snapshot now: a group move is applied as a delta from these, so reading live
+    // positions each frame would compound the movement instead of tracking the pointer.
+    const origins = new Map<string, { x: number; y: number; width: number; height: number }>();
+    const selected = new Set(selectedIdsRef.current);
+    for (const section of boardRef.current.sections) {
+      for (const slide of section.slides) {
+        for (const el of slide.elements) {
+          if (selected.has(el.id)) {
+            origins.set(el.id, { x: el.x, y: el.y, width: el.width, height: el.height });
+          }
+        }
+      }
+    }
+    moveOriginRef.current = origins;
   }, []);
+
+  /**
+   * Moves everything selected by one pointer delta.
+   *
+   * The whole group is clamped as a unit — the offset is trimmed so no member crosses an
+   * edge, rather than each element stopping on its own. Otherwise dragging a group into a
+   * corner squashes it, as the ones that hit the wall first pile up against the ones still
+   * moving, and nothing puts them back.
+   */
+  const moveSelectionBy = useCallback(
+    (slideId: string, dx: number, dy: number) => {
+      const origins = moveOriginRef.current;
+      if (origins.size < 2) return;
+
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxRight = -Infinity;
+      let maxBottom = -Infinity;
+      for (const o of origins.values()) {
+        minX = Math.min(minX, o.x);
+        minY = Math.min(minY, o.y);
+        maxRight = Math.max(maxRight, o.x + o.width);
+        maxBottom = Math.max(maxBottom, o.y + o.height);
+      }
+      const clampedDx = Math.max(-minX, Math.min(dx, SLIDE_WIDTH - maxRight));
+      const clampedDy = Math.max(-minY, Math.min(dy, SLIDE_HEIGHT - maxBottom));
+
+      commit((prev) => ({
+        ...prev,
+        sections: prev.sections.map((section) => ({
+          ...section,
+          slides: section.slides.map((slide) => {
+            if (slide.id !== slideId) return slide;
+            return {
+              ...slide,
+              elements: slide.elements.map((el) => {
+                const origin = origins.get(el.id);
+                if (!origin) return el;
+                return { ...el, x: origin.x + clampedDx, y: origin.y + clampedDy };
+              }),
+            };
+          }),
+        })),
+      }));
+    },
+    [commit]
+  );
 
   const endInteraction = useCallback(() => {
     interactionRef.current = false;
@@ -584,9 +656,30 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     }
     setSlideSelected(false);
     setSelectedElementIds((prev) => {
-      if (!additive) return prev.length === 1 && prev[0] === elementId ? prev : [elementId];
-      return prev.includes(elementId) ? prev.filter((id) => id !== elementId) : [...prev, elementId];
+      if (additive) {
+        return prev.includes(elementId)
+          ? prev.filter((id) => id !== elementId)
+          : [...prev, elementId];
+      }
+      // Pressing something already in the selection keeps the group, because that press is
+      // usually the start of dragging all of it. Collapsing to one happens on release, if
+      // the press turned out to be a click — see collapseSelectionTo.
+      if (prev.includes(elementId)) return prev;
+      return prev.length === 1 && prev[0] === elementId ? prev : [elementId];
     });
+  }, []);
+
+  /** A click that did not become a drag: reduce a group to the one that was clicked. */
+  const collapseSelectionTo = useCallback((elementId: string) => {
+    setSelectedElementIds((prev) =>
+      prev.length > 1 && prev.includes(elementId) ? [elementId] : prev
+    );
+  }, []);
+
+  /** Replaces the selection outright — used by the marquee, which decides it wholesale. */
+  const selectElements = useCallback((ids: readonly string[]) => {
+    setSelectedElementIds([...ids]);
+    if (ids.length) setSlideSelected(false);
   }, []);
 
   const selectSlide = useCallback(() => {
@@ -703,11 +796,20 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     [commit]
   );
 
-  const deleteElement = useCallback((slideId: string, elementId: string) => {
-    const removed = boardRef.current.sections
+  /**
+   * Removes elements from a slide in one step.
+   *
+   * Takes a list rather than one id so deleting a selection is a single commit — looping a
+   * single delete would push an undo entry per element, and undoing a group deletion would
+   * bring them back one at a time.
+   */
+  const deleteElements = useCallback((slideId: string, elementIds: readonly string[]) => {
+    if (!elementIds.length) return;
+    const doomed = new Set(elementIds);
+    const removed = (boardRef.current.sections
       .flatMap((s) => s.slides)
       .find((s) => s.id === slideId)
-      ?.elements.find((el) => el.id === elementId);
+      ?.elements ?? []).filter((el) => doomed.has(el.id));
 
     commit((prev) => ({
       ...prev,
@@ -717,7 +819,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           if (slide.id !== slideId) return slide;
           return {
             ...slide,
-            elements: slide.elements.filter((el) => el.id !== elementId),
+            elements: slide.elements.filter((el) => !doomed.has(el.id)),
           };
         }),
       })),
@@ -727,19 +829,25 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     // Mark the image unused once nothing places it any more. The file itself is never
     // deleted — undo reaches back 60 steps, and it would resurrect an element pointing at
     // something that no longer exists.
-    if (repo && removed?.type === 'image') {
+    for (const gone of removed) {
+      if (!repo || gone.type !== 'image') continue;
       const stillPlaced = boardRef.current.sections
         .flatMap((s) => s.slides)
         .flatMap((s) => s.elements)
-        .some((el) => el.type === 'image' && el.imageId === removed.imageId);
+        .some((el) => el.type === 'image' && el.imageId === gone.imageId);
       if (!stillPlaced) {
-        void repo.retireImage(removed.imageId).catch(() => {
+        void repo.retireImage(gone.imageId).catch(() => {
           // Cosmetic bookkeeping — a board that shows a removed image in its library is
           // not worth interrupting the user for.
         });
       }
     }
   }, [commit, repo]);
+
+  const deleteElement = useCallback(
+    (slideId: string, elementId: string) => deleteElements(slideId, [elementId]),
+    [deleteElements]
+  );
 
   const restack = useCallback(
     (slideId: string, elementId: string, edge: 'front' | 'back') => {
@@ -1509,10 +1617,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
 
   const deleteSelection = useCallback(() => {
-    if (!activeSlideId || !selectedElementIds.length) return;
-    // Snapshot the ids: deleteElement clears the selection as it goes.
-    for (const id of [...selectedElementIds]) deleteElement(activeSlideId, id);
-  }, [activeSlideId, selectedElementIds, deleteElement]);
+    if (!activeSlideId) return;
+    deleteElements(activeSlideId, selectedElementIds);
+  }, [activeSlideId, selectedElementIds, deleteElements]);
 
   const cutSelection = useCallback(
     (writeClipboard: (text: string) => void): boolean => {
@@ -1685,9 +1792,12 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         selectedElementId,
         selectedElementIds,
         deleteSelection,
+        moveSelectionBy,
         selectedCommentPinId,
         selectedCommentPin,
         selectElement,
+        selectElements,
+        collapseSelectionTo,
         isSlideSelected,
         selectSlide,
         selectCommentPin: selectCommentPinExclusive,

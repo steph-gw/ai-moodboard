@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 import { useBoard } from '../context/BoardContext';
 import { CanvasElementView } from './CanvasElementView';
 import { CommentPinMarker } from './CommentPinMarker';
@@ -7,6 +13,8 @@ import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 /** Small enough never to clip a real column; large enough that a zero-width measure
  *  doesn't render an invisible slide. */
 const MIN_SCALE = 0.08;
+/** Screen px of movement before a press counts as a marquee rather than a click. */
+const MARQUEE_THRESHOLD = 4;
 
 interface SlideCanvasProps {
   fullWidth?: boolean;
@@ -26,10 +34,17 @@ export function SlideCanvas({
     activeSlide,
     activeSlideId,
     selectSlide,
+    selectElements,
     isPlacingComment,
     placeCommentPin,
   } = useBoard();
   const containerRef = useRef<HTMLDivElement>(null);
+  const [marquee, setMarquee] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const artboardRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
 
@@ -83,6 +98,64 @@ export function SlideCanvas({
     onWidthChange?.(SLIDE_WIDTH * scale);
   }, [scale, onWidthChange]);
 
+  /**
+   * Rubber-band selection: press on bare artboard and drag a rectangle.
+   *
+   * Anything the rectangle touches is selected, rather than only what it fully encloses —
+   * on a dense collage the enclosing rule means dragging across four overlapping photos
+   * selects none of them.
+   *
+   * A press that never moves is a click, and selects the slide. The threshold is what
+   * keeps a slightly shaky click from wiping the selection.
+   */
+  const startMarquee = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (isPlacingComment || readOnly || e.target !== e.currentTarget || e.button !== 0) return;
+    const artboard = artboardRef.current;
+    if (!artboard || !activeSlide) return;
+
+    const rect = artboard.getBoundingClientRect();
+    const toSlide = (cx: number, cy: number) => ({
+      x: (cx - rect.left) / scale,
+      y: (cy - rect.top) / scale,
+    });
+    const origin = toSlide(e.clientX, e.clientY);
+    let moved = false;
+
+    const onMove = (ev: PointerEvent) => {
+      const at = toSlide(ev.clientX, ev.clientY);
+      const box = {
+        x: Math.min(origin.x, at.x),
+        y: Math.min(origin.y, at.y),
+        width: Math.abs(at.x - origin.x),
+        height: Math.abs(at.y - origin.y),
+      };
+      if (!moved && Math.max(box.width, box.height) * scale < MARQUEE_THRESHOLD) return;
+      moved = true;
+      setMarquee(box);
+      selectElements(
+        activeSlide.elements
+          .filter(
+            (el) =>
+              el.x < box.x + box.width &&
+              el.x + el.width > box.x &&
+              el.y < box.y + box.height &&
+              el.y + el.height > box.y
+          )
+          .map((el) => el.id)
+      );
+    };
+
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      setMarquee(null);
+      if (!moved) selectSlide();
+    };
+
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
   const handleArtboardClick = (e: MouseEvent<HTMLDivElement>) => {
     if (readOnly || !isPlacingComment || !artboardRef.current) return;
     const rect = artboardRef.current.getBoundingClientRect();
@@ -118,11 +191,7 @@ export function SlideCanvas({
           height: SLIDE_HEIGHT * scale,
           ...(activeSlide.background ? { background: activeSlide.background } : {}),
         }}
-        onMouseDown={(e) => {
-          // Only a click on the artboard itself, not on something standing on it.
-          if (isPlacingComment || readOnly || e.target !== e.currentTarget) return;
-          selectSlide();
-        }}
+        onPointerDown={startMarquee}
         onClick={handleArtboardClick}
       >
         {sortedElements.map((element) => (
@@ -134,6 +203,17 @@ export function SlideCanvas({
             readOnly={readOnly}
           />
         ))}
+        {marquee && (
+          <div
+            className="marquee"
+            style={{
+              left: marquee.x * scale,
+              top: marquee.y * scale,
+              width: marquee.width * scale,
+              height: marquee.height * scale,
+            }}
+          />
+        )}
         {!readOnly &&
           activeSlide.commentPins.map((pin, index) => (
             <CommentPinMarker
