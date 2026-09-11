@@ -31,6 +31,15 @@ export interface GWMoodboardProps {
   /** Bearer token. Not needed same-origin — the session cookie authenticates. */
   authToken?: string;
 
+  /**
+   * Everyone with access to this event, as `id|name|photoUrl` (photo optional).
+   *
+   * The User type isn't on the Data API, so the board cannot look up who wrote a comment.
+   * The host knows, and passing the handful of people involved is both cheaper and
+   * narrower than exposing every user in the app to be searched.
+   */
+  collaborators?: string[];
+
   currentUserId: string;
   currentUserName: string;
   /** Optional. Derived from currentUserName when blank. */

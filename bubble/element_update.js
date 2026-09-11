@@ -16,6 +16,7 @@ function(instance, properties, context) {
       ? new Date(properties.event_date).toISOString().slice(0, 10)
       : '',
 
+    collaborators: properties.collaborators || [],
     currentUserId: properties.current_user_id || '',
     currentUserName: properties.current_user_name || '',
     currentUserInitials: properties.current_user_initials || '',

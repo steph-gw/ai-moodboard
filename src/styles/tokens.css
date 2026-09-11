@@ -6,9 +6,9 @@
   --surface-2: #ece6dc;
   /* Neutral, not warm. Everything else in the app is on the cream ramp, which is exactly
      why a finished thread needs to sit off it to read as finished. */
-  --resolved-bg: #eceae8;
-  --resolved-border: #dcd9d6;
-  --resolved-text: #8b8782;
+  --resolved-bg: #f4f4f3;
+  --resolved-border: #e4e3e1;
+  --resolved-text: #9a9793;
   --gold: #c4a35a;
   --gold-hover: #b8903f;
   --gold-light: rgba(196, 163, 90, 0.1);

@@ -8,6 +8,8 @@ export interface Viewer {
   id: string;
   initials: string;
   name: string;
+  /** Absolute URL. Falls back to initials when absent. */
+  photoUrl?: string;
 }
 
 export interface Comment {
@@ -15,6 +17,7 @@ export interface Comment {
   authorId: string;
   authorName: string;
   authorInitials: string;
+  authorPhotoUrl?: string;
   text: string;
   timestamp: string;
   resolved?: boolean;

@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { BubbleApi } from './bubbleApi';
 import { initialsFrom } from '../utils/initials';
+import { parsePeople } from '../utils/people';
 import { BoardRepo, type BoardIdentity } from './boardRepo';
 import type { FeatureFlags, GWMoodboardProps, UserRole } from './types';
 
@@ -65,6 +66,7 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
     onStateChange,
     onLoaded,
     moodboardId,
+    collaborators,
     eventName,
     eventDate,
     apiBase,
@@ -78,8 +80,17 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
   }, [repoOverride, moodboardId, apiBase, authToken]);
 
   const identity = useMemo<BoardIdentity | null>(
-    () => (moodboardId ? { moodboardId, eventName: eventName ?? '', eventDate: eventDate ?? '' } : null),
-    [moodboardId, eventName, eventDate]
+    () =>
+      moodboardId
+        ? {
+            moodboardId,
+            eventName: eventName ?? '',
+            eventDate: eventDate ?? '',
+            people: parsePeople(collaborators),
+          }
+        : null,
+    // collaborators is a new array identity on every host update, so compare its contents.
+    [moodboardId, eventName, eventDate, (collaborators ?? []).join('\u0000')]
   );
 
   const value = useMemo<HostServices>(

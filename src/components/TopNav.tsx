@@ -36,11 +36,21 @@ export function TopNav() {
       <div className="topnav-right">
         <SaveStatus isDirty={isDirty} state={saveState} onSave={saveNow} />
         <div className="viewer-stack">
-          {board.viewers.map((v) => (
-            <div key={v.id} className="viewer-avatar" data-tooltip={v.name}>
-              {v.initials}
-            </div>
-          ))}
+          {board.viewers.map((v) =>
+            v.photoUrl ? (
+              <img
+                key={v.id}
+                className="viewer-avatar is-photo"
+                src={v.photoUrl}
+                alt={v.name}
+                data-tooltip={v.name}
+              />
+            ) : (
+              <div key={v.id} className="viewer-avatar" data-tooltip={v.name}>
+                {v.initials}
+              </div>
+            )
+          )}
         </div>
         <button
           type="button"

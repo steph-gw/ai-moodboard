@@ -709,6 +709,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   // Only one right-hand drawer at a time: opening one closes the other.
   const selectCommentPinExclusive = useCallback((pinId: string | null) => {
     setSelectedCommentPinId(pinId);
+    if (pinId) setSlideSelected(false);
     if (pinId) {
       setCommentsOpenState(true);
       setPlacingComment(false);
@@ -768,6 +769,13 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     },
     [applyComments, repo, onError]
   );
+
+  // Selecting the slide is about the slide you are looking at. Leaving it — for another
+  // slide, or another section — ends that, or the background control stays on screen
+  // claiming to act on something you are no longer pointing at.
+  useEffect(() => {
+    setSlideSelected(false);
+  }, [activeSlideId, activeSectionId]);
 
   const goToPin = useCallback(
     (sectionId: string, slideId: string, pinId: string) => {

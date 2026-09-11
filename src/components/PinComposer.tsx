@@ -10,10 +10,36 @@ import type { CommentPin } from '../types';
  * opens where the pin is, takes the first comment, and gets out of the way. Everything
  * after that — replies, resolving, reading other slides' threads — is the drawer's job.
  */
-export function PinComposer({ pin, scale }: { pin: CommentPin; scale: number }) {
+/** Composer box, unscaled — it sits above the artboard, not inside its coordinate space. */
+const WIDTH = 250;
+const HEIGHT = 86;
+/** Clearance from the pin, and from the artboard edge. */
+const GAP = 14;
+
+export function PinComposer({
+  pin,
+  scale,
+  boardWidth,
+  boardHeight,
+}: {
+  pin: CommentPin;
+  scale: number;
+  boardWidth: number;
+  boardHeight: number;
+}) {
   const { addComment, selectCommentPin, role } = useBoard();
   const [draft, setDraft] = useState('');
   const ref = useRef<HTMLTextAreaElement>(null);
+
+  // A pin near the right or bottom edge would push the box off the artboard, where it is
+  // clipped. Flip it to the other side of the pin rather than let that happen, and clamp
+  // so a pin in a corner still lands somewhere readable.
+  const px = pin.x * scale;
+  const py = pin.y * scale;
+  const flipX = px + GAP + WIDTH > boardWidth;
+  const flipY = py + GAP + HEIGHT > boardHeight;
+  const left = Math.max(0, Math.min(flipX ? px - GAP - WIDTH : px + GAP, boardWidth - WIDTH));
+  const top = Math.max(0, Math.min(flipY ? py - GAP - HEIGHT : py + GAP, boardHeight - HEIGHT));
 
   useEffect(() => {
     ref.current?.focus();
@@ -30,7 +56,7 @@ export function PinComposer({ pin, scale }: { pin: CommentPin; scale: number }) 
   return (
     <div
       className="pin-composer"
-      style={{ left: pin.x * scale, top: pin.y * scale }}
+      style={{ left, top, width: WIDTH }}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
@@ -49,14 +75,11 @@ export function PinComposer({ pin, scale }: { pin: CommentPin; scale: number }) 
           if (e.key === 'Escape') selectCommentPin(null);
         }}
       />
-      <div className="pin-composer-actions">
-        <span className="pin-composer-hint" aria-hidden>
-          <kbd>↵</kbd> to send
-        </span>
-        <button type="button" className="pin-composer-send" onClick={submit} disabled={!draft.trim()}>
-          Comment
-        </button>
-      </div>
+      {/* Same affordance as the drawer's reply box — Enter sends, and nothing else is
+          needed. A button here was a second way to do the one thing this box does. */}
+      <span className="pin-composer-hint" aria-hidden>
+        <kbd>↵</kbd> to send
+      </span>
     </div>
   );
 }

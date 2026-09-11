@@ -7,6 +7,7 @@ import type {
   Section,
   SectionStatus,
   Slide,
+  Viewer,
 } from '../types';
 import { BubbleApi, K, TYPE, type BubbleRow } from './bubbleApi';
 import { parseSlideContent, serializeSlideContent } from './serialize';
@@ -31,6 +32,8 @@ export interface LoadedBoard {
 
 export interface BoardIdentity {
   moodboardId: string;
+  /** Everyone with access, keyed by user id. Supplies comment authors and the avatar stack. */
+  people?: Map<string, Viewer>;
   /** Shown in the top nav. Comes from the host, not the API — the Event type isn't exposed. */
   eventName: string;
   eventDate: string;
@@ -46,7 +49,7 @@ export class BoardRepo {
    * section. Each row carries its parent id, so the tree is assembled here.
    */
   async load(
-    { moodboardId, eventName, eventDate }: BoardIdentity,
+    { moodboardId, eventName, eventDate, people = new Map<string, Viewer>() }: BoardIdentity,
     currentUserId: string
   ): Promise<LoadedBoard> {
     // Constraint keys are the same field keys the API returns, not the display names.
@@ -83,7 +86,7 @@ export class BoardRepo {
           'Created Date'
         )
       : [];
-    const pinsBySlide = buildPins(threadRows, commentRows);
+    const pinsBySlide = buildPins(threadRows, commentRows, people);
 
     // Only this viewer's votes. One row per person per image is the point of the type —
     // a single field on the image would let one person's thumbs-up erase another's down.
@@ -154,7 +157,8 @@ export class BoardRepo {
         sections,
         images,
         suggestions: [],
-        viewers: [],
+        // The stack in the top bar is who has access, in a stable order.
+        viewers: [...people.values()],
       },
       versions,
       lockedSlideIds,
@@ -357,7 +361,11 @@ export class BoardRepo {
  * when all of them are, so the thread's flag is copied onto every comment in it. Reading
  * it back out is `isPinResolved`, unchanged.
  */
-function buildPins(threadRows: BubbleRow[], commentRows: BubbleRow[]): Map<string, CommentPin[]> {
+function buildPins(
+  threadRows: BubbleRow[],
+  commentRows: BubbleRow[],
+  people: Map<string, Viewer>
+): Map<string, CommentPin[]> {
   const byThread = new Map<string, BubbleRow[]>();
   for (const row of commentRows) {
     const threadId = str(row[K.comment.thread]);
@@ -376,7 +384,7 @@ function buildPins(threadRows: BubbleRow[], commentRows: BubbleRow[]): Map<strin
     const tops: Comment[] = [];
     const byId = new Map<string, Comment>();
     for (const row of rows) {
-      const comment = toComment(row, resolved);
+      const comment = toComment(row, resolved, people);
       byId.set(row._id, comment);
       if (!str(row[K.comment.parent])) tops.push(comment);
     }
@@ -408,13 +416,23 @@ function buildPins(threadRows: BubbleRow[], commentRows: BubbleRow[]): Map<strin
   return pinsBySlide;
 }
 
-function toComment(row: BubbleRow, threadResolved: boolean): Comment {
-  const authorName = str(row[K.comment.authorName]);
+function toComment(
+  row: BubbleRow,
+  threadResolved: boolean,
+  people: Map<string, Viewer>
+): Comment {
+  const authorId = str(row['Created By']);
+  // The host's collaborator list is the source of truth: it has the current name and the
+  // photo. `Author name` is the fallback for anyone no longer on the event — a planner who
+  // has left should still be credited for what they wrote.
+  const person = people.get(authorId);
+  const authorName = person?.name || str(row[K.comment.authorName]);
   return {
     id: row._id,
-    authorId: str(row['Created By']),
+    authorId,
     authorName: authorName || 'Someone',
-    authorInitials: initialsFrom(authorName),
+    authorInitials: person?.initials || initialsFrom(authorName),
+    authorPhotoUrl: person?.photoUrl,
     text: str(row[K.comment.text]),
     timestamp: str(row['Created Date']),
     resolved: threadResolved,

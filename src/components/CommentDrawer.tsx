@@ -128,13 +128,19 @@ function CommentRow({
       className={`thread-item ${isReply ? 'is-reply' : ''} ${comment.resolved ? 'is-resolved' : ''}`}
     >
       <div className="thread-item-head">
-        <span
-          className="thread-avatar"
-          style={{ backgroundColor: avatarColor(comment.authorId) }}
-          aria-hidden
-        >
-          {comment.authorInitials}
-        </span>
+        {/* A photo when the host knows one, initials otherwise — a comment from someone
+            no longer on the event still has to render. */}
+        {comment.authorPhotoUrl ? (
+          <img className="thread-avatar is-photo" src={comment.authorPhotoUrl} alt="" />
+        ) : (
+          <span
+            className="thread-avatar"
+            style={{ backgroundColor: avatarColor(comment.authorId) }}
+            aria-hidden
+          >
+            {comment.authorInitials}
+          </span>
+        )}
         <span className="thread-author">{comment.authorName}</span>
         <span className="thread-time">
           {formatTimestamp(comment.timestamp)}
@@ -215,30 +221,21 @@ function CommentRow({
 
 interface ThreadEntry {
   pin: CommentPin;
-  index: number;
   sectionId: string;
-  sectionName: string;
   slideId: string;
-  slideName: string;
 }
 
 function Thread({
   pin,
-  pinIndex,
   isSelected,
   sectionId,
-  sectionName,
   slideId,
-  slideName,
   isElsewhere,
 }: {
   pin: CommentPin;
-  pinIndex: number;
   isSelected: boolean;
   sectionId: string;
-  sectionName: string;
   slideId: string;
-  slideName: string;
   /** The thread lives on a slide other than the one on screen. */
   isElsewhere: boolean;
 }) {
@@ -278,14 +275,10 @@ function Thread({
         else selectCommentPin(pin.id);
       }}
     >
-      <div className="thread-card-head">
-        <span className="thread-pin-badge">Pin {pinIndex}</span>
-        <span className="thread-where">
-          {sectionName} · {slideName}
-        </span>
-        {/* Reopen belongs to the thread, not to a comment inside it, and it is the only
-            action a resolved thread has — so it sits on the thread's own row rather than
-            behind an ellipsis that is hidden once resolved. */}
+      {/* No pin badge and no "section · slide" line: three lines of chrome above two
+          lines of comment, on every card, for a number and a location the click already
+          takes you to. Reopen is the only thing that earns the row. */}
+      <div className={`thread-card-head ${resolved ? '' : 'is-bare'}`}>
         {resolved && (
           <button
             type="button"
@@ -356,13 +349,10 @@ export function CommentDrawer() {
   // on the right slide. Each entry carries where it lives so selecting it can go there.
   const numbered = board.sections.flatMap((section) =>
     section.slides.flatMap((slide) =>
-      slide.commentPins.map((pin, index) => ({
+      slide.commentPins.map((pin) => ({
         pin,
-        index: index + 1,
         sectionId: section.id,
-        sectionName: section.name,
         slideId: slide.id,
-        slideName: slide.name,
       }))
     )
   );
@@ -381,12 +371,9 @@ export function CommentDrawer() {
     <Thread
       key={entry.pin.id}
       pin={entry.pin}
-      pinIndex={entry.index}
       isSelected={entry.pin.id === selectedCommentPinId}
       sectionId={entry.sectionId}
-      sectionName={entry.sectionName}
       slideId={entry.slideId}
-      slideName={entry.slideName}
       isElsewhere={entry.slideId !== activeSlideId}
     />
   );

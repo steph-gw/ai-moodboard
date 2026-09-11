@@ -10,6 +10,7 @@ import { CanvasElementView } from './CanvasElementView';
 import { CommentPinMarker } from './CommentPinMarker';
 import { PinComposer } from './PinComposer';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
+import { buildPinNumbers } from '../utils/commentHelpers';
 
 /** Small enough never to clip a real column; large enough that a zero-width measure
  *  doesn't render an invisible slide. */
@@ -39,7 +40,9 @@ export function SlideCanvas({
     isPlacingComment,
     placeCommentPin,
     selectedCommentPinId,
+    board,
   } = useBoard();
+  const pinNumbers = buildPinNumbers(board);
   const containerRef = useRef<HTMLDivElement>(null);
   const [marquee, setMarquee] = useState<{
     x: number;
@@ -217,11 +220,11 @@ export function SlideCanvas({
           />
         )}
         {!readOnly &&
-          activeSlide.commentPins.map((pin, index) => (
+          activeSlide.commentPins.map((pin) => (
             <CommentPinMarker
               key={pin.id}
               pin={pin}
-              pinIndex={index + 1}
+              pinIndex={pinNumbers.get(pin.id) ?? 0}
               scale={scale}
             />
           ))}
@@ -230,7 +233,15 @@ export function SlideCanvas({
         {!readOnly &&
           activeSlide.commentPins
             .filter((pin) => pin.id === selectedCommentPinId && pin.comments.length === 0)
-            .map((pin) => <PinComposer key={pin.id} pin={pin} scale={scale} />)}
+            .map((pin) => (
+              <PinComposer
+                key={pin.id}
+                pin={pin}
+                scale={scale}
+                boardWidth={SLIDE_WIDTH * scale}
+                boardHeight={SLIDE_HEIGHT * scale}
+              />
+            ))}
       </div>
     </div>
   );

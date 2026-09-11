@@ -1983,6 +1983,13 @@
      open, and anything on the cream ramp still reads as live. */
   background: var(--resolved-bg);
   border-color: var(--resolved-border);
+  /* Light grey and genuinely receded. Colour alone kept it competing with the live
+     threads above it; the whole card should read as finished at a glance. */
+  opacity: 0.72;
+}
+
+.thread-card.is-resolved:hover {
+  opacity: 1;
 }
 
 .thread-card.is-resolved .thread-author,
@@ -3311,8 +3318,6 @@
 .pin-composer {
   position: absolute;
   z-index: 120;
-  width: 250px;
-  margin: 14px 0 0 14px;
   padding: 8px;
   background: var(--white);
   border: 1px solid var(--border-strong);
@@ -3331,40 +3336,24 @@
   background: transparent;
 }
 
-.pin-composer-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 4px;
-}
-
 .pin-composer-hint {
+  display: block;
+  text-align: right;
   font-size: 10px;
   color: var(--text-muted);
-}
-
-.pin-composer-send {
-  border: none;
-  border-radius: 14px;
-  padding: 4px 12px;
-  font-size: 11.5px;
-  background: var(--text-primary);
-  color: var(--white);
-  cursor: pointer;
-}
-
-.pin-composer-send:disabled {
-  opacity: 0.4;
-  cursor: default;
 }
 
 /* ── Drawer: a thread's address, and reopening it ── */
 .thread-card-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 8px;
+}
+
+/* Nothing in it: no row, no gap above the first comment. */
+.thread-card-head.is-bare {
+  display: none;
 }
 
 .thread-where {
@@ -3392,4 +3381,13 @@
 .thread-reopen-btn:hover {
   color: var(--text-primary);
   border-color: var(--border-strong);
+}
+
+/* Photo avatars. Same footprint as the initials they replace, so a mixed stack of
+   people with and without photos still lines up. */
+.thread-avatar.is-photo,
+.viewer-avatar.is-photo {
+  object-fit: cover;
+  padding: 0;
+  background: var(--surface-2);
 }
