@@ -7,6 +7,14 @@ import type { UserRole } from './types';
  * Stand-in for the host page. The surrounding chrome in dev/index.html is
  * deliberately unstyled-by-us: if the moodboard's CSS leaks, it shows up there.
  */
+/** Stand-in for Bubble's list property object. See collaboratorIds below. */
+function bubbleList(values: string[]) {
+  return {
+    length: () => values.length,
+    get: (from: number, count: number) => values.slice(from, from + count),
+  };
+}
+
 const el = document.getElementById('board');
 if (!el) throw new Error('dev harness: #board missing');
 
@@ -54,10 +62,15 @@ const id = GWMoodboard.mount(el, {
   logoUrl: './gatherwise-logo.png',
   moodboardId: DEV_MOODBOARD_ID,
   businessId: 'biz-dev',
-  // Same shape the Bubble element sends: three lists that line up by index.
-  collaboratorIds: ['u-planner', 'u-client'],
-  collaboratorNames: ['Stephanie Chang', 'Alexander Lee'],
-  collaboratorPhotos: [],
+  // Deliberately the shape Bubble actually sends, not a plain array. A Bubble list
+  // property is an object with .length() and .get(from, count), and passing it through
+  // untouched crashed the board on `.join is not a function` the first time a real
+  // collaborator list arrived — a failure the harness could not have caught while it
+  // handed over tidy arrays. `as never` because the prop type is the array the bundle
+  // is supposed to end up with; the point is to prove it survives the wrong thing.
+  collaboratorIds: bubbleList(['u-planner', 'u-client']),
+  collaboratorNames: bubbleList(['Stephanie Chang', 'Alexander Lee']),
+  collaboratorPhotos: bubbleList([]),
   eventName: 'The Ashworth–Linden Wedding',
   eventDate: '2026-06-14',
   uploadFile,

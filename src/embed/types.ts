@@ -43,9 +43,9 @@ export interface GWMoodboardProps {
    * three fields per item into one string is not. A field the host cannot bind is no
    * field at all.
    */
-  collaboratorIds?: string[];
-  collaboratorNames?: string[];
-  collaboratorPhotos?: string[];
+  collaboratorIds?: unknown;
+  collaboratorNames?: unknown;
+  collaboratorPhotos?: unknown;
 
   /**
    * A moodboard to fork into this one, the first time this one opens empty.

@@ -3380,6 +3380,19 @@
   background: var(--surface-2);
 }
 
+/* A light ring so a photo reads as an avatar rather than as a floating cutout, and so
+   overlapping faces in the stack stay separable. */
+.viewer-avatar.is-photo {
+  border: 1.5px solid var(--white);
+  box-shadow: 0 0 0 1px var(--border-strong);
+}
+
+/* The stack overlaps by -6px, so a hovered avatar has to come forward or its tooltip is
+   painted over by the neighbour sitting on top of it. */
+.viewer-avatar:hover {
+  z-index: 2;
+}
+
 /* A selected slide gets the same treatment an element does — otherwise the background
    control appears with nothing on screen saying what it is about to act on. Ring plus a
    tinted halo, because a hairline against a white artboard on a cream page is exactly the

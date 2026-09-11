@@ -198,6 +198,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     currentUserId,
     currentUserName,
     currentUserInitials,
+    currentUserPhotoUrl,
     rootEl,
     repo,
     identity,
@@ -1495,6 +1496,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         authorId: currentUserId,
         authorName: currentUserName,
         authorInitials: currentUserInitials,
+        // Without this a comment you just wrote shows initials while every older one shows
+        // a face, until the next load quietly swaps it.
+        authorPhotoUrl: currentUserPhotoUrl,
         text: body,
         // Real rows carry Created Date; this is what the drawer shows until the next load.
         timestamp: new Date().toISOString(),
@@ -1548,6 +1552,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       currentUserId,
       currentUserName,
       currentUserInitials,
+      currentUserPhotoUrl,
     ]
   );
 

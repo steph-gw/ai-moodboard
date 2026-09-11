@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
 import { BubbleApi } from './bubbleApi';
 import { initialsFrom } from '../utils/initials';
-import { parsePeople } from '../utils/people';
+import { parsePeople, toStringList } from '../utils/people';
 import { BoardRepo, type BoardIdentity } from './boardRepo';
 import type { FeatureFlags, GWMoodboardProps, UserRole } from './types';
 
@@ -9,6 +9,8 @@ export interface HostServices {
   currentUserId: string;
   currentUserName: string;
   currentUserInitials: string;
+  /** The current user's own photo, resolved from the collaborator list. */
+  currentUserPhotoUrl?: string;
   role: UserRole;
   readOnly: boolean;
   logoUrl: string;
@@ -102,12 +104,11 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
       businessId,
       eventName,
       eventDate,
-      // join() and not length: the lists change contents without changing identity. Guarded
-      // with Array.isArray because a host can send a non-array and .join would throw during
-      // render, taking the whole board down rather than one avatar.
-      (Array.isArray(collaboratorIds) ? collaboratorIds : []).join('\u0000'),
-      (Array.isArray(collaboratorNames) ? collaboratorNames : []).join('\u0000'),
-      (Array.isArray(collaboratorPhotos) ? collaboratorPhotos : []).join('\u0000'),
+      // join() and not length: the lists change contents without changing identity.
+      // Normalised first — the host may send a list object rather than an array.
+      toStringList(collaboratorIds).join('\u0000'),
+      toStringList(collaboratorNames).join('\u0000'),
+      toStringList(collaboratorPhotos).join('\u0000'),
     ]
   );
 
@@ -116,6 +117,7 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
       currentUserId,
       currentUserName,
       currentUserInitials: currentUserInitials || initialsFrom(currentUserName),
+      currentUserPhotoUrl: identity?.people?.get(currentUserId)?.photoUrl,
       role,
       // Clients read the board; they still vote and comment, which don't go
       // through the board state at all.
@@ -137,6 +139,7 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
       currentUserId,
       currentUserName,
       currentUserInitials,
+      identity,
       role,
       readOnly,
       logoUrl,
