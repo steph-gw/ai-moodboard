@@ -16,7 +16,9 @@ function(instance, properties, context) {
       ? new Date(properties.event_date).toISOString().slice(0, 10)
       : '',
 
-    collaborators: properties.collaborators || [],
+    collaboratorIds: properties.collaborator_ids || [],
+    collaboratorNames: properties.collaborator_names || [],
+    collaboratorPhotos: properties.collaborator_photos || [],
     currentUserId: properties.current_user_id || '',
     currentUserName: properties.current_user_name || '',
     currentUserInitials: properties.current_user_initials || '',

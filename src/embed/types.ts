@@ -32,13 +32,20 @@ export interface GWMoodboardProps {
   authToken?: string;
 
   /**
-   * Everyone with access to this event, as `id|name|photoUrl` (photo optional).
+   * Everyone with access to this event, as three parallel lists zipped by index.
    *
    * The User type isn't on the Data API, so the board cannot look up who wrote a comment.
-   * The host knows, and passing the handful of people involved is both cheaper and
-   * narrower than exposing every user in the app to be searched.
+   * The host knows, and passing the handful of people on one event is both cheaper and
+   * narrower than making every user in the app searchable.
+   *
+   * Three lists rather than one list of `id|name|photo` because Bubble cannot build the
+   * second: `:each item's User's unique id` is a list expression it has, and joining
+   * three fields per item into one string is not. A field the host cannot bind is no
+   * field at all.
    */
-  collaborators?: string[];
+  collaboratorIds?: string[];
+  collaboratorNames?: string[];
+  collaboratorPhotos?: string[];
 
   currentUserId: string;
   currentUserName: string;

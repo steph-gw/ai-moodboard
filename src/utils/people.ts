@@ -2,25 +2,31 @@ import type { Viewer } from '../types';
 import { initialsFrom } from './initials';
 
 /**
- * Parses the host's collaborator list.
+ * Zips the host's three parallel collaborator lists into people.
  *
- * Format is `id|name|photoUrl`, one person per entry, because Bubble's list-of-texts field
- * is the only list shape a plugin property can take — there is no object list. Anything
- * malformed is skipped rather than thrown on: a bad row in the host's expression should
- * cost one avatar, not the whole board.
+ * Bubble can produce `:each item's User's unique id` and the same for name and photo, but
+ * it cannot join them per item — so they arrive as three lists that line up by index.
+ * Names and photos are optional and may be shorter than the ids; an id with nothing
+ * alongside it still yields a person, because a comment by them still has to render.
  */
-export function parsePeople(entries: string[] | undefined): Map<string, Viewer> {
+export function parsePeople(
+  ids: string[] | undefined,
+  names: string[] | undefined,
+  photos: string[] | undefined
+): Map<string, Viewer> {
   const people = new Map<string, Viewer>();
-  for (const entry of entries ?? []) {
-    const [id, name = '', photoUrl = ''] = String(entry).split('|');
-    if (!id) continue;
+  (ids ?? []).forEach((rawId, i) => {
+    const id = String(rawId).trim();
+    if (!id) return;
+    const name = String(names?.[i] ?? '').trim();
+    const photo = String(photos?.[i] ?? '').trim();
     people.set(id, {
       id,
-      name: name.trim() || 'Someone',
+      name: name || 'Someone',
       initials: initialsFrom(name),
-      // Bubble hands back protocol-relative //s3… URLs in some places.
-      photoUrl: photoUrl ? (photoUrl.startsWith('//') ? `https:${photoUrl}` : photoUrl) : undefined,
+      // Bubble hands back protocol-relative //s3… URLs from file fields.
+      photoUrl: photo ? (photo.startsWith('//') ? `https:${photo}` : photo) : undefined,
     });
-  }
+  });
   return people;
 }

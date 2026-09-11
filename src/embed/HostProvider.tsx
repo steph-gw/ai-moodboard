@@ -66,7 +66,9 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
     onStateChange,
     onLoaded,
     moodboardId,
-    collaborators,
+    collaboratorIds,
+    collaboratorNames,
+    collaboratorPhotos,
     eventName,
     eventDate,
     apiBase,
@@ -86,11 +88,18 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
             moodboardId,
             eventName: eventName ?? '',
             eventDate: eventDate ?? '',
-            people: parsePeople(collaborators),
+            people: parsePeople(collaboratorIds, collaboratorNames, collaboratorPhotos),
           }
         : null,
-    // collaborators is a new array identity on every host update, so compare its contents.
-    [moodboardId, eventName, eventDate, (collaborators ?? []).join('\u0000')]
+    // The lists are new array identities on every host update, so compare their contents.
+    [
+      moodboardId,
+      eventName,
+      eventDate,
+      (collaboratorIds ?? []).join('\u0000'),
+      (collaboratorNames ?? []).join('\u0000'),
+      (collaboratorPhotos ?? []).join('\u0000'),
+    ]
   );
 
   const value = useMemo<HostServices>(

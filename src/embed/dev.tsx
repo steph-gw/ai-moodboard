@@ -53,11 +53,10 @@ const id = GWMoodboard.mount(el, {
   role,
   logoUrl: './gatherwise-logo.png',
   moodboardId: DEV_MOODBOARD_ID,
-  // Same shape the Bubble element sends: a list of texts, `id|name|photoUrl`.
-  collaborators: [
-    'u-planner|Stephanie Chang|',
-    'u-client|Alexander Lee|',
-  ],
+  // Same shape the Bubble element sends: three lists that line up by index.
+  collaboratorIds: ['u-planner', 'u-client'],
+  collaboratorNames: ['Stephanie Chang', 'Alexander Lee'],
+  collaboratorPhotos: [],
   eventName: 'The Ashworth–Linden Wedding',
   eventDate: '2026-06-14',
   uploadFile,
