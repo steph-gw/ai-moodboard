@@ -20,6 +20,7 @@ on:
       - 'src/**'
       - 'public/**'
       - 'build.mjs'
+      - 'scripts/**'
       - 'postcss.config.mjs'
       - 'package.json'
       - 'package-lock.json'
@@ -56,6 +57,11 @@ jobs:
       - run: npm run typecheck
 
       - run: node build.mjs
+
+      # The system template's contents, emitted from the same sample board the harness
+      # renders. Published alongside the bundle so it can be imported into Bubble without
+      # anyone retyping five sections' worth of slides.
+      - run: node scripts/build-system-template.mjs
 
       # The source map is 1.6 MB and only useful to someone already reading the source,
       # which is public anyway — but there is no reason to serve it to every board.
