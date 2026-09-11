@@ -1,8 +1,13 @@
 <!-- GW Moodboard — plugin element "Headers" field.
      Replace both URLs after each rebuild — Bubble mints a new URL per upload rather
      than overwriting, so a stale URL silently serves the old bundle forever.
-     Uploaded 2026-09-11; strip any ?_gl= tracking query Bubble appends when you copy. -->
+     Upload through the File manager's own Upload button, by hand. Bubble stores whatever
+     Content-Type the browser reported, and a file pushed into the input programmatically
+     arrives with none — so it lands as application/octet-stream, and Chrome then refuses
+     the stylesheet in standards mode with no error that names the cause. Check it:
+       curl -sI "<url>" | grep content-type    # text/css and text/javascript
+     Strip the ?_gl= tracking query Bubble appends when you copy a URL. -->
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300..500;1,300..500&family=Playfair+Display:ital,wght@0,400..500;1,400..500&display=swap">
-<link rel="stylesheet" href="https://5e364458276059f98e6f71fb28ad5255.cdn.bubble.io/f1789093797257x912529453764963700/gw-moodboard.css">
-<script src="https://5e364458276059f98e6f71fb28ad5255.cdn.bubble.io/f1789114076204x796178836045510000/gw-moodboard.js"></script>
+<link rel="stylesheet" href="https://5e364458276059f98e6f71fb28ad5255.cdn.bubble.io/f1789122240297x449652632754647740/gw-moodboard.css">
+<script src="https://5e364458276059f98e6f71fb28ad5255.cdn.bubble.io/f1789122235573x632745692794271600/gw-moodboard.js"></script>
