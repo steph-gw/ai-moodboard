@@ -2,7 +2,11 @@
 // Paste into the element's Code tab. Bubble calls this after initialize and again
 // every time any bound property changes.
 
-function (instance, properties, context) {
+// Note the signature: `function(` with NO space before the bracket. Bubble silently
+// refuses to run element code written as `function (` — no error, no console output,
+// the element just renders an empty div forever. Verified 2026-09-11: the same code
+// with and without that space is dead versus working.
+function(instance, properties, context) {
   // Sent whole every tick rather than diffed — mount() shallow-merges and re-renders,
   // and React reconciles. Diffing here would only move the bookkeeping, not save work.
   var props = {

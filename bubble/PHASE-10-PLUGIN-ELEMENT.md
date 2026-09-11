@@ -1,8 +1,7 @@
 # Phase 10 — the `GW Moodboard` plugin element
 
-**Status: built.** The element, its 19 fields, 6 states, 2 events and all three code
-blocks exist in the plugin editor and survived a reload. What is left is placing it on
-a page and binding the fields — section 7.
+**Status: running in Bubble.** The board loads, renders and is interactive on
+`test_moodboard` as of 2026-09-11.
 
 Everything in this file is applied in the **plugin editor**
 (`bubble.io/plugin_editor?id=1788887915866x725990324315095000`), not in the app.
@@ -140,6 +139,48 @@ protocol-relative `//s3...` URL, which the adapter rewrites to `https:`.
    `Moodboard` field to your Event type, create the row on page load when it's empty,
    and bind to `Current Page Event's Moodboard's unique id` — a stored reference rather
    than a search that runs on every load and again per row in any list of events.
+
+### Fonts
+
+The Headers block loads only the board's own two families. The seven optional ones
+(Inter, Roboto, Open Sans, Montserrat, Poppins, Lato, Lora) are fetched by the bundle the
+first time a board uses one, so a board that uses none costs nothing.
+
+### Solved: `function (` with a space is silently ignored
+
+The element rendered an empty div and neither `initialize` nor `update` ever ran — no
+error, nothing in the console, in normal or debug mode.
+
+The cause is the function signature. Bubble will not run element code written as
+
+```js
+function (instance, context) {   // dead: never called, never reported
+```
+
+It runs the moment the space goes:
+
+```js
+function(instance, context) {    // works
+```
+
+Bubble's own boilerplate is written without the space, so this only bites code that was
+typed or pasted from elsewhere. Both `element_initialize.js` and `element_update.js` now
+carry a comment saying so, because nothing about the symptom points at it.
+
+How it was found, after the obvious things were ruled out — bundle present and working
+(mounting by hand into a scratch div rendered the whole app), code deployed in the app's
+`static.js`, code compiling under `eval`, element id matching, a second instance behaving
+the same, testing mode and installation both fine:
+
+1. A different plugin's element, dropped into the same group on the same page,
+   initialised normally. So: this element, not the page.
+2. A new minimal element in *this* plugin also initialised. So: this element's definition
+   or code, not the plugin.
+3. Adding a date field and a checkbox field to that minimal element changed nothing. So:
+   not the field types.
+4. Replacing this element's `initialize` with a one-line body made it run. So: the code.
+5. A marker written as the first statement inside `try` never appeared — the function was
+   not being entered at all, which meant the rejection happened before execution.
 
 ### Fonts
 

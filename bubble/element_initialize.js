@@ -1,7 +1,11 @@
 // GW Moodboard — plugin element "initialize"
 // Paste into the element's Code tab. Runs once, when the element first appears.
 
-function (instance, context) {
+// Note the signature: `function(` with NO space before the bracket. Bubble silently
+// refuses to run element code written as `function (` — no error, no console output,
+// the element just renders an empty div forever. Verified 2026-09-11: the same code
+// with and without that space is dead versus working.
+function(instance, context) {
   var el = instance.canvas.get(0);
   instance.data.el = el;
 
