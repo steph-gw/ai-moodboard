@@ -188,6 +188,15 @@ export function SlideCanvas({
     <div
       className={`slide-canvas-wrap ${fullWidth ? 'slide-canvas-fullwidth' : ''}`}
       ref={containerRef}
+      // Selecting the slide by clicking bare artboard only works while there is bare
+      // artboard left. On a full collage every pixel belongs to an element, so the slide —
+      // and with it the background control — became unreachable. The margin around the
+      // artboard is always there, so it selects the slide too.
+      onPointerDown={(e) => {
+        if (readOnly || isPlacingComment) return;
+        if (e.target !== e.currentTarget) return;
+        selectSlide();
+      }}
     >
       <div
         ref={artboardRef}
