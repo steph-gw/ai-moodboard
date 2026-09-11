@@ -78,13 +78,19 @@ editor-time toggles rather than data, stay checkboxes.
 | Enable voting | `enable_voting` | Checkbox | no | phase 8 |
 | Enable comments | `enable_comments` | Checkbox | no | phase 7 |
 | Collaborator ids | `collaborator_ids` | Dynamic value / text, **list** | — | `Current page Event's Collaborator Accesses:each item's User's unique id` |
-| Collaborator names | `collaborator_names` | Dynamic value / text, **list** | — | the same list, `:each item's User's` name field |
-| Collaborator photos | `collaborator_photos` | Dynamic value / text, **list** | — | the same list, `:each item's User's` photo field |
+| Collaborator names | `collaborator_names` | Dynamic value / text, **list** | — | `…Collaborator Accesses:each item's User's First Last` |
+| Collaborator photos | `collaborator_photos` | Dynamic value / text, **list** | — | `…Collaborator Accesses:each item's User's Profile picture` |
 | Template moodboard id | `template_moodboard_id` | Dynamic value / text | — | the template to fork on first open; blank for an ordinary board |
-| Business id | `business_id` | Dynamic value / text | — | `Current User's Business's unique id` |
+| Business id | `business_id` | Dynamic value / text | — | `Current page Event's Planner's Business's unique id` — event-derived rather than `Current User's Business`, so a client viewing the board still resolves to the right business |
 
 The three collaborator lists are read by index and must stay in step — they are the same
 list walked three times, so they do. See PHASE-11 for why three lists rather than one.
+
+**Every one of these binds to the User, not to the Collaborator Access.** The first pass
+bound `collaborator_ids` to `:each item's unique id` — the access record's id, not the
+person's — and comments store `Created By`, a User. Nothing matched, and the failure is
+silent: no author names, no photos, no error. Same trap on `collaborator_photos`, bound to
+`First Last`, which puts a name where a URL belongs.
 
 **"Is a list" is not "Long text".** They sit side by side in the field editor and ticking
 the wrong one gives a field that silently delivers a single string where the bundle expects
