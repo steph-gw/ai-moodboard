@@ -3548,7 +3548,10 @@
   top: calc(100% + 8px);
   right: 0;
   z-index: 9300;
-  min-width: 186px;
+  /* Sized by its longest item rather than a guess. A fixed min-width was either too wide
+     for the labels or too narrow for a longer one later. */
+  width: max-content;
+  max-width: 260px;
   padding: 4px;
   background: var(--white);
   border: 1px solid var(--border-strong);
@@ -3556,24 +3559,28 @@
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
 }
 
-/* Caret pointing back up at the button it belongs to. Two triangles: the outer one is the
-   border, the inner one covers it with the menu's own background. */
+/* Caret pointing back up at the button it belongs to. Two triangles: the outer is the
+   menu's border, the inner covers it with the menu's own fill. The border colour is
+   deliberately darker than the menu's own border — at 6px across, a 12%-black edge is
+   invisible against the white bar behind it. */
 .template-menu::before,
 .template-menu::after {
   content: '';
   position: absolute;
-  right: 16px;
-  border: 6px solid transparent;
+  right: 15px;
+  width: 0;
+  height: 0;
+  border: 7px solid transparent;
   border-top-width: 0;
 }
 
 .template-menu::before {
   bottom: 100%;
-  border-bottom-color: var(--border-strong);
+  border-bottom-color: rgba(0, 0, 0, 0.18);
 }
 
 .template-menu::after {
-  bottom: calc(100% - 1px);
+  bottom: calc(100% - 1.5px);
   border-bottom-color: var(--white);
 }
 
@@ -3668,15 +3675,21 @@
   z-index: 20;
 }
 
-/* A visible focus ring that is ours. Without one the browser paints its own — a heavy
-   dashed box in some engines — around whatever was last clicked. Keyboard users still get
-   a ring; a mouse click does not leave one behind. */
-.gw-mb button:focus {
+/* No browser focus outline anywhere on the board. Left to itself the engine paints its
+   own — a dashed or dotted box in some of them — around whatever was last clicked, which
+   is what kept appearing on the Templates button.
+
+   Keyboard focus still shows, as a soft ring drawn with box-shadow rather than outline:
+   it cannot be turned into a dashed box by the engine, and losing focus visibility
+   entirely would make the board unusable without a mouse. */
+.gw-mb :focus,
+.gw-mb :focus-visible,
+.gw-mb-portals :focus,
+.gw-mb-portals :focus-visible {
   outline: none;
 }
 
-.gw-mb button:focus-visible {
-  outline: 2px solid var(--gold);
-  outline-offset: 2px;
-  border-radius: 6px;
+.gw-mb button:focus-visible,
+.gw-mb-portals button:focus-visible {
+  box-shadow: 0 0 0 2px var(--gold-border);
 }

@@ -89,8 +89,8 @@ export function TemplateMenu() {
           type="button"
           className={`btn-ghost btn-sm ${open ? 'active' : ''}`}
           onClick={() => setOpen((v) => !v)}
-          data-tooltip="Templates"
           aria-expanded={open}
+          aria-haspopup="menu"
         >
           <LayoutTemplate size={13} strokeWidth={1.5} />
           <span className="btn-label">Templates</span>

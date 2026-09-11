@@ -23,8 +23,14 @@ function(instance, context) {
   var waited = 0;
 
   function start() {
+    // Mount with whatever update() has already handed over. Mounting with placeholders and
+    // filling them in afterwards meant the board briefly had no moodboard id, and a board
+    // with no moodboard id renders the built-in sample — so every load flashed the demo
+    // wedding before the real one appeared.
+    var pending = instance.data.pending || {};
+    instance.data.pending = null;
+
     instance.data.id = window.GWMoodboard.mount(el, {
-      // Real values arrive in update(), which Bubble calls immediately after this.
       moodboardId: '',
       currentUserId: '',
       currentUserName: '',
@@ -69,18 +75,18 @@ function(instance, context) {
         instance.publishState('last_error', message);
         instance.triggerEvent('error');
       },
+
+      // Last, so real values win over the placeholders above.
+      ...pending,
     });
 
-    // update() may have run while the bundle was still loading. Apply whatever it last saw,
-    // or the board would sit on its placeholder values until the next property change.
-    if (instance.data.pending) {
-      window.GWMoodboard.update(instance.data.id, instance.data.pending);
-      instance.data.pending = null;
-    }
   }
 
   function attempt() {
-    if (window.GWMoodboard) {
+    // Waits for the bundle AND for update() to have delivered properties. Bubble calls
+    // update() straight after initialize, so this is a frame or two — and it is the
+    // difference between the board's first paint being the real moodboard or the sample.
+    if (window.GWMoodboard && (instance.data.pending || waited >= WAIT_MS / 2)) {
       start();
       return;
     }
