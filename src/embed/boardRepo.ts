@@ -338,7 +338,12 @@ export class BoardRepo {
       if (byId.has(row._id)) continue;
       byId.set(row._id, { id: row._id, name: str(row[K.moodboard.name]) || 'Untitled', system: false });
     }
-    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+    // Gatherwise's own first, then the business's, each alphabetical. A planner with a
+    // dozen saved templates should still find the starter without scrolling for it, and
+    // on a brand-new account the system ones are the only thing in the list anyway.
+    return [...byId.values()].sort(
+      (a, b) => Number(b.system) - Number(a.system) || a.name.localeCompare(b.name)
+    );
   }
 
   /**
