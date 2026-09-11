@@ -595,11 +595,13 @@
   margin-bottom: 10px;
 }
 
+/* Same ink as the section tabs. --text-muted is for things you are meant to skip, and a
+   popover's own heading is not one of them. */
 .vision-brief-label {
   font-size: 9px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-weight: 500;
   margin-bottom: 8px;
 }
@@ -2929,7 +2931,7 @@
   font-family: var(--font-sans);
   font-size: 11px;
   line-height: 1.45;
-  color: var(--text-muted);
+  color: var(--text-secondary);
 }
 
 .palette-rows {

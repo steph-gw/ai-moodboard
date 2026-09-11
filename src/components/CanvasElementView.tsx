@@ -71,19 +71,18 @@ function ImageElementView({
   /** Present mode or the export sheet: nothing interactive, votes included. */
   isStatic?: boolean;
 }) {
-  const { selectedElementId, selectElement, updateElement, getImageById, bringToFront, beginInteraction, endInteraction } =
+  const { selectedElementId, selectElement, updateElement, getImageById, beginInteraction, endInteraction } =
     useBoard();
   const isSelected = selectedElementId === element.id;
   const image = getImageById(element.imageId);
   const hasVote = !!image?.clientVote;
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
 
-  const handleSelect = () => {
-    selectElement(element.id);
-    // Raise it, but through restack rather than a timestamp: clicking an element that
-    // is already on top is not an edit, and shouldn't cost an undo entry or a save.
-    if (!readOnly) bringToFront(slideId, element.id);
-  };
+  // Selecting does not restack. Stacking is something the planner arranged — a palette
+  // slide is a deliberate pile of shapes and labels — and raising whatever was last
+  // clicked takes that apart a click at a time. Bring to front is on the toolbar for when
+  // it is actually meant.
+  const handleSelect = () => selectElement(element.id);
 
   return (
     <DraggableBox
@@ -141,7 +140,7 @@ function TextElementView({
   scale: number;
   readOnly?: boolean;
 }) {
-  const { selectedElementId, selectElement, updateElement, bringToFront, beginInteraction, endInteraction } =
+  const { selectedElementId, selectElement, updateElement, beginInteraction, endInteraction } =
     useBoard();
   const [editing, setEditing] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
@@ -166,12 +165,11 @@ function TextElementView({
     }
   }, [isSelected, readOnly, element.content]);
 
-  const handleSelect = () => {
-    selectElement(element.id);
-    // Raise it, but through restack rather than a timestamp: clicking an element that
-    // is already on top is not an edit, and shouldn't cost an undo entry or a save.
-    if (!readOnly) bringToFront(slideId, element.id);
-  };
+  // Selecting does not restack. Stacking is something the planner arranged — a palette
+  // slide is a deliberate pile of shapes and labels — and raising whatever was last
+  // clicked takes that apart a click at a time. Bring to front is on the toolbar for when
+  // it is actually meant.
+  const handleSelect = () => selectElement(element.id);
 
   return (
     <DraggableBox
@@ -312,7 +310,6 @@ function ShapeElementView({
     selectedElementId,
     selectElement,
     updateElement,
-    bringToFront,
     beginInteraction,
     endInteraction,
   } = useBoard();
@@ -338,10 +335,7 @@ function ShapeElementView({
       className="canvas-element-shape"
       style={{ zIndex: element.zIndex }}
       rotation={element.rotation}
-      onSelect={() => {
-        selectElement(element.id);
-        if (!readOnly) bringToFront(slideId, element.id);
-      }}
+      onSelect={() => selectElement(element.id)}
       onChange={(patch) => updateElement(slideId, element.id, patch)}
       onContextMenu={(e) => {
         if (readOnly) return;
