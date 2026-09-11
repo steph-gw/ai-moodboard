@@ -171,14 +171,24 @@ Bubble's runtime simply does not invoke `initialize` or `update` for either inst
 That is on the Bubble side of the boundary, and worth a forum or support question with
 the table above.
 
-Two things to try first, both needing the account rather than the page:
+Ruled out since: testing mode (another testing-mode plugin runs fine) and installation
+(the plugin is installed). A second plugin element dropped into the *same group on the
+same page* initialised and rendered normally while ours stayed empty — so it is this
+plugin, not the page, the group, or Bubble's testing path.
 
-1. **Plugins tab** — confirm GW Moodboard is installed and enabled for this app, and
-   toggle it off and on. A plugin linked only as a "test app" from the plugin editor is
-   not the same as installed.
-2. **Publish a version** of the plugin (Versions tab) and switch the app to it instead of
-   testing mode. The app is currently on `_current`, and Bubble warns that testing-mode
-   plugins take a different, uncached path.
+**The app's copy of the plugin is not what the plugin editor holds.** The editor shows
+`Enable present` and `Enable export` defaulting to true and the element sized 1200x800;
+the definition the app actually loads has no defaults at all and `default_dim` of
+400x200 — while carrying the most recent `initialize`. So the app has current code and
+stale field metadata at the same time.
+
+That mismatch is the best remaining lead, and it points at re-installing rather than
+editing: **remove GW Moodboard from the app's Plugins tab and add it back**, so the app
+takes a fresh snapshot.
+
+Two smaller differences worth knowing if that doesn't do it — ours is the only element on
+this app using a `Checkbox` field (seven of them) or a `date` field, and both are things
+Bubble has to convert while assembling `properties`, before it ever calls our code.
 
 ### One thing still unverified
 
