@@ -20,7 +20,18 @@ function MoodboardShell() {
   if (isLoading) {
     return (
       <div className="app app-loading">
-        <span>Loading moodboard…</span>
+        {/* The house palette, filling in one swatch at a time. Quieter than a spinner and
+            it says what is coming — a board of colour — rather than just that something
+            is happening. */}
+        <div className="loading-swatches" aria-hidden>
+          <span style={{ background: '#F6EFE0' }} />
+          <span style={{ background: '#EDE5D8' }} />
+          <span style={{ background: '#DED6C8' }} />
+          <span style={{ background: '#B8935F' }} />
+          <span style={{ background: '#6B645A' }} />
+          <span style={{ background: '#2A2723' }} />
+        </div>
+        <span className="loading-label">Loading moodboard</span>
       </div>
     );
   }

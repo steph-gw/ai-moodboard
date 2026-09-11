@@ -3559,30 +3559,7 @@
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
 }
 
-/* Caret pointing back up at the button it belongs to. Two triangles: the outer is the
-   menu's border, the inner covers it with the menu's own fill. The border colour is
-   deliberately darker than the menu's own border — at 6px across, a 12%-black edge is
-   invisible against the white bar behind it. */
-.template-menu::before,
-.template-menu::after {
-  content: '';
-  position: absolute;
-  right: 15px;
-  width: 0;
-  height: 0;
-  border: 7px solid transparent;
-  border-top-width: 0;
-}
 
-.template-menu::before {
-  bottom: 100%;
-  border-bottom-color: rgba(0, 0, 0, 0.18);
-}
-
-.template-menu::after {
-  bottom: calc(100% - 1.5px);
-  border-bottom-color: var(--white);
-}
 
 .template-menu-item {
   display: block;
@@ -3669,19 +3646,18 @@
   color: var(--text-secondary);
 }
 
-/* The top bar has to out-stack the section tabs below it, or a tooltip dropping out of a
-   top-bar button is painted over by the tabs the moment it crosses the boundary. */
+/* The top bar has to out-stack everything it drops menus and tooltips over. .canvas sets
+   no z-index, so it creates no stacking context and .canvas-head's 400 competed with the
+   bar directly — which is why the Templates menu looked transparent: the canvas toolbar
+   was painting straight through it. Above 400, below present mode (9500) and modals. */
 .topnav {
-  z-index: 20;
+  z-index: 500;
 }
 
-/* No browser focus outline anywhere on the board. Left to itself the engine paints its
-   own — a dashed or dotted box in some of them — around whatever was last clicked, which
-   is what kept appearing on the Templates button.
-
-   Keyboard focus still shows, as a soft ring drawn with box-shadow rather than outline:
-   it cannot be turned into a dashed box by the engine, and losing focus visibility
-   entirely would make the board unusable without a mouse. */
+/* No focus ring anywhere on the board, outline or otherwise. The engine's own is a dashed
+   or dotted box in some browsers, and the replacement ring read as one too. Buttons still
+   show hover and active states, so a keyboard user is not entirely without feedback —
+   but this is a deliberate trade of focus visibility for a quieter board. */
 .gw-mb :focus,
 .gw-mb :focus-visible,
 .gw-mb-portals :focus,
@@ -3689,7 +3665,50 @@
   outline: none;
 }
 
+.gw-mb button:focus,
 .gw-mb button:focus-visible,
+.gw-mb-portals button:focus,
 .gw-mb-portals button:focus-visible {
-  box-shadow: 0 0 0 2px var(--gold-border);
+  box-shadow: none;
+}
+
+/* ── Loading ── */
+.loading-swatches {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+.loading-swatches span {
+  width: 16px;
+  height: 22px;
+  border-radius: 3px;
+  opacity: 0.18;
+  animation: swatch-fill 1.5s ease-in-out infinite;
+}
+
+.loading-swatches span:nth-child(2) { animation-delay: 0.1s; }
+.loading-swatches span:nth-child(3) { animation-delay: 0.2s; }
+.loading-swatches span:nth-child(4) { animation-delay: 0.3s; }
+.loading-swatches span:nth-child(5) { animation-delay: 0.4s; }
+.loading-swatches span:nth-child(6) { animation-delay: 0.5s; }
+
+@keyframes swatch-fill {
+  0%, 70%, 100% { opacity: 0.18; transform: translateY(0); }
+  35% { opacity: 1; transform: translateY(-3px); }
+}
+
+.loading-label {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+/* Someone who has asked for less motion gets the palette, just still. */
+@media (prefers-reduced-motion: reduce) {
+  .loading-swatches span {
+    animation: none;
+    opacity: 0.6;
+  }
 }
