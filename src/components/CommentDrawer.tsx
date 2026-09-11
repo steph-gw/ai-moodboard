@@ -1,5 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { CheckCircle2, MoreHorizontal, Pencil, RotateCcw, Trash2, X } from 'lucide-react';
+import {
+  CheckCircle2,
+  MessageSquarePlus,
+  MoreHorizontal,
+  Pencil,
+  RotateCcw,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import type { Comment, CommentPin } from '../types';
 import { avatarColor } from '../utils/avatarColor';
@@ -334,9 +342,16 @@ export function CommentDrawer() {
         </div>
       )}
 
-      <div className="comment-drawer-body">
+      <div className={`comment-drawer-body ${pins.length === 0 ? 'is-empty' : ''}`}>
         {pins.length === 0 ? (
-          <p className="thread-empty">No comments on this slide yet.</p>
+          <div className="drawer-empty">
+            <MessageSquarePlus size={26} strokeWidth={1.3} aria-hidden />
+            <p className="drawer-empty-title">No comments on this slide yet.</p>
+            <p className="drawer-empty-hint">
+              Choose <strong>Add comment</strong> at the bottom of the slide, then click
+              where the note belongs.
+            </p>
+          </div>
         ) : nothingToShow ? (
           <p className="thread-empty">No threads to show.</p>
         ) : (
