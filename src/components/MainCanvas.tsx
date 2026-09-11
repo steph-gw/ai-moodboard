@@ -32,7 +32,7 @@ export function MainCanvas() {
     activeSectionId,
     activeSlide,
     activeSlideId,
-    selectedElementId,
+    selectedElementIds,
     lockedSlideIds,
     canEdit,
     isSlideSelected,
@@ -46,9 +46,13 @@ export function MainCanvas() {
   const activeSection = board.sections.find((s) => s.id === activeSectionId);
   if (!activeSection) return null;
 
-  const selectedText = activeSlide?.elements.find(
-    (el) => el.id === selectedElementId && el.type === 'text'
+  // Text controls apply to the whole selection when it is all text — changing the color of
+  // five headings should be one action, not five.
+  const selectedTexts = (activeSlide?.elements ?? []).filter(
+    (el) => selectedElementIds.includes(el.id) && el.type === 'text'
   );
+  const allText = selectedTexts.length > 0 && selectedTexts.length === selectedElementIds.length;
+  const selectedText = allText ? selectedTexts[selectedTexts.length - 1] : undefined;
   const locked = lockedSlideIds.has(activeSlideId);
 
   return (
@@ -66,10 +70,16 @@ export function MainCanvas() {
           {activeSlideId && (selectedText || (isSlideSelected && canEdit)) && (
             <div className="canvas-bar-mid">
               {selectedText ? (
-                <TextFormatControls
-                  element={selectedText as Extract<typeof selectedText, { type: 'text' }>}
-                  slideId={activeSlideId}
-                />
+                <>
+                  {selectedTexts.length > 1 && (
+                    <span className="toolbar-count">{selectedTexts.length} selected</span>
+                  )}
+                  <TextFormatControls
+                    element={selectedText as Extract<typeof selectedText, { type: 'text' }>}
+                    slideId={activeSlideId}
+                    applyToIds={selectedTexts.map((el) => el.id)}
+                  />
+                </>
               ) : (
                 // Only once the slide has actually been clicked — see isSlideSelected.
                 <>

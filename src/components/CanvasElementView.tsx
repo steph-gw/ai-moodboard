@@ -71,9 +71,12 @@ function ImageElementView({
   /** Present mode or the export sheet: nothing interactive, votes included. */
   isStatic?: boolean;
 }) {
-  const { selectedElementId, selectElement, updateElement, getImageById, beginInteraction, endInteraction } =
+  const { selectedElementIds, selectElement, updateElement, getImageById, beginInteraction, endInteraction } =
     useBoard();
-  const isSelected = selectedElementId === element.id;
+  const isSelected = selectedElementIds.includes(element.id);
+  // Resize and rotate handles belong to one element at a time. With several selected the
+  // members get an outline and nothing to grab, so a handle never lies about what it moves.
+  const isOnly = isSelected && selectedElementIds.length === 1;
   const image = getImageById(element.imageId);
   const hasVote = !!image?.clientVote;
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
@@ -82,7 +85,7 @@ function ImageElementView({
   // slide is a deliberate pile of shapes and labels — and raising whatever was last
   // clicked takes that apart a click at a time. Bring to front is on the toolbar for when
   // it is actually meant.
-  const handleSelect = () => selectElement(element.id);
+  const handleSelect = (additive: boolean) => selectElement(element.id, additive);
 
   return (
     <DraggableBox
@@ -94,13 +97,13 @@ function ImageElementView({
       width={element.width}
       height={element.height}
       scale={scale}
-      selected={isSelected}
+      selected={isOnly}
       readOnly={readOnly}
       boundsWidth={SLIDE_WIDTH}
       boundsHeight={SLIDE_HEIGHT}
       minWidth={60}
       minHeight={45}
-      className={`canvas-element-image ${hasVote ? 'has-vote' : ''}`}
+      className={`canvas-element-image ${hasVote ? 'has-vote' : ''} ${isSelected && !isOnly ? 'in-selection' : ''}`}
       style={{ zIndex: element.zIndex }}
       rotation={element.rotation}
       onSelect={handleSelect}
@@ -140,16 +143,19 @@ function TextElementView({
   scale: number;
   readOnly?: boolean;
 }) {
-  const { selectedElementId, selectElement, updateElement, beginInteraction, endInteraction } =
+  const { selectedElementIds, selectElement, updateElement, beginInteraction, endInteraction } =
     useBoard();
   const [editing, setEditing] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const isSelected = selectedElementId === element.id;
+  const isSelected = selectedElementIds.includes(element.id);
+  // Resize and rotate handles belong to one element at a time. With several selected the
+  // members get an outline and nothing to grab, so a handle never lies about what it moves.
+  const isOnly = isSelected && selectedElementIds.length === 1;
   const ref = useRef<HTMLDivElement>(null);
   const didAutoFocus = useRef(false);
 
   useEffect(() => {
-    if (isSelected && !readOnly && !didAutoFocus.current && ref.current) {
+    if (isOnly && !readOnly && !didAutoFocus.current && ref.current) {
       didAutoFocus.current = true;
       setEditing(true);
       requestAnimationFrame(() => {
@@ -163,13 +169,13 @@ function TextElementView({
         }
       });
     }
-  }, [isSelected, readOnly, element.content]);
+  }, [isOnly, readOnly, element.content]);
 
   // Selecting does not restack. Stacking is something the planner arranged — a palette
   // slide is a deliberate pile of shapes and labels — and raising whatever was last
   // clicked takes that apart a click at a time. Bring to front is on the toolbar for when
   // it is actually meant.
-  const handleSelect = () => selectElement(element.id);
+  const handleSelect = (additive: boolean) => selectElement(element.id, additive);
 
   return (
     <DraggableBox
@@ -181,13 +187,13 @@ function TextElementView({
       width={element.width}
       height={element.height}
       scale={scale}
-      selected={isSelected}
+      selected={isOnly}
       readOnly={readOnly}
       boundsWidth={SLIDE_WIDTH}
       boundsHeight={SLIDE_HEIGHT}
       minWidth={80}
       minHeight={30}
-      className="canvas-element-text"
+      className={`canvas-element-text${isSelected && !isOnly ? ' in-selection' : ''}`}
       style={{ zIndex: element.zIndex }}
       rotation={element.rotation}
       onSelect={handleSelect}
@@ -307,13 +313,16 @@ function ShapeElementView({
   readOnly?: boolean;
 }) {
   const {
-    selectedElementId,
+    selectedElementIds,
     selectElement,
     updateElement,
     beginInteraction,
     endInteraction,
   } = useBoard();
-  const isSelected = selectedElementId === element.id;
+  const isSelected = selectedElementIds.includes(element.id);
+  // Resize and rotate handles belong to one element at a time. With several selected the
+  // members get an outline and nothing to grab, so a handle never lies about what it moves.
+  const isOnly = isSelected && selectedElementIds.length === 1;
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
 
   return (
@@ -326,16 +335,16 @@ function ShapeElementView({
       width={element.width}
       height={element.height}
       scale={scale}
-      selected={isSelected}
+      selected={isOnly}
       readOnly={readOnly}
       boundsWidth={SLIDE_WIDTH}
       boundsHeight={SLIDE_HEIGHT}
       minWidth={8}
       minHeight={8}
-      className="canvas-element-shape"
+      className={`canvas-element-shape${isSelected && !isOnly ? ' in-selection' : ''}`}
       style={{ zIndex: element.zIndex }}
       rotation={element.rotation}
-      onSelect={() => selectElement(element.id)}
+      onSelect={(additive) => selectElement(element.id, additive)}
       onChange={(patch) => updateElement(slideId, element.id, patch)}
       onContextMenu={(e) => {
         if (readOnly) return;

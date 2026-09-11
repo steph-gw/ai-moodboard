@@ -58,10 +58,13 @@ interface BoardContextValue {
   activeSlideId: string;
   setActiveSlideId: (id: string) => void;
   activeSlide: Slide | null;
+  /** The element being edited: the last one picked, or null unless exactly one is selected. */
   selectedElementId: string | null;
+  selectedElementIds: readonly string[];
+  deleteSelection: () => void;
   selectedCommentPinId: string | null;
   selectedCommentPin: CommentPin | null;
-  selectElement: (elementId: string | null) => void;
+  selectElement: (elementId: string | null, additive?: boolean) => void;
   isSlideSelected: boolean;
   selectSlide: () => void;
   selectCommentPin: (pinId: string | null) => void;
@@ -196,7 +199,14 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const gestureSnapshotRef = useRef(false);
   const [activeSectionId, setActiveSectionIdState] = useState(() => mockBoard.sections[0]?.id ?? '');
   const [activeSlideId, setActiveSlideId] = useState(() => mockBoard.sections[0]?.slides[0]?.id ?? '');
-  const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
+  /**
+   * Everything selected, in the order it was picked.
+   *
+   * An array rather than a Set because order is what makes "the one being edited" well
+   * defined — the last thing clicked is what the drag handles and the text cursor belong
+   * to, even when five things are selected.
+   */
+  const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [selectedCommentPinId, setSelectedCommentPinId] = useState<string | null>(null);
   /**
    * The slide itself is selected — clicked on, with nothing on it selected.
@@ -288,7 +298,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         )
       );
       // A refresh keeps whatever the person had selected; only a first load clears it.
-      if (!silent) setSelectedElementId(null);
+      if (!silent) setSelectedElementIds([]);
       onLoaded?.();
     } catch (err) {
       // A background refresh that fails is not worth interrupting anyone over: the board
@@ -519,6 +529,14 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  /**
+   * The element the single-element controls act on: the last one picked.
+   *
+   * Null while several are selected, so nothing that only makes sense for one thing —
+   * the text cursor, the rotate handle — appears for a group.
+   */
+  const selectedElementId = selectedElementIds.length === 1 ? selectedElementIds[0] : null;
+
   const activeSection = board.sections.find((s) => s.id === activeSectionId);
   const activeSlide = activeSection?.slides.find((s) => s.id === activeSlideId) ?? null;
   const activeSectionName = activeSection?.name ?? '';
@@ -544,23 +562,35 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       setActiveSlideId(slides[0].id);
       const firstImageEl = slides[0].elements.find((el) => el.type === 'image');
       if (firstImageEl && firstImageEl.type === 'image') {
-        setSelectedElementId(firstImageEl.id);
+        setSelectedElementIds([firstImageEl.id]);
       } else {
-        setSelectedElementId(null);
+        setSelectedElementIds([]);
       }
     }
     setSelectedCommentPinId(null);
     setPlacingComment(false);
   }, [board]);
 
-  const selectElement = useCallback((elementId: string | null) => {
-    setSelectedElementId(elementId);
-    // Selecting an element is the opposite of selecting the slide.
-    if (elementId) setSlideSelected(false);
+  /**
+   * Selects one element, or adds and removes it from the selection with Cmd/Ctrl held.
+   *
+   * Toggling on re-click is what makes an additive click undoable without a modifier of
+   * its own — the same gesture that added the fifth element takes it back out.
+   */
+  const selectElement = useCallback((elementId: string | null, additive = false) => {
+    if (!elementId) {
+      setSelectedElementIds([]);
+      return;
+    }
+    setSlideSelected(false);
+    setSelectedElementIds((prev) => {
+      if (!additive) return prev.length === 1 && prev[0] === elementId ? prev : [elementId];
+      return prev.includes(elementId) ? prev.filter((id) => id !== elementId) : [...prev, elementId];
+    });
   }, []);
 
   const selectSlide = useCallback(() => {
-    setSelectedElementId(null);
+    setSelectedElementIds([]);
     setSelectedCommentPinId(null);
     setSlideSelected(true);
   }, []);
@@ -692,7 +722,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         }),
       })),
     }));
-    setSelectedElementId(null);
+    setSelectedElementIds([]);
 
     // Mark the image unused once nothing places it any more. The file itself is never
     // deleted — undo reaches back 60 steps, and it would resurrect an element pointing at
@@ -781,7 +811,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         };
       }),
     }));
-    setSelectedElementId(el.id);
+    setSelectedElementIds([el.id]);
   }, [activeSlide, activeSectionId, activeSlideId, commit]);
 
   const setSlideBackground = useCallback(
@@ -819,7 +849,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           };
         }),
       }));
-      setSelectedElementId(el.id);
+      setSelectedElementIds([el.id]);
     },
     [activeSlide, activeSectionId, activeSlideId, commit]
   );
@@ -865,7 +895,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       applyStructural((prev) => ({ ...prev, sections: [...prev.sections, newSection] }));
       setActiveSectionIdState(newId);
       setActiveSlideId(firstSlideId);
-      setSelectedElementId(null);
+      setSelectedElementIds([]);
       setSelectedCommentPinId(null);
       setSlideSelected(false);
       setPlacingComment(false);
@@ -936,7 +966,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         const next = remaining[0];
         setActiveSectionIdState(next.id);
         setActiveSlideId(next.slides[0]?.id ?? '');
-        setSelectedElementId(null);
+        setSelectedElementIds([]);
         setSelectedCommentPinId(null);
         setPlacingComment(false);
       }
@@ -970,7 +1000,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       }),
     }));
     setActiveSlideId(newId);
-    setSelectedElementId(null);
+    setSelectedElementIds([]);
     setSelectedCommentPinId(null);
   }, [activeSectionId, activeSection?.slides.length, applyStructural, repo, runStructural]);
 
@@ -989,7 +1019,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       if (activeSlideId === slideId) {
         const remaining = activeSection.slides.filter((s) => s.id !== slideId);
         setActiveSlideId(remaining[0]?.id ?? '');
-        setSelectedElementId(null);
+        setSelectedElementIds([]);
         setSelectedCommentPinId(null);
       }
     },
@@ -1145,7 +1175,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       // setActiveSectionId, which would jump to that section's first slide.
       if (next.sectionId !== activeSectionId) setActiveSectionIdState(next.sectionId);
       setActiveSlideId(next.slideId);
-      setSelectedElementId(null);
+      setSelectedElementIds([]);
       setSelectedCommentPinId(null);
     },
     [slideSequence, activeSlideId, activeSectionId]
@@ -1384,7 +1414,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         suggestions: prev.suggestions.filter((s) => s.id !== suggestionId),
       }));
 
-      setSelectedElementId(el.id);
+      setSelectedElementIds([el.id]);
     },
     [board.suggestions, activeSectionId, activeSlide, activeSlideId, commit]
   );
@@ -1446,7 +1476,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         }),
       }));
 
-      setSelectedElementId(el.id);
+      setSelectedElementIds([el.id]);
     },
     [activeSlide, activeSlideId, activeSectionId, commit]
   );
@@ -1478,8 +1508,16 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   );
 
 
+  const deleteSelection = useCallback(() => {
+    if (!activeSlideId || !selectedElementIds.length) return;
+    // Snapshot the ids: deleteElement clears the selection as it goes.
+    for (const id of [...selectedElementIds]) deleteElement(activeSlideId, id);
+  }, [activeSlideId, selectedElementIds, deleteElement]);
+
   const cutSelection = useCallback(
     (writeClipboard: (text: string) => void): boolean => {
+      // Cut carries one element, because paste puts one back. Several selected is a
+      // delete, and Cmd+X on a group would quietly lose all but one of them.
       if (!selectedElementId || !activeSlideId) return false;
       const element = activeSlide?.elements.find((el) => el.id === selectedElementId);
       if (!element) return false;
@@ -1536,7 +1574,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           ),
         })),
       }));
-      setSelectedElementId(copy.id);
+      setSelectedElementIds([copy.id]);
     },
     [activeSlide, activeSlideId, commit]
   );
@@ -1619,17 +1657,17 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
       if (
         (e.key === 'Delete' || e.key === 'Backspace') &&
-        selectedElementId &&
+        selectedElementIds.length &&
         activeSlideId &&
         !typing
       ) {
         e.preventDefault();
-        deleteElement(activeSlideId, selectedElementId);
+        deleteSelection();
       }
     };
     rootEl.addEventListener('keydown', handleKeyDown);
     return () => rootEl.removeEventListener('keydown', handleKeyDown);
-  }, [selectedElementId, activeSlideId, deleteElement, undo, cutSelection, rootEl]);
+  }, [selectedElementIds, activeSlideId, deleteSelection, undo, cutSelection, rootEl]);
 
   return (
     <BoardContext.Provider
@@ -1645,6 +1683,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         },
         activeSlide,
         selectedElementId,
+        selectedElementIds,
+        deleteSelection,
         selectedCommentPinId,
         selectedCommentPin,
         selectElement,

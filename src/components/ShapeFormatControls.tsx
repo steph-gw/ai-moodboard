@@ -20,12 +20,17 @@ const STROKE_STYLES: { value: StrokeStyle; label: string; dash: string }[] = [
 export function ShapeFormatControls({
   element,
   slideId,
+  applyToIds,
 }: {
   element: ShapeElement;
   slideId: string;
+  /** Every element the change applies to. Defaults to the one whose values are shown. */
+  applyToIds?: readonly string[];
 }) {
   const { updateElement } = useBoard();
-  const patch = (updates: Partial<ShapeElement>) => updateElement(slideId, element.id, updates);
+  const patch = (updates: Partial<ShapeElement>) => {
+    for (const id of applyToIds ?? [element.id]) updateElement(slideId, id, updates);
+  };
   const isLine = element.shape === 'line';
 
   return (

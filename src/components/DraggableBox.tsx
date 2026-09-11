@@ -29,7 +29,7 @@ interface DraggableBoxProps {
   boundsHeight: number;
   className?: string;
   style?: React.CSSProperties;
-  onSelect: () => void;
+  onSelect: (additive: boolean) => void;
   onChange: (patch: BoxPatch) => void;
   /** Called once at pointerdown and once at pointerup, so a whole drag is one undo step. */
   onInteractionStart?: () => void;
@@ -187,7 +187,8 @@ export function DraggableBox({
     // Opened before onSelect so the raise-to-front that selection triggers folds into
     // the same undo step as the drag itself. One gesture, one entry.
     onInteractionStart?.();
-    onSelect();
+    // Cmd on a Mac, Ctrl elsewhere — whichever the platform uses for "add to a selection".
+    onSelect(e.metaKey || e.ctrlKey);
 
     const box = (e.currentTarget as HTMLElement).closest('.canvas-element');
     const rect = box?.getBoundingClientRect();

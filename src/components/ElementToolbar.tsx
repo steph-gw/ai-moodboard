@@ -24,11 +24,11 @@ export function ElementToolbar() {
   const {
     activeSlide,
     activeSlideId,
-    selectedElementId,
+    selectedElementIds,
     canEdit,
     bringToFront,
     sendToBack,
-    deleteElement,
+    deleteSelection,
     getImageById,
     activeSectionName,
   } = useBoard();
@@ -36,18 +36,26 @@ export function ElementToolbar() {
   const ref = useRef<HTMLDivElement>(null);
   const [at, setAt] = useState<{ left: number; top: number; below: boolean } | null>(null);
 
-  const element = activeSlide?.elements.find((el) => el.id === selectedElementId);
+  const selected = (activeSlide?.elements ?? []).filter((el) => selectedElementIds.includes(el.id));
+  // The last one picked: what the toolbar anchors to, and what its single-element
+  // controls read their current values from.
+  const element = selected.length ? selected[selected.length - 1] : undefined;
+  const many = selected.length > 1;
+  // Format controls need every member to be the same kind of thing — there is no sensible
+  // corner radius for a mixture of a rectangle and a photograph.
+  const sameType = !!element && selected.every((el) => el.type === element.type);
   const visible = !!element && !!activeSlideId && canEdit;
 
   // Reads the element's rendered box rather than recomputing x*scale, so rotation and the
   // artboard's own offset come along for free.
+  const anchorId = element?.id ?? null;
   useLayoutEffect(() => {
-    if (!visible || !selectedElementId) {
+    if (!visible || !anchorId) {
       setAt(null);
       return;
     }
     const stage = ref.current?.offsetParent as HTMLElement | null;
-    const node = stage?.querySelector<HTMLElement>(`[data-el-id="${CSS.escape(selectedElementId)}"]`);
+    const node = stage?.querySelector<HTMLElement>(`[data-el-id="${CSS.escape(anchorId)}"]`);
     if (!stage || !node) return;
 
     const box = node.getBoundingClientRect();
@@ -78,7 +86,8 @@ export function ElementToolbar() {
     setAt({ left, top, below: !preferAbove });
   }, [
     visible,
-    selectedElementId,
+    anchorId,
+    selected.length,
     // Re-place when the element moves, resizes or rotates.
     element?.x,
     element?.y,
@@ -90,7 +99,9 @@ export function ElementToolbar() {
 
   if (!visible || !element || !activeSlideId) return null;
 
-  const imageUrl = element.type === 'image' ? getImageById(element.imageId)?.url : undefined;
+  // Downloading is a one-file action; offering it for a group would need a zip.
+  const imageUrl =
+    !many && element.type === 'image' ? getImageById(element.imageId)?.url : undefined;
 
   return (
     <div
@@ -99,17 +110,29 @@ export function ElementToolbar() {
       style={at ? { left: at.left, top: at.top } : { opacity: 0 }}
       onPointerDown={(e) => e.stopPropagation()}
     >
-      {element.type === 'shape' && (
+      {many && (
         <>
-          <ShapeFormatControls element={element} slideId={activeSlideId} />
+          <span className="toolbar-count">{selected.length} selected</span>
           <span className="text-format-divider" />
         </>
       )}
 
+      {element.type === 'shape' && sameType && (
+        <>
+          <ShapeFormatControls
+            element={element}
+            slideId={activeSlideId}
+            applyToIds={selected.map((el) => el.id)}
+          />
+          <span className="text-format-divider" />
+        </>
+      )}
+
+
       <button
         type="button"
         className="text-format-btn"
-        onClick={() => bringToFront(activeSlideId, element.id)}
+        onClick={() => selected.forEach((el) => bringToFront(activeSlideId, el.id))}
         data-tooltip="Bring to front"
         aria-label="Bring to front"
       >
@@ -118,7 +141,7 @@ export function ElementToolbar() {
       <button
         type="button"
         className="text-format-btn"
-        onClick={() => sendToBack(activeSlideId, element.id)}
+        onClick={() => [...selected].reverse().forEach((el) => sendToBack(activeSlideId, el.id))}
         data-tooltip="Send to back"
         aria-label="Send to back"
       >
@@ -142,9 +165,9 @@ export function ElementToolbar() {
       <button
         type="button"
         className="text-format-btn is-danger"
-        onClick={() => deleteElement(activeSlideId, element.id)}
-        data-tooltip="Delete"
-        aria-label="Delete"
+        onClick={deleteSelection}
+        data-tooltip={many ? `Delete ${selected.length}` : 'Delete'}
+        aria-label={many ? `Delete ${selected.length} elements` : 'Delete'}
       >
         <Trash2 size={14} strokeWidth={1.7} />
       </button>

@@ -12,14 +12,19 @@ import { TEXT_FONT_OPTIONS } from '../utils/textFonts';
 export function TextFormatControls({
   element: text,
   slideId,
+  applyToIds,
 }: {
   element: TextElement;
   slideId: string;
+  /** Every element the change applies to. Defaults to the one whose values are shown. */
+  applyToIds?: readonly string[];
 }) {
   const { updateElement } = useBoard();
 
+  // Applied to every selected element of this type, which is what makes changing the font
+  // color of five headings one action instead of five.
   const patch = (updates: Partial<TextElement>) => {
-    updateElement(slideId, text.id, updates);
+    for (const id of applyToIds ?? [text.id]) updateElement(slideId, id, updates);
   };
 
   return (

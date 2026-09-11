@@ -2754,6 +2754,25 @@
   overflow: hidden;
 }
 
+/* A member of a multiple selection: outlined, but with no handles — see isOnly. */
+.canvas-element.in-selection::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border: 1.5px solid var(--gold-active);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.toolbar-count {
+  font-family: var(--font-sans);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
 /* ── One-swatch color field ── */
 .color-field {
   position: relative;
