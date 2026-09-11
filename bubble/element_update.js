@@ -7,6 +7,19 @@
 // the element just renders an empty div forever. Verified 2026-09-11: the same code
 // with and without that space is dead versus working.
 function(instance, properties, context) {
+  // Bubble does not hand a list property over as a JS array. It is a list object with
+  // .length() and .get(from, count), and passing it straight through gives the bundle
+  // something that looks iterable and isn't — the board died on `.join is not a function`
+  // the first time a collaborator list was non-empty.
+  function listOf(prop) {
+    if (!prop) return [];
+    if (Array.isArray(prop)) return prop;
+    if (typeof prop.length === 'function' && typeof prop.get === 'function') {
+      return prop.get(0, prop.length()) || [];
+    }
+    return [];
+  }
+
   // Sent whole every tick rather than diffed — mount() shallow-merges and re-renders,
   // and React reconciles. Diffing here would only move the bookkeeping, not save work.
   var props = {
@@ -18,9 +31,9 @@ function(instance, properties, context) {
       ? new Date(properties.event_date).toISOString().slice(0, 10)
       : '',
 
-    collaboratorIds: properties.collaborator_ids || [],
-    collaboratorNames: properties.collaborator_names || [],
-    collaboratorPhotos: properties.collaborator_photos || [],
+    collaboratorIds: listOf(properties.collaborator_ids),
+    collaboratorNames: listOf(properties.collaborator_names),
+    collaboratorPhotos: listOf(properties.collaborator_photos),
     currentUserId: properties.current_user_id || '',
     currentUserName: properties.current_user_name || '',
     currentUserInitials: properties.current_user_initials || '',

@@ -15,11 +15,17 @@ export function parsePeople(
   photos: string[] | undefined
 ): Map<string, Viewer> {
   const people = new Map<string, Viewer>();
-  (ids ?? []).forEach((rawId, i) => {
+  // Not `?? []`: a host that sends something other than an array sends an object, which
+  // survives ?? and then fails on the first array method. Bubble does exactly this — a
+  // list property is a list object, not an array — and the board died on it.
+  const idList = Array.isArray(ids) ? ids : [];
+  const nameList = Array.isArray(names) ? names : [];
+  const photoList = Array.isArray(photos) ? photos : [];
+  idList.forEach((rawId, i) => {
     const id = String(rawId).trim();
     if (!id) return;
-    const name = String(names?.[i] ?? '').trim();
-    const photo = String(photos?.[i] ?? '').trim();
+    const name = String(nameList[i] ?? '').trim();
+    const photo = String(photoList[i] ?? '').trim();
     people.set(id, {
       id,
       name: name || 'Someone',

@@ -102,9 +102,12 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
       businessId,
       eventName,
       eventDate,
-      (collaboratorIds ?? []).join('\u0000'),
-      (collaboratorNames ?? []).join('\u0000'),
-      (collaboratorPhotos ?? []).join('\u0000'),
+      // join() and not length: the lists change contents without changing identity. Guarded
+      // with Array.isArray because a host can send a non-array and .join would throw during
+      // render, taking the whole board down rather than one avatar.
+      (Array.isArray(collaboratorIds) ? collaboratorIds : []).join('\u0000'),
+      (Array.isArray(collaboratorNames) ? collaboratorNames : []).join('\u0000'),
+      (Array.isArray(collaboratorPhotos) ? collaboratorPhotos : []).join('\u0000'),
     ]
   );
 
