@@ -146,6 +146,36 @@ The Headers block loads only the board's own two families. The seven optional on
 (Inter, Roboto, Open Sans, Montserrat, Poppins, Lato, Lora) are fetched by the bundle the
 first time a board uses one, so a board that uses none costs nothing.
 
+### Upload the bundle through the File manager's own Upload button
+
+Bubble stores whatever `Content-Type` the browser reported for the file, and serves it
+back verbatim. A file picked by hand gets `text/css` / `text/javascript`; one pushed into
+the input programmatically can arrive with no type and get stored as
+`application/octet-stream`.
+
+That is fatal for the stylesheet and merely lucky for the script. In standards mode Chrome
+refuses to apply a stylesheet whose `Content-Type` isn't a CSS type — no console error that
+names the cause, just a completely unstyled board. `application/octet-stream` JavaScript
+still executes today, but only because nothing sets `nosniff` on that CDN.
+
+So check it after every upload:
+
+```
+curl -sI "<File Manager URL>/gw-moodboard.css" | grep content-type   # must be text/css
+```
+
+### Z-index: present mode and modals live above the editor, the canvas is isolated
+
+The scale drifted as toolbars were added — present mode was written at `200` and the modal
+at `300`, then `.canvas-head` landed on `400`, `.slide-actions` on `320`, the elements menu
+on `9300` and the vision brief on `9401`. Present mode was underneath all of it: the
+editing toolbar and the comment pins painted straight over the presentation.
+
+Present mode is now `9500` and the modal `9600`. The canvas is the other half of the fix:
+`.slide-artboard` sets `isolation: isolate`, so the large arbitrary numbers inside it —
+author-set element z-indexes, and the `100000` on `.comment-pin` that has to beat them —
+stay a private ordering instead of something every overlay in the app must outrank.
+
 ### Solved: a field's **Name** is the key, and nothing warns you when it isn't
 
 The fields, states and events had been created with human-readable Names — `Moodboard id`,

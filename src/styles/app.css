@@ -1521,6 +1521,10 @@
 
 .slide-artboard {
   position: relative;
+  /* Canvas elements carry author-set z-indexes and the pins have to beat all of them, so
+     the numbers in here are large and arbitrary. Isolating keeps them a private ordering
+     rather than something every overlay in the app has to outrank. */
+  isolation: isolate;
   background: var(--white);
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -2268,7 +2272,10 @@
 .present-overlay {
   position: fixed;
   inset: 0;
-  z-index: 200;
+  /* Above .canvas-head (400), .slide-actions (320), .add-elements-menu (9300) and the
+     vision brief (9401). Present mode replaces the editor; nothing from it may show
+     through. */
+  z-index: 9500;
   background: #14120e;
   display: flex;
   flex-direction: column;
@@ -2391,7 +2398,7 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  z-index: 300;
+  z-index: 9600;
   display: flex;
   align-items: center;
   justify-content: center;
