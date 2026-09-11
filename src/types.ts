@@ -138,3 +138,17 @@ export interface Board {
 
 export const SLIDE_WIDTH = 960;
 export const SLIDE_HEIGHT = 540;
+
+/**
+ * Shown when a moodboard has no palette of its own, so the strip is never an empty
+ * shrug. Read off gatherwise.io: page ground, ink, the gold accent, and the three
+ * neutrals between them.
+ */
+export const DEFAULT_PALETTE = [
+  '#F6EFE0',
+  '#EDE5D8',
+  '#DED6C8',
+  '#B8935F',
+  '#6B645A',
+  '#2A2723',
+];

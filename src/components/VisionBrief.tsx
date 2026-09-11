@@ -12,7 +12,8 @@ import { useHost } from '../embed/HostProvider';
  * size on every screen, to show text nobody re-reads after the first look.
  */
 export function VisionBrief() {
-  const { visionBrief, updateVisionBrief, canManage } = useBoard();
+  const { visionBrief, updateVisionBrief, canManage, activeSectionId, requestEditSection } =
+    useBoard();
   const { portalHost } = useHost();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLParagraphElement>(null);
@@ -37,6 +38,8 @@ export function VisionBrief() {
     };
   }, [open]);
 
+  const isEmpty = !visionBrief.trim();
+
   const commit = () => {
     if (canManage && ref.current) updateVisionBrief(ref.current.innerText);
   };
@@ -47,7 +50,16 @@ export function VisionBrief() {
         ref={anchorRef}
         type="button"
         className={`btn-ghost btn-sm ${open ? 'active' : ''}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          // Nothing to read yet: opening an empty popover to then send someone hunting
+          // for where to write it is a step that does nothing. Go straight to the editor
+          // that owns the field — but only for someone who may edit it.
+          if (isEmpty && canManage) {
+            requestEditSection(activeSectionId);
+            return;
+          }
+          setOpen((v) => !v);
+        }}
         data-tooltip="Vision brief"
         aria-expanded={open}
       >

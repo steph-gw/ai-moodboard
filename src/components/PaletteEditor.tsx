@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { Palette, Plus, X } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { useHost } from '../embed/HostProvider';
+import { DEFAULT_PALETTE } from '../types';
 
 const MAX_COLORS = 12;
 const NEW_COLOR = '#c4a35a';
@@ -44,7 +45,9 @@ export function PaletteEditor() {
     };
   }, [open]);
 
-  const colors = board.palette;
+  // A board that has never had a palette set still shows one: an empty strip reads as
+  // broken, and the house colours are a better starting point than nothing.
+  const colors = board.palette.length > 0 ? board.palette : DEFAULT_PALETTE;
   const replace = (i: number, color: string) =>
     setPalette(colors.map((c, n) => (n === i ? color : c)));
   const remove = (i: number) => setPalette(colors.filter((_, n) => n !== i));
@@ -66,7 +69,6 @@ export function PaletteEditor() {
       >
         <Palette size={12} strokeWidth={1.6} className="palette-strip-icon" />
         <span className="palette-strip-swatches">
-          {colors.length === 0 && <span className="palette-strip-empty">No colors yet</span>}
           {colors.map((color, i) => (
             <span
               key={`${color}-${i}`}

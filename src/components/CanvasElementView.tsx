@@ -54,6 +54,29 @@ function ImageVoteControls({ imageId }: { imageId: string }) {
   );
 }
 
+/**
+ * The read-only face of a vote, for present mode.
+ *
+ * Present is where the planner walks the client through the board, so a decision already
+ * taken should be visible — but nothing there is clickable, and the export sheet renders
+ * its own elements entirely, so a PDF never picks this up.
+ */
+function ImageVoteBadge({ imageId }: { imageId: string }) {
+  const { getImageById } = useBoard();
+  const vote = getImageById(imageId)?.clientVote;
+  if (!vote) return null;
+
+  return (
+    <div className={`image-vote-badge ${vote}`} aria-hidden>
+      {vote === 'up' ? (
+        <ThumbsUp size={13} strokeWidth={1.6} fill="currentColor" />
+      ) : (
+        <ThumbsDown size={13} strokeWidth={1.6} fill="currentColor" />
+      )}
+    </div>
+  );
+}
+
 function ImageElementView({
   element,
   slideId,
@@ -119,7 +142,11 @@ function ImageElementView({
     >
       <div className="canvas-image-inner">
         <img src={imageUrl} alt="" draggable={false} />
-        {!isStatic && <ImageVoteControls imageId={element.imageId} />}
+        {isStatic ? (
+          <ImageVoteBadge imageId={element.imageId} />
+        ) : (
+          <ImageVoteControls imageId={element.imageId} />
+        )}
       </div>
       {menu && (
         <ElementContextMenu

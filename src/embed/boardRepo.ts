@@ -299,6 +299,14 @@ export class BoardRepo {
     await this.api.remove(TYPE.vote, voteRowId);
   }
 
+  /** A pin dragged to a new spot. Geometry only — the discussion is untouched. */
+  async moveThread(threadId: string, x: number, y: number): Promise<void> {
+    await this.api.patch(TYPE.thread, threadId, {
+      [K.thread.x]: Math.round(x),
+      [K.thread.y]: Math.round(y),
+    });
+  }
+
   async deleteThread(threadId: string): Promise<void> {
     await this.api.remove(TYPE.thread, threadId);
   }

@@ -74,6 +74,11 @@ interface BoardContextValue {
   isPlacingComment: boolean;
   setPlacingComment: (value: boolean) => void;
   placeCommentPin: (x: number, y: number) => void;
+  /** Drags a pin to a new spot on its slide. Board coordinates, not screen. */
+  moveCommentPin: (pinId: string, x: number, y: number) => void;
+  /** The section whose editor should be open, and the way to ask for it. */
+  editingSectionId: string | null;
+  requestEditSection: (sectionId: string | null) => void;
   voteImage: (imageId: string, vote: ImageVote) => void;
   visionBrief: string;
   updateVisionBrief: (text: string) => void;
@@ -738,6 +743,34 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     },
     [activeSlideId, applyComments]
   );
+
+  const moveCommentPin = useCallback(
+    (pinId: string, x: number, y: number) => {
+      const found = findPinInBoard(boardRef.current.sections, pinId);
+      if (!found) return;
+      const clampedX = Math.min(Math.max(x, 0), SLIDE_WIDTH);
+      const clampedY = Math.min(Math.max(y, 0), SLIDE_HEIGHT);
+
+      applyComments((prev) =>
+        updateSlidePins(prev, found.slideId, (pins) =>
+          pins.map((pin) => (pin.id === pinId ? { ...pin, x: clampedX, y: clampedY } : pin))
+        )
+      );
+
+      // A pin with no comments has no thread row yet — placeCommentPin leaves that until
+      // the first comment — so there is nothing to patch and the local move is the move.
+      if (!repo || found.pin.comments.length === 0) return;
+      void repo.moveThread(pinId, clampedX, clampedY).catch(() => {
+        onError('Could not move that comment pin.');
+      });
+    },
+    [applyComments, repo, onError]
+  );
+
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
+  const requestEditSection = useCallback((sectionId: string | null) => {
+    setEditingSectionId(sectionId);
+  }, []);
 
   /**
    * Voting is not a board edit. A client is read-only over the canvas and still votes —
@@ -1821,6 +1854,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         isPlacingComment,
         setPlacingComment,
         placeCommentPin,
+        moveCommentPin,
+        editingSectionId,
+        requestEditSection,
         voteImage,
         visionBrief,
         updateVisionBrief,

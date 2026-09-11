@@ -119,10 +119,21 @@ function TabMenu({
 }
 
 export function SectionTabs() {
-  const { board, canManage, activeSectionId, setActiveSectionId, deleteSection } = useBoard();
+  const {
+    board,
+    canManage,
+    activeSectionId,
+    setActiveSectionId,
+    deleteSection,
+    editingSectionId,
+    requestEditSection,
+  } = useBoard();
   const [isAdding, setIsAdding] = useState(false);
   const [editing, setEditing] = useState<Section | null>(null);
   const [deleting, setDeleting] = useState<Section | null>(null);
+  const requested = editingSectionId
+    ? (board.sections.find((s) => s.id === editingSectionId) ?? null)
+    : null;
   
   return (
     <nav className="section-tabs" aria-label="Sections">
@@ -164,6 +175,11 @@ export function SectionTabs() {
       {isAdding && <AddSectionModal onClose={() => setIsAdding(false)} />}
       {editing && (
         <AddSectionModal section={editing} onClose={() => setEditing(null)} />
+      )}
+      {/* Opened from somewhere else in the app — the vision brief button, when the brief
+          is still empty. The modal lives here because this is what owns section editing. */}
+      {!editing && requested && (
+        <AddSectionModal section={requested} onClose={() => requestEditSection(null)} />
       )}
       {deleting && (
         <ConfirmModal

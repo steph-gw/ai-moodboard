@@ -146,8 +146,8 @@ function CommentRow({
             <button
               type="button"
               className="thread-icon-btn"
-              data-tooltip="Mark as resolved and hide discussion"
-              aria-label="Mark as resolved and hide discussion"
+              data-tooltip="Resolve thread"
+              aria-label="Mark as resolved"
               onClick={() => resolveComment(pinId)}
             >
               <CheckCircle2 size={15} strokeWidth={1.6} />
@@ -264,7 +264,10 @@ function Thread({
         <p className="thread-empty">No comments on this pin yet.</p>
       )}
 
-      {isSelected && !resolved && (
+      {/* Every open thread keeps its reply box. Making it appear only on the selected
+          thread meant replying was a two-click job, and the drawer jumped as the box
+          moved between cards. */}
+      {!resolved && (
         <div className="thread-reply">
           <textarea
             className="thread-reply-input"
@@ -357,10 +360,17 @@ export function CommentDrawer() {
         ) : (
           <>
             {showOpen && open.map(renderThread)}
-            {/* The Resolved group only exists once something has been resolved. */}
+            {/* The Resolved group only exists once something has been resolved, and only
+                carries a rule above it when there is something above it to divide from. */}
             {showResolved && (
               <>
-                <h3 className="thread-group-label">Resolved</h3>
+                <h3
+                  className={`thread-group-label ${
+                    showOpen && open.length > 0 ? '' : 'is-first'
+                  }`}
+                >
+                  Resolved
+                </h3>
                 {resolved.map(renderThread)}
               </>
             )}
