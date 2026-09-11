@@ -103,6 +103,33 @@ without it render as "Someone" rather than breaking.
 
 ---
 
+## Transport: confirmed 2026-09-11
+
+Run from the app in preview, logged in, against `/version-test/api/1.1/obj`:
+
+| | Result |
+|---|---|
+| `GET /moodboard` | **200**, returned the row |
+| `POST /moodboardsection` | **201**, returned an id |
+| `DELETE /moodboardsection/<id>` | **204** |
+
+So the session cookie authenticates the Data API as `Current User`, and the plugin can
+create and delete rows itself. The `auth_token` field stays blank, and the write path does
+not need backend API workflows — which was the fork this test existed to settle.
+
+**It also means nothing is protected yet.** Those calls succeeded with no privacy rules in
+place, so the types are as open as they were in phase 0. Worth checking what an
+unauthenticated visitor can see: open the same app in a private window, logged out, and run
+
+```js
+fetch('/version-test/api/1.1/obj/moodboardsection').then(r => r.json()).then(console.log)
+```
+
+If that returns rows, every moodboard on the app is world-readable to anyone who guesses
+the URL. The rules below are what closes it.
+
+---
+
 ## Then tell me and I'll verify in about a minute
 
 1. Anonymous fetch of all seven → every one must return `count: 0`.
