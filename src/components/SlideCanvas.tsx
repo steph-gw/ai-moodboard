@@ -41,6 +41,7 @@ export function SlideCanvas({
     placeCommentPin,
     selectedCommentPinId,
     board,
+    isSlideSelected,
   } = useBoard();
   const pinNumbers = buildPinNumbers(board);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -190,7 +191,9 @@ export function SlideCanvas({
     >
       <div
         ref={artboardRef}
-        className={`slide-artboard ${isPlacingComment ? 'placing-comment' : ''}`}
+        className={`slide-artboard ${isPlacingComment ? 'placing-comment' : ''} ${
+          isSlideSelected && !readOnly ? 'is-selected' : ''
+        }`}
         style={{
           width: SLIDE_WIDTH * scale,
           height: SLIDE_HEIGHT * scale,

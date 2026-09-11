@@ -1582,15 +1582,15 @@
 
 /* Once a decision is made, the decision is what shows. The opposite thumb is still
    there to change your mind with, but it waits to be asked for. */
+/* Once a decision is made the decision leads, but the other thumb stays put — blanking
+   it left a gap exactly where a button had been, which reads as something missing. */
 .image-vote-controls.has-vote .image-vote-btn:not(.active) {
-  opacity: 0;
-  pointer-events: none;
+  opacity: 0.42;
   transition: opacity 0.15s;
 }
 
 .canvas-element-image:hover .image-vote-controls.has-vote .image-vote-btn:not(.active) {
   opacity: 1;
-  pointer-events: auto;
 }
 
 /* Present mode: the same verdict, with nothing to click. */
@@ -3318,6 +3318,7 @@
 .pin-composer {
   position: absolute;
   z-index: 120;
+  margin: 0;
   padding: 8px;
   background: var(--white);
   border: 1px solid var(--border-strong);
@@ -3325,62 +3326,24 @@
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
 }
 
-.pin-composer-input {
-  width: 100%;
-  border: none;
-  outline: none;
-  resize: none;
-  font: inherit;
-  font-size: 12.5px;
-  color: var(--text-primary);
-  background: transparent;
-}
-
-.pin-composer-hint {
-  display: block;
-  text-align: right;
-  font-size: 10px;
-  color: var(--text-muted);
-}
-
 /* ── Drawer: a thread's address, and reopening it ── */
-.thread-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-/* Nothing in it: no row, no gap above the first comment. */
-.thread-card-head.is-bare {
-  display: none;
-}
-
-.thread-where {
-  font-size: 10px;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
+/* Sits with the timestamp on the comment's own row, and is as quiet as the rest of a
+   finished thread until you go for it. */
 .thread-reopen-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  border: 1px solid var(--resolved-border);
-  border-radius: 12px;
-  padding: 2px 9px;
+  gap: 3px;
+  border: none;
+  background: none;
+  padding: 0 2px;
   font-size: 10.5px;
   color: var(--resolved-text);
-  background: var(--white);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .thread-reopen-btn:hover {
   color: var(--text-primary);
-  border-color: var(--border-strong);
 }
 
 /* Photo avatars. Same footprint as the initials they replace, so a mixed stack of
@@ -3390,4 +3353,11 @@
   object-fit: cover;
   padding: 0;
   background: var(--surface-2);
+}
+
+/* A selected slide gets the same outline an element does — otherwise the background
+   control appears with nothing on screen saying what it is about to act on. */
+.slide-artboard.is-selected {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
 }

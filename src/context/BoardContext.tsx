@@ -708,7 +708,22 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
   // Only one right-hand drawer at a time: opening one closes the other.
   const selectCommentPinExclusive = useCallback((pinId: string | null) => {
-    setSelectedCommentPinId(pinId);
+    // Dropping a pin and then thinking better of it should leave nothing behind. The
+    // thread row is only written with the first comment, so an abandoned pin is purely
+    // local — but left on the slide it is a marker that opens an empty drawer forever.
+    setSelectedCommentPinId((previous) => {
+      if (previous && previous !== pinId) {
+        const found = findPinInBoard(boardRef.current.sections, previous);
+        if (found && found.pin.comments.length === 0) {
+          applyComments((prev) =>
+            updateSlidePins(prev, found.slideId, (pins) =>
+              pins.filter((pin) => pin.id !== previous)
+            )
+          );
+        }
+      }
+      return pinId;
+    });
     if (pinId) setSlideSelected(false);
     if (pinId) {
       setCommentsOpenState(true);
@@ -735,7 +750,13 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     (x: number, y: number) => {
       if (!activeSlideId) return;
       const pinId = `pin-${Date.now()}`;
-      const newPin: CommentPin = { id: pinId, x, y, comments: [] };
+      const newPin: CommentPin = {
+        id: pinId,
+        x,
+        y,
+        createdAt: new Date().toISOString(),
+        comments: [],
+      };
 
       // Local only: the thread row is written with the first comment, not on pin-drop.
       applyComments((prev) =>

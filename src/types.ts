@@ -30,6 +30,8 @@ export interface CommentPin {
   id: string;
   x: number;
   y: number;
+  /** ISO. Numbering runs in this order, so a pin's number never depends on where it sits. */
+  createdAt: string;
   comments: Comment[];
 }
 

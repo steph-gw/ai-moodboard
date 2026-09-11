@@ -110,20 +110,21 @@ export function withLivePins<T extends { sections: { slides: Slide[] }[] }>(
 }
 
 /**
- * One running number per pin across the whole board, in section → slide → pin order.
+ * One running number per pin across the whole board, in the order the pins were made.
  *
- * Numbering per slide meant three different pins were all "Pin 1", which is useless the
- * moment the drawer shows the whole board. The trade is that inserting a pin on an early
- * slide shifts the numbers after it; a number that never moved would have to be stored on
- * the thread, and a stale one is worse than a shifting one.
+ * Numbering by position — section, then slide, then pin — meant adding a pin to an early
+ * slide renumbered everything after it, so a pin you had been calling 7 silently became 8.
+ * Creation order is stable against that: a new pin is always the highest number there is,
+ * wherever on the board it lands.
  */
-export function buildPinNumbers(board: { sections: { slides: { commentPins: { id: string }[] }[] }[] }): Map<string, number> {
+export function buildPinNumbers(board: {
+  sections: { slides: { commentPins: { id: string; createdAt?: string }[] }[] }[];
+}): Map<string, number> {
+  const all = board.sections.flatMap((section) =>
+    section.slides.flatMap((slide) => slide.commentPins)
+  );
+  all.sort((a, b) => (a.createdAt ?? '').localeCompare(b.createdAt ?? ''));
   const numbers = new Map<string, number>();
-  let n = 0;
-  for (const section of board.sections) {
-    for (const slide of section.slides) {
-      for (const pin of slide.commentPins) numbers.set(pin.id, ++n);
-    }
-  }
+  all.forEach((pin, i) => numbers.set(pin.id, i + 1));
   return numbers;
 }

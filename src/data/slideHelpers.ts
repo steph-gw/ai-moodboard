@@ -778,6 +778,7 @@ function ceremonySamplePins(): CommentPin[] {
   return [
     {
       id: 'pin-c1',
+      createdAt: '2026-05-02T09:12:00.000Z',
       x: 200,
       y: 140,
       comments: [
@@ -803,6 +804,7 @@ function ceremonySamplePins(): CommentPin[] {
     },
     {
       id: 'pin-c2',
+      createdAt: '2026-05-04T15:40:00.000Z',
       x: 560,
       y: 320,
       comments: [
@@ -820,6 +822,7 @@ function ceremonySamplePins(): CommentPin[] {
     },
     {
       id: 'pin-c3',
+      createdAt: '2026-05-06T11:05:00.000Z',
       x: 820,
       y: 260,
       comments: [

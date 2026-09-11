@@ -55,14 +55,16 @@ export function PinComposer({
 
   return (
     <div
-      className="pin-composer"
+      className="pin-composer thread-reply"
       style={{ left, top, width: WIDTH }}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
+      {/* Literally the drawer's reply box — same class, same behaviour. Two inputs that
+          do the same job should not look like two different things. */}
       <textarea
         ref={ref}
-        className="pin-composer-input"
+        className="thread-reply-input"
         rows={2}
         placeholder={role === 'client' ? 'Leave a comment…' : 'Add a comment…'}
         value={draft}
@@ -77,7 +79,7 @@ export function PinComposer({
       />
       {/* Same affordance as the drawer's reply box — Enter sends, and nothing else is
           needed. A button here was a second way to do the one thing this box does. */}
-      <span className="pin-composer-hint" aria-hidden>
+      <span className="thread-reply-hint" aria-hidden>
         <kbd>↵</kbd> to send
       </span>
     </div>

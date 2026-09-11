@@ -403,10 +403,18 @@ function buildPins(
     // rendering a pin that opens an empty drawer.
     if (!tops.length) continue;
 
+    // Who closed it, by name. The row stores a user id, which is no use on screen — and
+    // reading it only at resolve time meant it was blank for everyone but the resolver.
+    const resolvedById = str(thread[K.thread.resolvedBy]);
+    if (resolved && resolvedById && tops[0]) {
+      tops[0].resolvedBy = people.get(resolvedById)?.name || 'someone';
+    }
+
     const pin: CommentPin = {
       id: thread._id,
       x: num(thread[K.thread.x]),
       y: num(thread[K.thread.y]),
+      createdAt: str(thread['Created Date']),
       comments: tops,
     };
     const list = pinsBySlide.get(slideId);

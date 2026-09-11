@@ -111,7 +111,7 @@ function CommentRow({
   isReply?: boolean;
   isFirst?: boolean;
 }) {
-  const { currentUserId, resolveComment, editComment } = useBoard();
+  const { currentUserId, resolveComment, reopenComment, editComment } = useBoard();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.text);
   const isOwn = comment.authorId === currentUserId;
@@ -161,6 +161,22 @@ function CommentRow({
           )}
           {/* A resolved thread offers exactly one thing: reopening it. Edit and delete
               belong to a live conversation, so the menu goes away with the thread. */}
+          {/* Reopen rides on the comment's own row, next to the time, rather than on a
+              header of its own — that header was a line of gap above every resolved
+              thread for one button. */}
+          {canReopen && (
+            <button
+              type="button"
+              className="thread-reopen-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                reopenComment(pinId);
+              }}
+            >
+              <RotateCcw size={11} strokeWidth={1.7} />
+              Reopen
+            </button>
+          )}
           {isOwn && !comment.resolved && (
             <CommentActions
               pinId={pinId}
@@ -239,7 +255,7 @@ function Thread({
   /** The thread lives on a slide other than the one on screen. */
   isElsewhere: boolean;
 }) {
-  const { addComment, selectCommentPin, reopenComment, goToPin, role } = useBoard();
+  const { addComment, selectCommentPin, goToPin, role } = useBoard();
   const [draft, setDraft] = useState('');
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -275,24 +291,7 @@ function Thread({
         else selectCommentPin(pin.id);
       }}
     >
-      {/* No pin badge and no "section · slide" line: three lines of chrome above two
-          lines of comment, on every card, for a number and a location the click already
-          takes you to. Reopen is the only thing that earns the row. */}
-      <div className={`thread-card-head ${resolved ? '' : 'is-bare'}`}>
-        {resolved && (
-          <button
-            type="button"
-            className="thread-reopen-btn"
-            onClick={(e) => {
-              e.stopPropagation();
-              reopenComment(pin.id);
-            }}
-          >
-            <RotateCcw size={12} strokeWidth={1.7} />
-            Reopen
-          </button>
-        )}
-      </div>
+
       {hasComments ? (
         pin.comments.map((comment, i) => (
           <CommentRow
