@@ -3,6 +3,7 @@ import { useBoard } from '../context/BoardContext';
 import { requestFullscreen } from '../utils/fullscreen';
 import { formatEventDate } from '../utils/formatDate';
 import { useHost } from '../embed/HostProvider';
+import { TemplateMenu } from './TemplateMenu';
 
 export function TopNav() {
   const {
@@ -34,6 +35,10 @@ export function TopNav() {
         <span className="topnav-date">{formatEventDate(board.weddingDate)}</span>
       </div>
       <div className="topnav-right">
+        {/* Board-level, so it lives here rather than in the section bar — which does not
+            render at all on an empty board, which is exactly when someone wants to start
+            from a template. */}
+        <TemplateMenu />
         <SaveStatus isDirty={isDirty} state={saveState} onSave={saveNow} />
         <div className="viewer-stack">
           {board.viewers.map((v) =>

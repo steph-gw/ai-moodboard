@@ -292,6 +292,47 @@ export class BoardRepo {
     }
   }
 
+  /**
+   * A template the planner can reuse, holding a copy of this board.
+   *
+   * No Event is set: a template belongs to whoever made it, not to the wedding it happened
+   * to be built for. The name is the template's own — `Name` is otherwise unused on a
+   * moodboard, since the top bar shows the event's.
+   */
+  async createTemplate(name: string): Promise<string> {
+    return this.api.create(TYPE.moodboard, {
+      [K.moodboard.name]: name,
+      [K.moodboard.template]: true,
+    });
+  }
+
+  /**
+   * Templates this viewer may start from: their own and their team's, plus Gatherwise's.
+   *
+   * Privacy rules decide which of the planner-made ones come back — the query asks for all
+   * of them and the server returns the ones this person is allowed to see.
+   */
+  async listTemplates(): Promise<{ id: string; name: string; system: boolean }[]> {
+    const [mine, system] = await Promise.all([
+      this.api.list(TYPE.moodboard, [
+        { key: K.moodboard.template, constraint_type: 'equals', value: true },
+      ]),
+      this.api.list(TYPE.moodboard, [
+        { key: K.moodboard.systemTemplate, constraint_type: 'equals', value: true },
+      ]),
+    ]);
+    const byId = new Map<string, { id: string; name: string; system: boolean }>();
+    for (const row of system) {
+      byId.set(row._id, { id: row._id, name: str(row[K.moodboard.name]) || 'Untitled', system: true });
+    }
+    // A board flagged both ways is Gatherwise's; listing it twice would be the only harm.
+    for (const row of mine) {
+      if (byId.has(row._id)) continue;
+      byId.set(row._id, { id: row._id, name: str(row[K.moodboard.name]) || 'Untitled', system: false });
+    }
+    return [...byId.values()].sort((a, b) => a.name.localeCompare(b.name));
+  }
+
   async createImage(moodboardId: string, url: string): Promise<string> {
     return this.api.create(TYPE.image, {
       [K.image.moodboard]: moodboardId,

@@ -78,6 +78,12 @@ interface BoardContextValue {
   moveCommentPin: (pinId: string, x: number, y: number) => void;
   /** Brings a thread on another slide into view and selects its pin. */
   goToPin: (sectionId: string, slideId: string, pinId: string) => void;
+  /** Saves the board as a reusable template. Resolves with the template's id. */
+  saveAsTemplate: (name: string) => Promise<string | null>;
+  /** Forks a template into this board. Only offered while the board is empty. */
+  applyTemplate: (templateId: string) => Promise<void>;
+  listTemplates: () => Promise<{ id: string; name: string; system: boolean }[]>;
+  isCloning: boolean;
   /** The section whose editor should be open, and the way to ask for it. */
   editingSectionId: string | null;
   requestEditSection: (sectionId: string | null) => void;
@@ -818,6 +824,47 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       setSelectedCommentPinId(pinId);
     },
     []
+  );
+
+  const [isCloning, setIsCloning] = useState(false);
+
+  const saveAsTemplate = useCallback(
+    async (name: string) => {
+      if (!repo || !identity) return null;
+      setIsCloning(true);
+      try {
+        const templateId = await repo.createTemplate(name.trim() || 'Untitled template');
+        await repo.cloneInto(identity.moodboardId, templateId);
+        return templateId;
+      } catch (err) {
+        onError(err instanceof Error ? err.message : 'Could not save that template.');
+        return null;
+      } finally {
+        setIsCloning(false);
+      }
+    },
+    [repo, identity, onError]
+  );
+
+  const applyTemplate = useCallback(
+    async (templateId: string) => {
+      if (!repo || !identity) return;
+      setIsCloning(true);
+      try {
+        await repo.cloneInto(templateId, identity.moodboardId);
+        await loadBoardRef.current?.();
+      } catch (err) {
+        onError(err instanceof Error ? err.message : 'Could not apply that template.');
+      } finally {
+        setIsCloning(false);
+      }
+    },
+    [repo, identity, onError]
+  );
+
+  const listTemplates = useCallback(
+    () => (repo ? repo.listTemplates() : Promise.resolve([])),
+    [repo]
   );
 
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);
@@ -1909,6 +1956,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         placeCommentPin,
         moveCommentPin,
         goToPin,
+        saveAsTemplate,
+        applyTemplate,
+        listTemplates,
+        isCloning,
         editingSectionId,
         requestEditSection,
         voteImage,
