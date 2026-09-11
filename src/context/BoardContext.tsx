@@ -480,7 +480,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    * Comments and votes sit outside both. They are how a client takes part, and a locked
    * slide is closed for redesign, not for discussion.
    */
-  const canManage = !readOnly;
+  const canManage = !readOnly && role === 'planner';
   const canEdit = canManage && !lockedSlideIds.has(activeSlideId);
   const canEditRef = useRef(canEdit);
   canEditRef.current = canEdit;
