@@ -10,6 +10,16 @@ Event` has `Template?` and `System Template?` — and moodboards now follow the 
 |---|---|---|---|
 | `Template?` | yes/no | `template__boolean` | Saved by a planner or their team, reusable inside their business |
 | `System template?` | yes/no | `system_template__boolean` | Authored by Gatherwise, offered to everyone |
+| `Business id` | text | `business_id_text` | The planner business a saved template belongs to |
+
+`Business id` is a text unique id rather than a reference to the Business type, which is
+not on the Data API and should not have to be just so a board can scope a list. The element
+takes it as `business_id`, bound to `Current User's Business's unique id`.
+
+The template list is scoped on it **explicitly**, not left to privacy rules. The moodboard
+types are currently readable by anyone logged in, so an unscoped query would offer a planner
+every other business's templates — and every one of those would carry that business's
+client photographs across on the first fork.
 
 `Name` doubles as the template's name — a moodboard's own name is otherwise unused, since
 the top bar shows the event's. No `Template name` field was added for that reason.

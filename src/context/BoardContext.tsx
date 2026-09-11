@@ -833,7 +833,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       if (!repo || !identity) return null;
       setIsCloning(true);
       try {
-        const templateId = await repo.createTemplate(name.trim() || 'Untitled template');
+        const templateId = await repo.createTemplate(
+          name.trim() || 'Untitled template',
+          identity.businessId ?? ''
+        );
         await repo.cloneInto(identity.moodboardId, templateId);
         return templateId;
       } catch (err) {
@@ -863,8 +866,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   );
 
   const listTemplates = useCallback(
-    () => (repo ? repo.listTemplates() : Promise.resolve([])),
-    [repo]
+    () => (repo ? repo.listTemplates(identity?.businessId ?? '') : Promise.resolve([])),
+    [repo, identity]
   );
 
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null);

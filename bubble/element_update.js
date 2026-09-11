@@ -12,6 +12,7 @@ function(instance, properties, context) {
   var props = {
     moodboardId: properties.moodboard_id || '',
     templateMoodboardId: properties.template_moodboard_id || '',
+    businessId: properties.business_id || '',
     eventName: properties.event_name || '',
     eventDate: properties.event_date
       ? new Date(properties.event_date).toISOString().slice(0, 10)

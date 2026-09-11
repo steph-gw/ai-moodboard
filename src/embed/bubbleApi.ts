@@ -23,6 +23,13 @@ export const K = {
     template: 'template__boolean',
     /** Authored by Gatherwise and offered to everyone. */
     systemTemplate: 'system_template__boolean',
+    /**
+     * The planner business a template belongs to, as a unique id.
+     *
+     * A text id rather than a reference to the Business type, which isn't on the Data API
+     * and shouldn't have to be just so a board can scope a list.
+     */
+    businessId: 'business_id_text',
   },
   section: {
     moodboard: 'moodboard_custom_moodboard',

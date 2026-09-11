@@ -67,6 +67,7 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
     onLoaded,
     moodboardId,
     templateMoodboardId,
+    businessId,
     collaboratorIds,
     collaboratorNames,
     collaboratorPhotos,
@@ -90,6 +91,7 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
             eventName: eventName ?? '',
             eventDate: eventDate ?? '',
             templateMoodboardId: templateMoodboardId || undefined,
+            businessId: businessId || undefined,
             people: parsePeople(collaboratorIds, collaboratorNames, collaboratorPhotos),
           }
         : null,
@@ -97,6 +99,7 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
     [
       moodboardId,
       templateMoodboardId,
+      businessId,
       eventName,
       eventDate,
       (collaboratorIds ?? []).join('\u0000'),

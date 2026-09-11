@@ -91,7 +91,7 @@ export function TemplateMenu() {
                   setMode('start');
                 }}
               >
-                Start from a template…
+                Start from a template
               </button>
             )}
             <button
@@ -103,7 +103,7 @@ export function TemplateMenu() {
                 setMode('save');
               }}
             >
-              Save this board as a template…
+              Save as template
             </button>
           </div>
         )}
@@ -137,7 +137,11 @@ export function TemplateMenu() {
                         Copies the sections, slides, canvas, images and palette. Comments,
                         votes and approvals are left behind.
                       </p>
+                      <label className="modal-label" htmlFor="template-name">
+                        Template name <span className="modal-req">*</span>
+                      </label>
                       <input
+                        id="template-name"
                         className="modal-input"
                         placeholder="Garden wedding, Modern minimal…"
                         value={name}
@@ -154,7 +158,7 @@ export function TemplateMenu() {
                   <p className="modal-copy">Loading templates…</p>
                 ) : templates.length === 0 ? (
                   <p className="modal-copy">
-                    No templates yet. Build a board and save it as one.
+                    No templates yet. Build a board, then save it as one.
                   </p>
                 ) : (
                   <ul className="template-list">

@@ -35,10 +35,6 @@ export function TopNav() {
         <span className="topnav-date">{formatEventDate(board.weddingDate)}</span>
       </div>
       <div className="topnav-right">
-        {/* Board-level, so it lives here rather than in the section bar — which does not
-            render at all on an empty board, which is exactly when someone wants to start
-            from a template. */}
-        <TemplateMenu />
         <SaveStatus isDirty={isDirty} state={saveState} onSave={saveNow} />
         <div className="viewer-stack">
           {board.viewers.map((v) =>
@@ -67,6 +63,10 @@ export function TopNav() {
         >
           <MessageSquare size={13} strokeWidth={1.5} />
         </button>
+        {/* Board-level, so it lives up here rather than in the section bar — which does
+            not render at all on an empty board, which is exactly when someone wants to
+            start from a template. Sits with Present and Export, the other board actions. */}
+        <TemplateMenu />
         {isPlanner && features.present && (
           <>
             <button

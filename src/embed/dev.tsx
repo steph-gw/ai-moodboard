@@ -53,6 +53,7 @@ const id = GWMoodboard.mount(el, {
   role,
   logoUrl: './gatherwise-logo.png',
   moodboardId: DEV_MOODBOARD_ID,
+  businessId: 'biz-dev',
   // Same shape the Bubble element sends: three lists that line up by index.
   collaboratorIds: ['u-planner', 'u-client'],
   collaboratorNames: ['Stephanie Chang', 'Alexander Lee'],

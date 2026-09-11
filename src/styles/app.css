@@ -3521,3 +3521,11 @@
   text-transform: uppercase;
   color: var(--gold-active);
 }
+
+/* The save dialog is copy, then a labelled field — it needs air between the two, or the
+   explanation reads as part of the label. */
+.modal-body .modal-copy + .modal-label {
+  display: block;
+  margin-top: 18px;
+  margin-bottom: 6px;
+}

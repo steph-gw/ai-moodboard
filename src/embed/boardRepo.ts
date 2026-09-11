@@ -37,6 +37,8 @@ export interface BoardIdentity {
   people?: Map<string, Viewer>;
   /** Forked into this board on first open, when this board is still empty. */
   templateMoodboardId?: string;
+  /** Scopes which saved templates this viewer may start from. */
+  businessId?: string;
   /** Shown in the top nav. Comes from the host, not the API — the Event type isn't exposed. */
   eventName: string;
   eventDate: string;
@@ -299,24 +301,30 @@ export class BoardRepo {
    * to be built for. The name is the template's own — `Name` is otherwise unused on a
    * moodboard, since the top bar shows the event's.
    */
-  async createTemplate(name: string): Promise<string> {
+  async createTemplate(name: string, businessId: string): Promise<string> {
     return this.api.create(TYPE.moodboard, {
       [K.moodboard.name]: name,
       [K.moodboard.template]: true,
+      ...(businessId ? { [K.moodboard.businessId]: businessId } : {}),
     });
   }
 
   /**
-   * Templates this viewer may start from: their own and their team's, plus Gatherwise's.
+   * Templates this viewer may start from: their own business's, plus Gatherwise's.
    *
-   * Privacy rules decide which of the planner-made ones come back — the query asks for all
-   * of them and the server returns the ones this person is allowed to see.
+   * Scoped on the business explicitly rather than left to privacy rules. The moodboard
+   * types are currently readable by anyone logged in, so an unscoped query would offer a
+   * planner every other business's templates — and each one would carry their client's
+   * photographs across.
    */
-  async listTemplates(): Promise<{ id: string; name: string; system: boolean }[]> {
+  async listTemplates(businessId: string): Promise<{ id: string; name: string; system: boolean }[]> {
     const [mine, system] = await Promise.all([
-      this.api.list(TYPE.moodboard, [
-        { key: K.moodboard.template, constraint_type: 'equals', value: true },
-      ]),
+      businessId
+        ? this.api.list(TYPE.moodboard, [
+            { key: K.moodboard.template, constraint_type: 'equals', value: true },
+            { key: K.moodboard.businessId, constraint_type: 'equals', value: businessId },
+          ])
+        : Promise.resolve([]),
       this.api.list(TYPE.moodboard, [
         { key: K.moodboard.systemTemplate, constraint_type: 'equals', value: true },
       ]),

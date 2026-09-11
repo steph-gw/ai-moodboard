@@ -56,6 +56,13 @@ export interface GWMoodboardProps {
    */
   templateMoodboardId?: string;
 
+  /**
+   * The planner business this viewer belongs to. Scopes the template list — without it
+   * every template in the app is a candidate, including other businesses'.
+   * Empty for a client, who never sees templates anyway.
+   */
+  businessId?: string;
+
   currentUserId: string;
   currentUserName: string;
   /** Optional. Derived from currentUserName when blank. */
