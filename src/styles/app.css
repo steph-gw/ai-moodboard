@@ -1551,6 +1551,19 @@
   transition: border-color 0.15s;
   touch-action: none;
   user-select: none;
+  /* Anything you can pick up should say so before you press. The resize handles set
+     their own cursors and win, because they are on top. */
+  cursor: grab;
+}
+
+.canvas-element:active {
+  cursor: grabbing;
+}
+
+/* Present mode and the export sheet: nothing here moves. */
+.slide-canvas-wrap.is-static .canvas-element,
+.slide-canvas-wrap.is-static .canvas-element:active {
+  cursor: default;
 }
 
 .canvas-element.selected {
@@ -3377,6 +3390,44 @@
   box-shadow:
     0 0 0 6px var(--gold-light),
     0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+/* Corner marks, so a selected slide reads the way a selected element does rather than
+   as a slide that merely happens to have a border. They are indicators, not handles —
+   the artboard is a fixed 960×540 and nothing here resizes. */
+.slide-artboard.is-selected::before,
+.slide-artboard.is-selected::after,
+.slide-select-corner {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  background: var(--white);
+  border: 1.5px solid var(--gold);
+  border-radius: 2px;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.slide-artboard.is-selected::before {
+  content: '';
+  top: -6px;
+  left: -6px;
+}
+
+.slide-artboard.is-selected::after {
+  content: '';
+  top: -6px;
+  right: -6px;
+}
+
+.slide-select-corner.is-sw {
+  bottom: -6px;
+  left: -6px;
+}
+
+.slide-select-corner.is-se {
+  bottom: -6px;
+  right: -6px;
 }
 
 .canvas-bar-mid::-webkit-scrollbar {

@@ -186,7 +186,9 @@ export function SlideCanvas({
 
   return (
     <div
-      className={`slide-canvas-wrap ${fullWidth ? 'slide-canvas-fullwidth' : ''}`}
+      className={`slide-canvas-wrap ${fullWidth ? 'slide-canvas-fullwidth' : ''} ${
+        readOnly ? 'is-static' : ''
+      }`}
       ref={containerRef}
       // Selecting the slide by clicking bare artboard only works while there is bare
       // artboard left. On a full collage every pixel belongs to an element, so the slide —
@@ -220,6 +222,12 @@ export function SlideCanvas({
             readOnly={readOnly}
           />
         ))}
+        {isSlideSelected && !readOnly && (
+          <>
+            <span className="slide-select-corner is-sw" aria-hidden />
+            <span className="slide-select-corner is-se" aria-hidden />
+          </>
+        )}
         {marquee && (
           <div
             className="marquee"
