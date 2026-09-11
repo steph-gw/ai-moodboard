@@ -3411,6 +3411,14 @@
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
 }
 
+/* The hint is positioned against .thread-reply, which in the drawer has no padding — here
+   the composer adds 8px of its own, so the shared offsets left the key sitting right on
+   the textarea's border. Add the composer's padding back, plus room to breathe. */
+.pin-composer .thread-reply-hint {
+  right: 19px;
+  bottom: 18px;
+}
+
 /* ── Drawer: a thread's address, and reopening it ── */
 /* Sits with the timestamp on the comment's own row, and is as quiet as the rest of a
    finished thread until you go for it. */
