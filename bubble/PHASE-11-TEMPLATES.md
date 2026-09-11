@@ -10,11 +10,24 @@ Event` has `Template?` and `System Template?` — and moodboards now follow the 
 |---|---|---|---|
 | `Template?` | yes/no | `template__boolean` | Saved by a planner or their team, reusable inside their business |
 | `System template?` | yes/no | `system_template__boolean` | Authored by Gatherwise, offered to everyone |
-| `Business id` | text | `business_id_text` | The planner business a saved template belongs to |
+| `Business` | Event Planner Business | `business_custom_business` | The planner business a saved template belongs to |
 
-`Business id` is a text unique id rather than a reference to the Business type, which is
-not on the Data API and should not have to be just so a board can scope a list. The element
-takes it as `business_id`, bound to `Current User's Business's unique id`.
+`Business` is a real reference, not a denormalised text id. A first pass used text on the
+reasoning that Event Planner Business is not exposed on the Data API — that was wrong. The
+API hands a reference back as the target's unique id and accepts one on write whether or
+not the target type is exposed, so the text field bought nothing and cost Bubble the
+ability to follow the link in its own expressions and searches.
+
+The element takes it as `business_id`, bound to `Current User's Business's unique id` — an
+id is what a reference field wants over the API.
+
+**The `Moodboard templates` list on `Event Planner Business` is the other direction of the
+same link, and the bundle cannot maintain it**: it is a field on Business, and Business is
+not on the Data API, so the plugin can neither read nor write it. Treat `Moodboard.Business`
+as the source of truth and let Bubble-side UI search on it
+(`Search for Moodboards: Business = Current User's Business, Template? = yes`). If the list
+field is wanted for convenience, a database trigger on Moodboard has to keep it in sync —
+it cannot be kept current from the board.
 
 The template list is scoped on it **explicitly**, not left to privacy rules. The moodboard
 types are currently readable by anyone logged in, so an unscoped query would offer a planner

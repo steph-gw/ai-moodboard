@@ -305,7 +305,7 @@ export class BoardRepo {
     return this.api.create(TYPE.moodboard, {
       [K.moodboard.name]: name,
       [K.moodboard.template]: true,
-      ...(businessId ? { [K.moodboard.businessId]: businessId } : {}),
+      ...(businessId ? { [K.moodboard.business]: businessId } : {}),
     });
   }
 
@@ -322,7 +322,7 @@ export class BoardRepo {
       businessId
         ? this.api.list(TYPE.moodboard, [
             { key: K.moodboard.template, constraint_type: 'equals', value: true },
-            { key: K.moodboard.businessId, constraint_type: 'equals', value: businessId },
+            { key: K.moodboard.business, constraint_type: 'equals', value: businessId },
           ])
         : Promise.resolve([]),
       this.api.list(TYPE.moodboard, [

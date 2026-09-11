@@ -24,12 +24,14 @@ export const K = {
     /** Authored by Gatherwise and offered to everyone. */
     systemTemplate: 'system_template__boolean',
     /**
-     * The planner business a template belongs to, as a unique id.
+     * The planner business a template belongs to.
      *
-     * A text id rather than a reference to the Business type, which isn't on the Data API
-     * and shouldn't have to be just so a board can scope a list.
+     * A real reference, not a text id: the Data API hands a reference back as the target's
+     * unique id and accepts one on write whether or not that type is itself exposed, so
+     * there is nothing to gain from denormalising it — and a reference is what Bubble's own
+     * expressions and searches can follow.
      */
-    businessId: 'business_id_text',
+    business: 'business_custom_business', // Event Planner Business is internally `business`
   },
   section: {
     moodboard: 'moodboard_custom_moodboard',
