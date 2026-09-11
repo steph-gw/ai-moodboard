@@ -3,11 +3,9 @@
 // every time any bound property changes.
 
 function (instance, properties, context) {
-  if (!instance.data.id) return; // initialize bailed out; nothing to update
-
   // Sent whole every tick rather than diffed — mount() shallow-merges and re-renders,
   // and React reconciles. Diffing here would only move the bookkeeping, not save work.
-  window.GWMoodboard.update(instance.data.id, {
+  var props = {
     moodboardId: properties.moodboard_id || '',
     eventName: properties.event_name || '',
     eventDate: properties.event_date
@@ -37,5 +35,13 @@ function (instance, properties, context) {
       imageVoting: !!properties.enable_voting,
       comments: !!properties.enable_comments,
     },
-  });
+  };
+
+  // The bundle may still be downloading — initialize waits for it and applies this then.
+  if (!instance.data.id) {
+    instance.data.pending = props;
+    return;
+  }
+
+  window.GWMoodboard.update(instance.data.id, props);
 }

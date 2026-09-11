@@ -147,6 +147,39 @@ The Headers block loads only the board's own two families. The seven optional on
 (Inter, Roboto, Open Sans, Montserrat, Poppins, Lato, Lora) are fetched by the bundle the
 first time a board uses one, so a board that uses none costs nothing.
 
+### Open: Bubble never calls the element's code
+
+On `test_moodboard` the element renders — right plugin id, right element id, visible,
+1470x442 — and then nothing happens. No board, no error, no console output.
+
+Ruled out, each checked on the live page:
+
+| Checked | Result |
+|---|---|
+| Bundle reaches the page | `window.GWMoodboard` present, correct build stamp |
+| Bundle works there | mounting by hand into a scratch div rendered the whole app |
+| jQuery | present (`use_jquery: true`) |
+| Element code deployed | found in the app's `static.js`, current text |
+| Code compiles | `eval` of `plugin_elements.AAC.code.initialize.fn` returns a function |
+| Element id matches | instance uses `AAC`; `AAC` is the defined element |
+| A stale instance | a freshly dropped second instance behaved identically |
+| `initialize` running at all | a `console.log` on its first line never printed |
+| Errors | none, in normal or `?debug_mode=true` |
+
+So the element definition, its code and the bundle are all correct and present, and
+Bubble's runtime simply does not invoke `initialize` or `update` for either instance.
+That is on the Bubble side of the boundary, and worth a forum or support question with
+the table above.
+
+Two things to try first, both needing the account rather than the page:
+
+1. **Plugins tab** — confirm GW Moodboard is installed and enabled for this app, and
+   toggle it off and on. A plugin linked only as a "test app" from the plugin editor is
+   not the same as installed.
+2. **Publish a version** of the plugin (Versions tab) and switch the app to it instead of
+   testing mode. The app is currently on `_current`, and Bubble warns that testing-mode
+   plugins take a different, uncached path.
+
 ### One thing still unverified
 
 Bubble derives each property key from the field *name* (lowercased, non-alphanumerics
