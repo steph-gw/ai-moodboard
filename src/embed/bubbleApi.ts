@@ -1,9 +1,11 @@
 /**
  * Bubble Data API client.
  *
- * Every field key below was verified by writing to a live record — Bubble derives them
- * from the field's display name and they are not guessable with confidence. See
- * bubble/PHASE-1-DATA-MODEL.md, Appendix B.
+ * Every field key below is checked against `GET /version-test/api/1.1/meta`, which returns
+ * the real schema — id, display name and type for every exposed field. Bubble derives the
+ * ids from display names in ways that are not guessable (a `?` leaves a double underscore;
+ * "1 Project / Event" is internally `wedding`), so read them there rather than inferring.
+ * See bubble/PHASE-1-DATA-MODEL.md, Appendix B.
  *
  * Two rules worth knowing when adding to this file:
  *  - Empty fields are omitted from responses entirely, never returned as null. Treat every
@@ -30,7 +32,7 @@ export const K = {
     lockedSlides: 'locked_slides_list_custom_moodboard_slide',
   },
   slide: {
-    section: 'section_custom_moodboard_section',
+    section: 'moodboard_section_custom_moodboard_section',
     name: 'slide_name_text',
     order: 'order_number',
     elementsJson: 'elements_json_text',
@@ -122,7 +124,10 @@ export class BubbleApi {
   private readonly authToken?: string;
 
   constructor(options: BubbleApiOptions = {}) {
-    this.base = options.base ?? resolveApiBase();
+    // `||`, not `??`: the host sends an empty string when it has nothing to override with,
+    // and `??` treats '' as a real value — which points every request at the live app
+    // instead of /version-test, where the records it is asking for do not exist.
+    this.base = options.base || resolveApiBase();
     this.authToken = options.authToken;
   }
 

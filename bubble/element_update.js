@@ -25,10 +25,11 @@ function(instance, properties, context) {
     logoUrl: properties.logo_url || '',
     height: properties.height_css || '100%',
 
-    // Left blank on purpose: same-origin cookies authenticate the Data API, and the
-    // base URL is derived from the page's own /version-test prefix.
-    apiBase: properties.api_base || '',
-    authToken: properties.auth_token || '',
+    // Only sent when actually set. Left out, the bundle derives the base from the page's
+    // own /version-test prefix; sent as an empty string, older bundles took it literally
+    // and talked to the live app instead.
+    ...(properties.api_base ? { apiBase: properties.api_base } : {}),
+    ...(properties.auth_token ? { authToken: properties.auth_token } : {}),
 
     features: {
       pinterest: !!properties.show_pinterest,

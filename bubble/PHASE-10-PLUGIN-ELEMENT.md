@@ -146,6 +146,33 @@ The Headers block loads only the board's own two families. The seven optional on
 (Inter, Roboto, Open Sans, Montserrat, Poppins, Lato, Lora) are fetched by the bundle the
 first time a board uses one, so a board that uses none costs nothing.
 
+### Solved: a field's **Name** is the key, and nothing warns you when it isn't
+
+The fields, states and events had been created with human-readable Names — `Moodboard id`,
+`Active section id`, `Board loaded` — and captions to match. Bubble's Name column *is* the
+runtime key: the element code reads `properties.moodboard_id` and calls
+`instance.publishState('active_section_id')`, and none of those matched. The board fell
+back to the sample data on every page, with correct values sitting right there in the
+debugger's property list.
+
+States and events at least say so — the console carries one
+`State active_section_id is not defined in the plugin` per publish. **Fields say nothing
+at all**: an unmatched key is simply `undefined`, which every `|| ''` in `update` turns
+into a blank. That asymmetry is what made this look like a data problem for so long.
+
+So: Name is snake_case and matches the code; Caption is the human-readable label the
+property editor shows. Renaming a field does not break a page's existing binding — the
+page stores the field by internal id — so this is safe to fix after the fact.
+
+### Solved: read field keys from `/api/1.1/meta`, don't guess them
+
+`GET /version-test/api/1.1/meta` returns the whole exposed schema — for every type, each
+field's API `id`, its display name and its type. `K.slide.section` had been written as
+`section_custom_moodboard_section` when the field is actually named *Moodboard section*,
+so the real key is `moodboard_section_custom_moodboard_section`; slide reads 404'd and
+slide writes 400'd. The meta endpoint answers this in one request and is the right place
+to check any new key against.
+
 ### Solved: `function (` with a space is silently ignored
 
 The element rendered an empty div and neither `initialize` nor `update` ever ran — no
