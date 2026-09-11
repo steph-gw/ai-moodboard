@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { LayoutTemplate, Sparkles } from 'lucide-react';
+import { ChevronDown, LayoutTemplate, Sparkles } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { useHost } from '../embed/HostProvider';
 
@@ -94,6 +94,13 @@ export function TemplateMenu() {
         >
           <LayoutTemplate size={13} strokeWidth={1.5} />
           <span className="btn-label">Templates</span>
+          {/* Points up while the menu is open, so the button says what it is and what it
+              is doing without needing the menu to be visible to work it out. */}
+          <ChevronDown
+            size={12}
+            strokeWidth={1.6}
+            className={`template-caret ${open ? 'is-open' : ''}`}
+          />
         </button>
         {open && (
           <div className="template-menu" role="menu">

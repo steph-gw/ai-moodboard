@@ -3533,17 +3533,48 @@
   position: relative;
 }
 
+.template-caret {
+  transition: transform 0.15s;
+}
+
+.template-caret.is-open {
+  transform: rotate(180deg);
+}
+
 .template-menu {
   position: absolute;
-  top: calc(100% + 5px);
-  left: 0;
+  /* Right-aligned: the button sits near the right-hand end of the bar, and a menu hanging
+     left from it would run off the window on a narrow board. */
+  top: calc(100% + 8px);
+  right: 0;
   z-index: 9300;
-  min-width: 226px;
+  min-width: 186px;
   padding: 4px;
   background: var(--white);
   border: 1px solid var(--border-strong);
   border-radius: 8px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.14);
+}
+
+/* Caret pointing back up at the button it belongs to. Two triangles: the outer one is the
+   border, the inner one covers it with the menu's own background. */
+.template-menu::before,
+.template-menu::after {
+  content: '';
+  position: absolute;
+  right: 16px;
+  border: 6px solid transparent;
+  border-top-width: 0;
+}
+
+.template-menu::before {
+  bottom: 100%;
+  border-bottom-color: var(--border-strong);
+}
+
+.template-menu::after {
+  bottom: calc(100% - 1px);
+  border-bottom-color: var(--white);
 }
 
 .template-menu-item {
@@ -3629,4 +3660,23 @@
   margin-top: 8px;
   font-size: 12px;
   color: var(--text-secondary);
+}
+
+/* The top bar has to out-stack the section tabs below it, or a tooltip dropping out of a
+   top-bar button is painted over by the tabs the moment it crosses the boundary. */
+.topnav {
+  z-index: 20;
+}
+
+/* A visible focus ring that is ours. Without one the browser paints its own — a heavy
+   dashed box in some engines — around whatever was last clicked. Keyboard users still get
+   a ring; a mouse click does not leave one behind. */
+.gw-mb button:focus {
+  outline: none;
+}
+
+.gw-mb button:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: 6px;
 }

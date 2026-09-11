@@ -414,7 +414,8 @@ export class BoardRepo {
     if (patch.name !== undefined) fields[K.section.name] = patch.name;
     if (patch.icon !== undefined) fields[K.section.icon] = patch.icon;
     if (patch.visionBrief !== undefined) fields[K.section.visionBrief] = patch.visionBrief;
-    if (patch.status !== undefined) fields[K.section.status] = patch.status;
+    // Same option-set rule as votes: the display text, not the internal key.
+    if (patch.status !== undefined) fields[K.section.status] = writeOption(patch.status);
     if (patch.approvedDate !== undefined) fields[K.section.approvedDate] = patch.approvedDate;
     if (Object.keys(fields).length) await this.api.patch(TYPE.section, sectionId, fields);
   }
@@ -470,12 +471,12 @@ export class BoardRepo {
   async castVote(imageId: string, vote: ImageVote): Promise<string> {
     return this.api.create(TYPE.vote, {
       [K.vote.image]: imageId,
-      [K.vote.vote]: vote,
+      [K.vote.vote]: writeOption(vote),
     });
   }
 
   async changeVote(voteRowId: string, vote: ImageVote): Promise<void> {
-    await this.api.patch(TYPE.vote, voteRowId, { [K.vote.vote]: vote });
+    await this.api.patch(TYPE.vote, voteRowId, { [K.vote.vote]: writeOption(vote) });
   }
 
   /** Clearing a vote removes the row: "no opinion" and "never voted" are the same thing. */
@@ -632,6 +633,19 @@ function toComment(
 function readVote(value: unknown): ImageVote | undefined {
   const v = str(value).toLowerCase();
   return v === 'up' || v === 'down' ? v : undefined;
+}
+
+/**
+ * An option set is written by its **display** text, not by the lowercase key the app uses
+ * internally. Sending 'up' is rejected outright:
+ *
+ *   INVALID_DATA — could not parse this as a Moodboard Vote OS
+ *
+ * and the write path answers a failed write by reloading the board from the server, so
+ * every thumbs-up visibly reloaded the whole moodboard. Reads still accept either case.
+ */
+function writeOption(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function num(value: unknown): number {
