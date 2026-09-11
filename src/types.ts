@@ -76,9 +76,16 @@ export interface TextElement extends CanvasElementBase {
   fontFamily: TextFontFamily;
   color: string;
   align: 'left' | 'center' | 'right';
+  /** Multiplier, not px, so it holds when the font size changes. Default DEFAULT_LINE_HEIGHT. */
+  lineHeight?: number;
   bold?: boolean;
   italic?: boolean;
 }
+
+/** What text renders at when nothing has been chosen. */
+export const DEFAULT_LINE_HEIGHT = 1.3;
+export const MIN_LINE_HEIGHT = 0.8;
+export const MAX_LINE_HEIGHT = 3;
 
 /** Straight line, or a closed shape drawn to fill its box. */
 export type ShapeKind = 'line' | 'rect' | 'ellipse' | 'triangle' | 'polygon';

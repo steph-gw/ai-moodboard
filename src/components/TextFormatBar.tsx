@@ -1,8 +1,9 @@
-import { Bold, Italic, Minus, Plus } from 'lucide-react';
+import { Bold, Italic, Minus, Plus, AlignVerticalSpaceAround } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { ColorField } from './ColorField';
 import { loadFont } from '../utils/loadFont';
 import type { TextElement } from '../types';
+import { DEFAULT_LINE_HEIGHT, MAX_LINE_HEIGHT, MIN_LINE_HEIGHT } from '../types';
 import { TEXT_FONT_OPTIONS } from '../utils/textFonts';
 
 /**
@@ -101,6 +102,30 @@ export function TextFormatControls({
         >
           <Plus size={12} strokeWidth={2} />
         </button>
+      </div>
+
+      <span className="text-format-divider" />
+
+      {/* Beside the size, because line height is only ever read in relation to it. Stored
+          as a multiplier so it survives a size change instead of needing re-setting. */}
+      <div className="text-format-size" data-tooltip="Line height">
+        <AlignVerticalSpaceAround size={12} strokeWidth={1.7} className="text-format-lh-icon" />
+        <input
+          type="number"
+          className="text-format-size-input"
+          value={text.lineHeight ?? DEFAULT_LINE_HEIGHT}
+          min={MIN_LINE_HEIGHT}
+          max={MAX_LINE_HEIGHT}
+          step={0.1}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            if (Number.isNaN(value)) return;
+            patch({
+              lineHeight: Math.min(MAX_LINE_HEIGHT, Math.max(MIN_LINE_HEIGHT, value)),
+            });
+          }}
+          aria-label="Line height"
+        />
       </div>
 
       <span className="text-format-divider" />

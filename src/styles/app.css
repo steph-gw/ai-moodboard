@@ -364,6 +364,10 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
+  /* Narrow windows scroll this group rather than crushing the controls inside it. The
+     popovers it opens are portalled out, so scrolling here cannot clip them. */
+  overflow-x: auto;
+  scrollbar-width: none;
   /* Takes the space between the section name and the buttons and centres itself in it,
      rather than being pinned to the row's true centre — which would overlap both of them
      as soon as the window narrows. */
@@ -1101,6 +1105,14 @@
   border-radius: 6px;
   overflow: hidden;
   background: var(--white);
+  /* A number field squashed to nothing is worse than a row that scrolls: these hold their
+     width and the bar gives instead. */
+  flex: none;
+}
+
+.text-format-lh-icon {
+  margin-left: 7px;
+  color: var(--text-muted);
 }
 
 .text-format-size-btn {
@@ -3355,9 +3367,18 @@
   background: var(--surface-2);
 }
 
-/* A selected slide gets the same outline an element does — otherwise the background
-   control appears with nothing on screen saying what it is about to act on. */
+/* A selected slide gets the same treatment an element does — otherwise the background
+   control appears with nothing on screen saying what it is about to act on. Ring plus a
+   tinted halo, because a hairline against a white artboard on a cream page is exactly the
+   kind of selection people miss. */
 .slide-artboard.is-selected {
   outline: 2px solid var(--gold);
-  outline-offset: 3px;
+  outline-offset: 2px;
+  box-shadow:
+    0 0 0 6px var(--gold-light),
+    0 4px 24px rgba(0, 0, 0, 0.06);
+}
+
+.canvas-bar-mid::-webkit-scrollbar {
+  display: none;
 }

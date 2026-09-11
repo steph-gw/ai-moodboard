@@ -1,4 +1,7 @@
 import {
+  DEFAULT_LINE_HEIGHT,
+  MAX_LINE_HEIGHT,
+  MIN_LINE_HEIGHT,
   SLIDE_HEIGHT,
   SLIDE_WIDTH,
   type CanvasElement,
@@ -105,6 +108,11 @@ function coerceElement(item: unknown, knownImageIds: ReadonlySet<string>): Canva
       type: 'text',
       content: typeof o.content === 'string' ? o.content : '',
       fontSize: clamp(num(o.fontSize, 28), 8, 200),
+      // Absent on anything written before line height existed; the renderer's default
+      // then applies, so old boards keep looking exactly as they did.
+      ...(o.lineHeight === undefined
+        ? {}
+        : { lineHeight: clamp(num(o.lineHeight, DEFAULT_LINE_HEIGHT), MIN_LINE_HEIGHT, MAX_LINE_HEIGHT) }),
       fontFamily: FONTS.includes(o.fontFamily as TextFontFamily)
         ? (o.fontFamily as TextFontFamily)
         : 'sans',

@@ -4,7 +4,7 @@ import { useBoard } from '../context/BoardContext';
 import { DraggableBox } from './DraggableBox';
 import { ShapeView } from './ShapeView';
 import type { CanvasElement, ImageElement, ShapeElement, TextElement } from '../types';
-import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
+import { SLIDE_HEIGHT, SLIDE_WIDTH, DEFAULT_LINE_HEIGHT } from '../types';
 import { textFontCss } from '../utils/textFonts';
 import { ElementContextMenu } from './ElementContextMenu';
 
@@ -244,6 +244,7 @@ function TextElementView({
         suppressContentEditableWarning
         style={{
           fontSize: element.fontSize * scale,
+          lineHeight: element.lineHeight ?? DEFAULT_LINE_HEIGHT,
           fontFamily: textFontCss(element.fontFamily),
           fontWeight: element.bold ? 700 : 400,
           fontStyle: element.italic ? 'italic' : 'normal',

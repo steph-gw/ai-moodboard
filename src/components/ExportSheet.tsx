@@ -1,7 +1,7 @@
 import { createPortal } from 'react-dom';
 import { useBoard } from '../context/BoardContext';
 import type { CanvasElement } from '../types';
-import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
+import { DEFAULT_LINE_HEIGHT, SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 import { textFontCss } from '../utils/textFonts';
 import { ShapeView } from './ShapeView';
 
@@ -48,6 +48,7 @@ function StaticElement({
       style={{
         ...style,
         fontSize: element.fontSize,
+        lineHeight: element.lineHeight ?? DEFAULT_LINE_HEIGHT,
         fontFamily: textFontCss(element.fontFamily),
         fontWeight: element.bold ? 700 : 400,
         fontStyle: element.italic ? 'italic' : 'normal',
