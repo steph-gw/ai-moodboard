@@ -122,14 +122,19 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
     deleteSlide,
     duplicateSlide,
     lockedSlideIds,
+    unlockedSlideIds,
   } = useBoard();
 
   const section = board.sections.find((s) => s.id === activeSectionId);
   const slide = section?.slides.find((s) => s.id === slideId);
   const isActive = activeSlideId === slideId;
   // Approval freezes every slide in the section, so they all wear the padlock — the
-  // filmstrip is where you look to see which slides are closed.
-  const locked = lockedSlideIds.has(slideId) || section?.status === 'approved';
+  // filmstrip is where you look to see which slides are closed. Mirrors the stage padlock
+  // exactly, override included: a slide opened back up while its section stays approved is
+  // not locked, and the thumbnail must not claim otherwise.
+  const locked =
+    (lockedSlideIds.has(slideId) || section?.status === 'approved') &&
+    !unlockedSlideIds.has(slideId);
   // Removing a slide takes other people's work with it, so it stays a planner action —
   // and a frozen section (locked slide or approved) refuses it like any other edit.
   const canDelete = canManage && canEdit && (section?.slides.length ?? 0) > 1;

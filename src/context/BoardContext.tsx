@@ -117,6 +117,8 @@ interface BoardContextValue {
   saveNow: () => Promise<void>;
   saveState: import('../embed/useSlideSaver').SaveState;
   lockedSlideIds: ReadonlySet<string>;
+  /** Slides opened back up for editing while their section stays Approved. */
+  unlockedSlideIds: ReadonlySet<string>;
   /** False for a client, or when the planner has locked this slide. */
   canEdit: boolean;
   toggleSlideLock: (slideId: string) => void;
@@ -262,6 +264,15 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   /** This viewer's vote row per image, so changing a vote patches rather than duplicates. */
   const voteRowsRef = useRef<Map<string, string>>(new Map());
   const [lockedSlideIds, setLockedSlideIds] = useState<ReadonlySet<string>>(new Set());
+  /**
+   * Slides a manager has deliberately opened back up while their section stays Approved.
+   *
+   * Kept in memory rather than written to Bubble on purpose: approval is the record, and
+   * this is a working override on top of it. A reload puts the section back to frozen, so
+   * an override left behind by someone who wandered off doesn't quietly become the state
+   * of the board.
+   */
+  const [unlockedSlideIds, setUnlockedSlideIds] = useState<ReadonlySet<string>>(new Set());
   const pdf = useExportPdf(onError);
 
   // Declared before the saver, which closes over it to reload after a conflict.
@@ -530,8 +541,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    *
    * `canEdit` is `canWrite` plus the active slide being editable at all. Two things freeze
    * a slide, and both override write access for everyone including the planner who holds
-   * it: an explicit lock, and the section being approved. Approval is a decision about the
-   * work, so the work stops moving under it — set the section back to Open to keep going.
+   * it: an explicit lock, and the section being approved. Either one can be lifted from the
+   * padlock by someone who can manage the board — lifting approval's freeze leaves the
+   * Approved status standing, because "we agreed this" and "nobody may touch it" are two
+   * different statements and only the second is a padlock.
    *
    * Deleting an element has one more rule on top, in deleteElements: a client may remove
    * what they added and nothing else.
@@ -540,7 +553,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const isClient = role === 'client';
   const canManage = canWrite && !isClient;
   const activeSectionStatus = board.sections.find((s) => s.id === activeSectionId)?.status;
-  const isSlideFrozen = lockedSlideIds.has(activeSlideId) || activeSectionStatus === 'approved';
+  const isSlideFrozen =
+    (lockedSlideIds.has(activeSlideId) || activeSectionStatus === 'approved') &&
+    !unlockedSlideIds.has(activeSlideId);
   const canEdit = canWrite && !isSlideFrozen;
   const canEditRef = useRef(canEdit);
   canEditRef.current = canEdit;
@@ -552,6 +567,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   isClientRef.current = isClient;
   const lockedSlideIdsRef = useRef(lockedSlideIds);
   lockedSlideIdsRef.current = lockedSlideIds;
+  const unlockedSlideIdsRef = useRef(unlockedSlideIds);
+  unlockedSlideIdsRef.current = unlockedSlideIds;
 
   const commit = useCallback((updater: (prev: Board) => Board) => {
     // Every board mutation funnels through here, applyStructural or runStructural. Gating
@@ -1251,6 +1268,18 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       // somebody's else work, so they stay with the planner side even when a client has
       // write access.
       if (!canManageRef.current) return;
+
+      // Changing the status is a fresh decision, so any "unlocked while approved" override
+      // on this section's slides stops here. Without this, re-approving a section someone
+      // had opened up would leave it editable and still say Approved.
+      if (patch.status !== undefined && unlockedSlideIdsRef.current.size > 0) {
+        const ids = new Set(
+          boardRef.current.sections.find((s) => s.id === sectionId)?.slides.map((sl) => sl.id) ?? []
+        );
+        const next = new Set([...unlockedSlideIdsRef.current].filter((id) => !ids.has(id)));
+        if (next.size !== unlockedSlideIdsRef.current.size) setUnlockedSlideIds(next);
+      }
+
       applyStructural((prev) => ({
         ...prev,
         sections: prev.sections.map((section) =>
@@ -1380,6 +1409,21 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const toggleSlideLock = useCallback(
     (slideId: string) => {
       if (!canManageRef.current) return;
+
+      // An approved section freezes its slides without any of them being locked, so the
+      // padlock here has to answer approval rather than the lock field — otherwise the
+      // first click would "lock" an already-frozen slide and look like it did nothing.
+      const owner = boardRef.current.sections.find((sec) =>
+        sec.slides.some((sl) => sl.id === slideId)
+      );
+      if (owner?.status === 'approved') {
+        const override = new Set(unlockedSlideIdsRef.current);
+        if (override.has(slideId)) override.delete(slideId);
+        else override.add(slideId);
+        setUnlockedSlideIds(override);
+        return;
+      }
+
       const next = new Set(lockedSlideIdsRef.current);
       if (next.has(slideId)) next.delete(slideId);
       else next.add(slideId);
@@ -2096,6 +2140,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         isDirty: saver.isDirty,
         saveNow: saver.flush,
         lockedSlideIds,
+        unlockedSlideIds,
         canEdit,
         canManage,
         canWrite,

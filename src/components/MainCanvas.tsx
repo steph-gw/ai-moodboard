@@ -1,5 +1,4 @@
 import { useCallback, useState } from 'react';
-import { Lock } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { SlideCanvas } from './SlideCanvas';
 import { ElementToolbar } from './ElementToolbar';
@@ -33,7 +32,6 @@ export function MainCanvas() {
     activeSlide,
     activeSlideId,
     selectedElementIds,
-    lockedSlideIds,
     canEdit,
     isSlideSelected,
     setSlideBackground,
@@ -53,12 +51,6 @@ export function MainCanvas() {
   );
   const allText = selectedTexts.length > 0 && selectedTexts.length === selectedElementIds.length;
   const selectedText = allText ? selectedTexts[selectedTexts.length - 1] : undefined;
-  // Two ways a slide stops taking edits, and they need different words on the badge:
-  // a lock is one slide someone froze on purpose, approval freezes the whole section and
-  // is lifted by setting the status back rather than by unlocking anything.
-  const locked = lockedSlideIds.has(activeSlideId);
-  const approved = activeSection.status === 'approved';
-
   return (
     <main className="canvas">
       {/* Everything above the stage is fixed height so the artboard can take
@@ -109,20 +101,7 @@ export function MainCanvas() {
           artboard scales to its container, so anything that appears in the layout above it
           shrinks the slide — which is what selecting a text box used to do. */}
       <div className="canvas-stage">
-        {/* On the slide itself, where someone wondering why they can't edit is looking. */}
-        {(locked || approved) && (
-          <span
-            className="canvas-lock"
-            data-tooltip={
-              locked
-                ? 'This slide is locked'
-                : 'This section is approved — set it back to Open to edit'
-            }
-            tabIndex={0}
-          >
-            <Lock size={15} strokeWidth={2} />
-          </span>
-        )}
+        {/* The lock badge lives in SlideActions, top right — one padlock, not two. */}
         <ElementToolbar />
         <SlideActions />
         <SlideCanvas fullWidth fitMode="contain" onWidthChange={onWidthChange} />

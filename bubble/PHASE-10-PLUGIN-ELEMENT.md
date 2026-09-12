@@ -115,10 +115,20 @@ same way if those should also never be read-only.
 
 Two things then freeze a slide for **everyone**, write access included:
 
-- **Lock**, per slide, set from the slide actions column. A client never sees the control.
-- **Approved**, per section. Approval is a decision about the work, so the work stops
-  moving under it — set the status back to Open to carry on. The canvas shows a badge
-  saying so, in the same spot the lock badge uses.
+- **Lock**, per slide, set from the padlock at the top right of the stage. Persisted on the
+  section's `Locked slides` field. A client never gets the toggle.
+- **Approved**, per section. Approval freezes every slide in it the moment it is set.
+
+Both are lifted from the same padlock, by anyone who can manage the board. Lifting
+approval's freeze **does not un-approve the section** — the status stays Approved and the
+canvas becomes editable. Approval is the record of a decision; the padlock is a working
+state on top of it, and the two are not the same statement. That override is held in memory
+only: a reload, or setting the status again, puts the freeze back. Nothing new is stored in
+Bubble for it.
+
+The padlock is the only lock indicator on the stage — it is also what a viewer who cannot
+lift it sees, with the reason ("This slide has been approved on 8 Sep 2026") and without the
+invitation to click.
 
 **Hidden is enforced on the page, not in the bundle.** The `moodboard` page carries a
 second `Page is loaded` workflow:

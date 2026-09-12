@@ -17,11 +17,13 @@ function toChoice(section: Section): Choice {
   return section.status === 'approved' ? 'approved' : 'open';
 }
 
-/** "8 Sep" — matches how approval dates already read in the board. */
+/**
+ * The approval date goes to Bubble as ISO, because the field on Moodboard Section is a
+ * date. A friendly "8 Sep" round-tripped through it came back as a raw timestamp; the
+ * formatting belongs at the point of display (formatApprovalDate), not in the write.
+ */
 function today(): string {
-  const now = new Date();
-  const month = now.toLocaleString('en-US', { month: 'short' });
-  return `${now.getDate()} ${month}`;
+  return new Date().toISOString();
 }
 
 export function SectionStatusSelect({ section }: { section: Section }) {

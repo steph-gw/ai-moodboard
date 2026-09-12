@@ -394,36 +394,6 @@
   display: none;
 }
 
-.canvas-lock {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  z-index: 320;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
-  background: var(--gold-active);
-  border: 1px solid var(--gold-active);
-  color: #fff;
-  box-shadow: 0 4px 14px rgba(26, 23, 20, 0.18);
-  cursor: default;
-}
-
-/* Against the left edge of the stage, so a centred label would run off it. */
-.canvas-lock[data-tooltip]::after {
-  top: calc(100% + 7px);
-  left: 0;
-  right: auto;
-  transform: none;
-}
-
-.canvas-lock[data-tooltip]::before {
-  left: 15px;
-}
-
 /* Sits on a corner of the thumbnail in the section's own gold, with the whole thumbnail
    dimmed behind it — a small grey square was too easy to read as an artefact. */
 .slide-tab-lock {
@@ -578,8 +548,26 @@
   color: var(--text-primary);
 }
 
+/* A locked slide gets the solid gold badge the stage corner used to carry — the badge and
+   the control are the same object now, so the state has to be readable at a glance rather
+   than as a slightly different icon. */
 .slide-action-btn.is-locked {
-  color: var(--gold-active);
+  background: var(--gold-active);
+  color: #fff;
+}
+
+.slide-action-btn.is-locked:hover {
+  background: var(--gold-active);
+  color: #fff;
+}
+
+/* Shown to someone who cannot lift it: it says why, it does not invite a click. */
+.slide-action-btn.is-static {
+  cursor: default;
+}
+
+.slide-action-btn.is-static:hover {
+  background: var(--gold-active);
 }
 
 .text-format-btn.is-danger:hover {
