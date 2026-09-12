@@ -38,16 +38,16 @@ function MoodboardShell() {
 
   return (
     <div className="app">
-      <TopNav />
-      {/* Above the tabs, not inside the canvas: it is a fact about the whole board, and
-          it has to be the first thing read on a board that looks like every other one.
-          Hidden while presenting — an audience is not being warned about anything. */}
+      {/* Above the header, not below it: it frames everything under it, including the
+          board's name in the top bar. Hidden while presenting — an audience is not being
+          warned about anything. */}
       {board.isTemplate && !isPresenting && (
         <div className="template-banner" role="status">
           This is a moodboard <strong>template</strong>. Edits will apply to all{' '}
           <em>future</em> copies of this template.
         </div>
       )}
+      <TopNav />
       {!isPresenting && <SectionTabs />}
       <div className="app-body">
         {!isPresenting && <SlideStrip />}

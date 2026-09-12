@@ -82,6 +82,8 @@ interface BoardContextValue {
   saveAsTemplate: (name: string) => Promise<string | null>;
   /** Replaces this board's contents with a fork of a template. */
   applyTemplate: (templateId: string) => Promise<void>;
+  /** Empties the board and leaves one blank slide. Archives rather than deletes. */
+  startFromScratch: () => Promise<void>;
   listTemplates: () => Promise<{ id: string; name: string; system: boolean }[]>;
   isCloning: boolean;
   /** The section whose editor should be open, and the way to ask for it. */
@@ -894,6 +896,30 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     },
     [repo, identity, onError]
   );
+
+  /**
+   * Empties the board and leaves one blank slide to start on.
+   *
+   * The same shape as applying a template, minus the template: flush first so nothing
+   * unsaved is lost, archive rather than delete so the old board is recoverable, then
+   * reload. A board with no sections at all renders the "add your first section" state,
+   * which is a worse place to land than an empty canvas.
+   */
+  const startFromScratch = useCallback(async () => {
+    if (!repo || !identity) return;
+    setIsCloning(true);
+    try {
+      await saverRef.current.flush();
+      await repo.clearBoard(identity.moodboardId);
+      const sectionId = await repo.createSection(identity.moodboardId, 'Section 1', 'flower', 0);
+      await repo.createSlide(sectionId, 'Slide 1', 0);
+      await loadBoardRef.current?.();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : 'Could not clear the board.');
+    } finally {
+      setIsCloning(false);
+    }
+  }, [repo, identity, onError]);
 
   const listTemplates = useCallback(
     () => (repo ? repo.listTemplates(identity?.businessId ?? '') : Promise.resolve([])),
@@ -2038,6 +2064,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         goToPin,
         saveAsTemplate,
         applyTemplate,
+        startFromScratch,
         listTemplates,
         isCloning,
         editingSectionId,

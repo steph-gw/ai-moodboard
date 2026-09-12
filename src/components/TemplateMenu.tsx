@@ -1,27 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, LayoutTemplate, Sparkles } from 'lucide-react';
+import { ChevronDown, LayoutTemplate } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { useHost } from '../embed/HostProvider';
 
 type Template = { id: string; name: string; system: boolean };
 
 /**
- * Save this board as a template, or start an empty one from one.
+ * Save this board as a template, or rebuild it from one.
  *
- * Starting from a template is offered only while the board has no sections. Forking into a
- * board someone has already worked on would mean merging two boards, and there is no
- * sensible answer to what happens to the slides already there.
+ * Starting from a template replaces what is on the board, so the dropdown and the sentence
+ * under it are the whole safety step: the choice and its consequence are on screen at the
+ * same time, and nothing happens until Replace is pressed. Archiving rather than deleting
+ * is what makes that survivable if someone presses it anyway.
  */
 export function TemplateMenu() {
-  const { board, canManage, saveAsTemplate, applyTemplate, listTemplates, isCloning } =
+  const { board, canManage, saveAsTemplate, applyTemplate, startFromScratch, listTemplates, isCloning } =
     useBoard();
   const { portalHost } = useHost();
   const [mode, setMode] = useState<'save' | 'start' | null>(null);
   const [name, setName] = useState('');
   const [templates, setTemplates] = useState<Template[] | null>(null);
-  /** The template the planner has picked and is being asked to confirm. */
-  const [pending, setPending] = useState<Template | null>(null);
+  /**
+   * What the dropdown is on: a template id, `scratch`, or nothing chosen yet. One value
+   * rather than a second screen — the consequence is spelled out under the dropdown, so
+   * the planner reads it with the choice still in front of them.
+   */
+  const [choice, setChoice] = useState('');
   const [saved, setSaved] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -78,9 +83,11 @@ export function TemplateMenu() {
   const close = () => {
     setMode(null);
     setName('');
-    setPending(null);
+    setChoice('');
     setSaved(false);
   };
+
+  const chosen = templates?.find((t) => t.id === choice) ?? null;
 
   return (
     <>
@@ -146,11 +153,7 @@ export function TemplateMenu() {
               <div className="modal-head">
                 <p className="modal-eyebrow">Templates</p>
                 <h2 className="modal-title modal-title-sm">
-                  {mode === 'save'
-                    ? 'Save as template'
-                    : pending
-                      ? 'Replace this moodboard?'
-                      : 'Start from a template'}
+                  {mode === 'save' ? 'Save as template' : 'Start from a template'}
                 </h2>
               </div>
 
@@ -186,46 +189,73 @@ export function TemplateMenu() {
                   )
                 ) : templates === null ? (
                   <p className="modal-copy">Loading templates…</p>
-                ) : templates.length === 0 ? (
-                  <p className="modal-copy">
-                    No templates yet. Build a board, then save it as one.
-                  </p>
-                ) : pending ? (
-                  // Second step, because this rewrites a board someone may have spent
-                  // hours on. Naming what goes and what survives is the difference between
-                  // a confirm people read and one they click through.
-                  <>
-                    <p className="modal-copy">
-                      <strong>{pending.name}</strong> will replace what is on
-                      {board.weddingName ? ` ${board.weddingName}'s` : ' this'} moodboard.
-                    </p>
-                    <p className="modal-copy is-quiet">
-                      The current sections are archived rather than deleted, so their
-                      slides, comments and images are all still there if you want them
-                      back. Unsaved changes are saved first.
-                    </p>
-                  </>
                 ) : (
-                  <ul className="template-list">
-                    {templates.map((t) => (
-                      <li key={t.id}>
-                        <button
-                          type="button"
-                          className="template-list-item"
-                          disabled={isCloning}
-                          onClick={() => setPending(t)}
-                        >
-                          <span className="template-list-name">{t.name}</span>
-                          {t.system && (
-                            <span className="template-list-tag">
-                              <Sparkles size={10} strokeWidth={1.8} />
-                              Gatherwise
-                            </span>
-                          )}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
+                  <>
+                    <label className="modal-label" htmlFor="template-choice">
+                      Templates
+                    </label>
+                    <select
+                      id="template-choice"
+                      className="modal-input modal-select"
+                      value={choice}
+                      autoFocus
+                      disabled={isCloning}
+                      onChange={(e) => setChoice(e.target.value)}
+                    >
+                      <option value="">Choose a template…</option>
+                      {/* Grouped rather than tagged: a native optgroup says whose a
+                          template is without a badge competing with the name. */}
+                      {templates.some((t) => t.system) && (
+                        <optgroup label="Gatherwise">
+                          {templates
+                            .filter((t) => t.system)
+                            .map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name}
+                              </option>
+                            ))}
+                        </optgroup>
+                      )}
+                      {templates.some((t) => !t.system) && (
+                        <optgroup label="Your templates">
+                          {templates
+                            .filter((t) => !t.system)
+                            .map((t) => (
+                              <option key={t.id} value={t.id}>
+                                {t.name}
+                              </option>
+                            ))}
+                        </optgroup>
+                      )}
+                      <optgroup label="Or">
+                        <option value="scratch">Start from scratch</option>
+                      </optgroup>
+                    </select>
+
+                    {/* Says what is about to happen, for whichever choice is on. This is
+                        the whole safety step, so it names what goes and what survives. */}
+                    {choice === 'scratch' ? (
+                      <p className="modal-copy is-quiet">
+                        Empties
+                        {board.weddingName ? ` ${board.weddingName}'s` : ' this'} moodboard
+                        and leaves one blank slide. The current sections are archived
+                        rather than deleted, so their slides, comments and images are all
+                        still there if you want them back.
+                      </p>
+                    ) : chosen ? (
+                      <p className="modal-copy is-quiet">
+                        <strong>{chosen.name}</strong> will replace what is on
+                        {board.weddingName ? ` ${board.weddingName}'s` : ' this'} moodboard.
+                        The current sections are archived rather than deleted, so nothing
+                        is lost. Unsaved changes are saved first.
+                      </p>
+                    ) : templates.length === 0 ? (
+                      <p className="modal-copy is-quiet">
+                        No templates saved yet — build a board and save it as one, or start
+                        from scratch.
+                      </p>
+                    ) : null}
+                  </>
                 )}
               </div>
 
@@ -245,26 +275,31 @@ export function TemplateMenu() {
                 </div>
               )}
 
-              {mode === 'start' && pending && (
+              {mode === 'start' && (
                 <div className="modal-foot">
                   <button
                     type="button"
                     className="modal-btn-cancel"
                     disabled={isCloning}
-                    onClick={() => setPending(null)}
+                    onClick={close}
                   >
-                    Back
+                    Cancel
                   </button>
                   <button
                     type="button"
                     className="modal-btn-save"
-                    disabled={isCloning}
+                    disabled={!choice || isCloning}
                     onClick={async () => {
-                      await applyTemplate(pending.id);
+                      if (choice === 'scratch') await startFromScratch();
+                      else await applyTemplate(choice);
                       close();
                     }}
                   >
-                    {isCloning ? 'Replacing…' : 'Replace moodboard'}
+                    {isCloning
+                      ? 'Replacing…'
+                      : choice === 'scratch'
+                        ? 'Empty this moodboard'
+                        : 'Replace moodboard'}
                   </button>
                 </div>
               )}

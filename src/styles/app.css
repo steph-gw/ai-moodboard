@@ -2870,7 +2870,7 @@
 
 /* ── Narrow confirm dialog ── */
 .modal-card-narrow {
-  max-width: 380px;
+  max-width: 340px;
 }
 
 .modal-title-sm {
@@ -3690,18 +3690,39 @@
    or dotted box in some browsers, and the replacement ring read as one too. Buttons still
    show hover and active states, so a keyboard user is not entirely without feedback —
    but this is a deliberate trade of focus visibility for a quieter board. */
+.gw-mb,
 .gw-mb :focus,
 .gw-mb :focus-visible,
 .gw-mb-portals :focus,
 .gw-mb-portals :focus-visible {
-  outline: none;
+  /* !important because the ring being fought is not ours: the host page's own stylesheet
+     reaches inside the mounted element, and whatever it uses wins on specificity alone. */
+  outline: none !important;
 }
 
 .gw-mb button:focus,
 .gw-mb button:focus-visible,
 .gw-mb-portals button:focus,
 .gw-mb-portals button:focus-visible {
-  box-shadow: none;
+  box-shadow: none !important;
+}
+
+/* A dropdown that reads as the text inputs next to it, with the engine's own arrow
+   replaced — a native select control looks like it belongs to the browser, not here. */
+/* The confirm label changes with the choice ("Replace moodboard" / "Empty this
+   moodboard"), and a wrapped button in a narrow dialog reads as broken. */
+.modal-foot .modal-btn-save,
+.modal-foot .modal-btn-cancel {
+  white-space: nowrap;
+}
+
+.modal-select {
+  appearance: none;
+  padding-right: 30px;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6460' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  cursor: pointer;
 }
 
 /* ── Loading ── */

@@ -368,11 +368,15 @@ export class BoardRepo {
    * That matters for a one-click action on a board someone may have spent hours on: the
    * word "replace" should not mean "gone".
    */
-  async replaceWithTemplate(
-    templateId: string,
-    targetMoodboardId: string,
-    businessId?: string
-  ): Promise<void> {
+  /**
+   * Clears a board back to nothing: sections archived, images retired.
+   *
+   * Nothing is destroyed, exactly as when a template replaces a board — the sections and
+   * their slides, comments and images stay recoverable. Shared with replaceWithTemplate
+   * because "empty this board" and "empty it and copy a template in" differ only in what
+   * happens next.
+   */
+  async clearBoard(targetMoodboardId: string): Promise<void> {
     const [sections, images] = await Promise.all([
       this.api.list(TYPE.section, [
         { key: K.section.moodboard, constraint_type: 'equals', value: targetMoodboardId },
@@ -390,7 +394,14 @@ export class BoardRepo {
       if (image[K.image.inUse] === false) continue;
       await this.retireImage(image._id);
     }
+  }
 
+  async replaceWithTemplate(
+    templateId: string,
+    targetMoodboardId: string,
+    businessId?: string
+  ): Promise<void> {
+    await this.clearBoard(targetMoodboardId);
     await this.cloneInto(templateId, targetMoodboardId, businessId);
   }
 
