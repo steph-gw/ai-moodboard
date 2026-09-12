@@ -120,6 +120,23 @@ Two things then freeze a slide for **everyone**, write access included:
   moving under it — set the status back to Open to carry on. The canvas shows a badge
   saying so, in the same spot the lock badge uses.
 
+**Hidden is enforced on the page, not in the bundle.** The `moodboard` page carries a
+second `Page is loaded` workflow:
+
+```
+Only when  Current page's 1 Project / Event's Collaborator Accesses
+             :filtered (User = Current User)
+             :first item's Tabs with Hidden Access
+             contains moodboard
+Step 1     Go to page  event   (Data to send: Current page's 1 Project / Event)
+```
+
+It has to live here rather than in the element: by the time the bundle could refuse, it has
+already been handed a moodboard id and has started reading the board. The redirect fires
+before the element mounts — verified by `window.GWMoodboard` being undefined on the page
+the viewer lands on. This is the direct-URL case; the nav item is already gone for them.
+Somebody with no Collaborator Access row has an empty list, so it never fires on an admin.
+
 Element ownership is recorded in the slide's own JSON (`createdBy`, the Bubble user id) and
 enforced in the bundle, not by a privacy rule — the whole canvas is one text field, so
 Bubble cannot police it per element. It stops an honest client from deleting the planner's
