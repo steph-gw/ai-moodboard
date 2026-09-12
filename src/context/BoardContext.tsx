@@ -311,7 +311,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         const existing = await repo.load(identity, currentUserId);
         if (existing.board.sections.length === 0) {
           forkingRef.current = true;
-          await repo.cloneInto(identity.templateMoodboardId, identity.moodboardId);
+          await repo.cloneInto(identity.templateMoodboardId, identity.moodboardId, identity.businessId);
         }
       }
       const {
@@ -862,7 +862,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           name.trim() || 'Untitled template',
           identity.businessId ?? ''
         );
-        await repo.cloneInto(identity.moodboardId, templateId);
+        await repo.cloneInto(identity.moodboardId, templateId, identity.businessId);
         return templateId;
       } catch (err) {
         onError(err instanceof Error ? err.message : 'Could not save that template.');
@@ -884,7 +884,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         // sections they belong to are archived, not deleted, so a flushed edit is
         // recoverable where a lost one is not.
         await saverRef.current.flush();
-        await repo.replaceWithTemplate(templateId, identity.moodboardId);
+        await repo.replaceWithTemplate(templateId, identity.moodboardId, identity.businessId);
         await loadBoardRef.current?.();
       } catch (err) {
         onError(err instanceof Error ? err.message : 'Could not apply that template.');

@@ -215,7 +215,11 @@ export class BoardRepo {
    * evidence, the one operating rule it implies (never hard-delete image files), and the
    * proven recipe if privacy work ever makes separating them necessary.
    */
-  async cloneInto(sourceMoodboardId: string, targetMoodboardId: string): Promise<void> {
+  async cloneInto(
+    sourceMoodboardId: string,
+    targetMoodboardId: string,
+    businessId?: string
+  ): Promise<void> {
     const [source, sectionRows, imageRows] = await Promise.all([
       this.api.get(TYPE.moodboard, sourceMoodboardId),
       this.api.list(TYPE.section, [
@@ -286,11 +290,17 @@ export class BoardRepo {
 
     const palette = asList(source[K.moodboard.palette]);
     const visionBrief = str(source[K.moodboard.visionBrief]);
-    if (palette.length || visionBrief) {
-      await this.api.patch(TYPE.moodboard, targetMoodboardId, {
-        ...(palette.length ? { [K.moodboard.palette]: palette } : {}),
-        ...(visionBrief ? { [K.moodboard.visionBrief]: visionBrief } : {}),
-      });
+    // Business is stamped here as well as by whoever created the row. A board that never
+    // learns its business is invisible to listTemplates and to anything else scoped that
+    // way, and the failure is silent — an empty picker, not an error. Writing it on every
+    // fork costs one field on a call already being made and heals the older rows.
+    const patch = {
+      ...(palette.length ? { [K.moodboard.palette]: palette } : {}),
+      ...(visionBrief ? { [K.moodboard.visionBrief]: visionBrief } : {}),
+      ...(businessId ? { [K.moodboard.business]: businessId } : {}),
+    };
+    if (Object.keys(patch).length) {
+      await this.api.patch(TYPE.moodboard, targetMoodboardId, patch);
     }
   }
 
@@ -357,7 +367,11 @@ export class BoardRepo {
    * That matters for a one-click action on a board someone may have spent hours on: the
    * word "replace" should not mean "gone".
    */
-  async replaceWithTemplate(templateId: string, targetMoodboardId: string): Promise<void> {
+  async replaceWithTemplate(
+    templateId: string,
+    targetMoodboardId: string,
+    businessId?: string
+  ): Promise<void> {
     const [sections, images] = await Promise.all([
       this.api.list(TYPE.section, [
         { key: K.section.moodboard, constraint_type: 'equals', value: targetMoodboardId },
@@ -376,7 +390,7 @@ export class BoardRepo {
       await this.retireImage(image._id);
     }
 
-    await this.cloneInto(templateId, targetMoodboardId);
+    await this.cloneInto(templateId, targetMoodboardId, businessId);
   }
 
   async createImage(moodboardId: string, url: string): Promise<string> {
