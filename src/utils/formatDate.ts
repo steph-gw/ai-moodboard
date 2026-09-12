@@ -18,25 +18,28 @@ export function formatEventDate(iso: string): string {
 }
 
 /**
- * Formats whatever ended up in a section's approval date as "8 Sep 2025".
+ * Formats a section's approval date as "Jul 7, 2026" — the same shape as formatEventDate,
+ * because both are dates read in a sentence.
  *
- * It has three possible shapes: a short label the app wrote itself ("8 Sep"), a plain ISO
- * date, or a full ISO timestamp coming back from Bubble. The timestamp is the one that
- * matters — printed raw it reads as machine output in the middle of a sentence.
+ * The value arrives in one of three shapes: a full ISO timestamp from Bubble (the normal
+ * case — the field is a date), a plain ISO date, or a bare label written by an older build.
+ * A date with no time is parsed by hand rather than through Date, which would read it as
+ * UTC midnight and show the day before to anyone west of Greenwich. A timestamp is read in
+ * the viewer's own timezone, which is the day they mean.
  */
 export function formatApprovalDate(value: string): string {
   const text = value.trim();
   if (!text) return '';
-  const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(text);
-  if (iso) {
-    const [, year, month, day] = iso;
-    const label = MONTHS[Number(month) - 1];
-    if (label) return `${Number(day)} ${label} ${year}`;
-  }
+
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (dateOnly) return formatEventDate(text);
+
   const parsed = new Date(text);
   if (!Number.isNaN(parsed.getTime())) {
-    return `${parsed.getDate()} ${MONTHS[parsed.getMonth()]} ${parsed.getFullYear()}`;
+    const label = MONTHS[parsed.getMonth()];
+    if (label) return `${label} ${parsed.getDate()}, ${parsed.getFullYear()}`;
   }
-  // Already a human label like "8 Sep" — leave it alone rather than mangle it.
+
+  // Something we do not recognise — show it as it is rather than mangle it.
   return text;
 }
