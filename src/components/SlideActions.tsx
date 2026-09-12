@@ -18,10 +18,17 @@ export function SlideActions() {
     canManage,
     canEdit,
     canWrite,
+    board,
+    activeSectionId,
   } = useBoard();
 
   if (!canWrite || !activeSlideId) return null;
-  const locked = lockedSlideIds.has(activeSlideId);
+  // Approval freezes the whole section, so the padlock shows closed on its slides too —
+  // but it cannot be opened from here: the way out is the section's status, and a toggle
+  // that looked live and did nothing would be worse than one that says it is fixed.
+  const approved =
+    board.sections.find((s) => s.id === activeSectionId)?.status === 'approved';
+  const locked = lockedSlideIds.has(activeSlideId) || approved;
 
   return (
     <div className="slide-actions">
@@ -31,8 +38,15 @@ export function SlideActions() {
         <button
           type="button"
           className={`slide-action-btn ${locked ? 'is-locked' : ''}`}
-          onClick={() => toggleSlideLock(activeSlideId)}
-          data-tooltip={locked ? 'Unlock slide' : 'Lock slide'}
+          onClick={() => !approved && toggleSlideLock(activeSlideId)}
+          disabled={approved}
+          data-tooltip={
+            approved
+              ? 'Locked — this section is approved'
+              : locked
+                ? 'Unlock slide'
+                : 'Lock slide'
+          }
           aria-label={locked ? 'Unlock slide' : 'Lock slide'}
           aria-pressed={locked}
         >

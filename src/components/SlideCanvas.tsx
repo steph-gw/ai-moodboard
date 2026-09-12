@@ -42,6 +42,7 @@ export function SlideCanvas({
     selectedCommentPinId,
     board,
     isSlideSelected,
+    canEdit,
   } = useBoard();
   const pinNumbers = buildPinNumbers(board);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -206,8 +207,10 @@ export function SlideCanvas({
 
   return (
     <div
+      // is-static covers present mode and the export sheet; a locked or approved slide is
+      // the same thing on the live board — nothing here moves, so nothing should offer to.
       className={`slide-canvas-wrap ${fullWidth ? 'slide-canvas-fullwidth' : ''} ${
-        readOnly ? 'is-static' : ''
+        readOnly || !canEdit ? 'is-static' : ''
       }`}
       ref={containerRef}
       // Selecting the slide by clicking bare artboard only works while there is bare

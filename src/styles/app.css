@@ -3709,6 +3709,47 @@
 
 /* A dropdown that reads as the text inputs next to it, with the engine's own arrow
    replaced — a native select control looks like it belongs to the browser, not here. */
+/* Two ways to start, side by side: a pair of cards rather than a list, because they are
+   alternatives of equal weight and the second is not a footnote to the first. */
+.modal-choice-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.modal-choice {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--white);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  line-height: 1.25;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.modal-choice:hover {
+  border-color: var(--gold-border);
+}
+
+.modal-choice.is-on {
+  border-color: var(--gold);
+  background: var(--gold-light);
+  color: var(--text-primary);
+}
+
+.modal-choice input {
+  flex: none;
+  accent-color: var(--gold);
+  margin: 0;
+}
+
 /* The confirm label changes with the choice ("Replace moodboard" / "Empty this
    moodboard"), and a wrapped button in a narrow dialog reads as broken. */
 .modal-foot .modal-btn-save,
@@ -3733,8 +3774,10 @@
 }
 
 .loading-swatches span {
-  width: 16px;
-  height: 22px;
+  /* Square, not swatch-shaped: at this size a tall rectangle read as a loading bar
+     chopped into pieces rather than as colour. */
+  width: 18px;
+  height: 18px;
   border-radius: 3px;
   opacity: 0.18;
   animation: swatch-fill 1.5s ease-in-out infinite;

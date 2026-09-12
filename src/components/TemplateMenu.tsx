@@ -27,6 +27,13 @@ export function TemplateMenu() {
    * the planner reads it with the choice still in front of them.
    */
   const [choice, setChoice] = useState('');
+  /**
+   * Which of the two ways to start is selected. Separate from the dropdown because they
+   * are different answers, not two entries in one list: one picks a template, the other
+   * throws the board away. A dropdown that mixed them made the second look like a third
+   * template.
+   */
+  const [how, setHow] = useState<'template' | 'scratch'>('template');
   const [saved, setSaved] = useState(false);
   const anchorRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -84,6 +91,7 @@ export function TemplateMenu() {
     setMode(null);
     setName('');
     setChoice('');
+    setHow('template');
     setSaved(false);
   };
 
@@ -191,70 +199,70 @@ export function TemplateMenu() {
                   <p className="modal-copy">Loading templates…</p>
                 ) : (
                   <>
-                    <label className="modal-label" htmlFor="template-choice">
-                      Templates
-                    </label>
-                    <select
-                      id="template-choice"
-                      className="modal-input modal-select"
-                      value={choice}
-                      autoFocus
-                      disabled={isCloning}
-                      onChange={(e) => setChoice(e.target.value)}
-                    >
-                      <option value="">Choose a template…</option>
-                      {/* Grouped rather than tagged: a native optgroup says whose a
-                          template is without a badge competing with the name. */}
-                      {templates.some((t) => t.system) && (
-                        <optgroup label="Gatherwise">
-                          {templates
-                            .filter((t) => t.system)
-                            .map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.name}
-                              </option>
-                            ))}
-                        </optgroup>
-                      )}
-                      {templates.some((t) => !t.system) && (
-                        <optgroup label="Your templates">
-                          {templates
-                            .filter((t) => !t.system)
-                            .map((t) => (
-                              <option key={t.id} value={t.id}>
-                                {t.name}
-                              </option>
-                            ))}
-                        </optgroup>
-                      )}
-                      <optgroup label="Or">
-                        <option value="scratch">Start from scratch</option>
-                      </optgroup>
-                    </select>
+                    <div className="modal-choice-row" role="radiogroup" aria-label="How to start">
+                      <label className={`modal-choice ${how === 'template' ? 'is-on' : ''}`}>
+                        <input
+                          type="radio"
+                          name="template-how"
+                          checked={how === 'template'}
+                          disabled={isCloning}
+                          onChange={() => setHow('template')}
+                        />
+                        Use a template
+                      </label>
+                      <label className={`modal-choice ${how === 'scratch' ? 'is-on' : ''}`}>
+                        <input
+                          type="radio"
+                          name="template-how"
+                          checked={how === 'scratch'}
+                          disabled={isCloning}
+                          onChange={() => setHow('scratch')}
+                        />
+                        Start from scratch
+                      </label>
+                    </div>
 
-                    {/* Says what is about to happen, for whichever choice is on. This is
-                        the whole safety step, so it names what goes and what survives. */}
-                    {choice === 'scratch' ? (
+                    {how === 'template' ? (
+                      <>
+                        <label className="modal-label" htmlFor="template-choice">
+                          Templates
+                        </label>
+                        <select
+                          id="template-choice"
+                          className="modal-input modal-select"
+                          value={choice}
+                          disabled={isCloning || templates.length === 0}
+                          onChange={(e) => setChoice(e.target.value)}
+                        >
+                          <option value="">
+                            {templates.length === 0
+                              ? 'No templates saved yet'
+                              : 'Choose a template…'}
+                          </option>
+                          {/* One flat list. Gatherwise's own sort first, which is enough
+                              to tell them apart without grouping the list into pieces. */}
+                          {templates.map((t) => (
+                            <option key={t.id} value={t.id}>
+                              {t.name}
+                            </option>
+                          ))}
+                        </select>
+                        {chosen && (
+                          <p className="modal-copy is-quiet">
+                            <strong>{chosen.name}</strong> will replace what is on
+                            {board.weddingName ? ` ${board.weddingName}'s` : ' this'}{' '}
+                            moodboard. The current sections are archived rather than
+                            deleted, so nothing is lost.
+                          </p>
+                        )}
+                      </>
+                    ) : (
                       <p className="modal-copy is-quiet">
                         Empties
                         {board.weddingName ? ` ${board.weddingName}'s` : ' this'} moodboard
-                        and leaves one blank slide. The current sections are archived
-                        rather than deleted, so their slides, comments and images are all
-                        still there if you want them back.
+                        and leaves one blank slide.
                       </p>
-                    ) : chosen ? (
-                      <p className="modal-copy is-quiet">
-                        <strong>{chosen.name}</strong> will replace what is on
-                        {board.weddingName ? ` ${board.weddingName}'s` : ' this'} moodboard.
-                        The current sections are archived rather than deleted, so nothing
-                        is lost. Unsaved changes are saved first.
-                      </p>
-                    ) : templates.length === 0 ? (
-                      <p className="modal-copy is-quiet">
-                        No templates saved yet — build a board and save it as one, or start
-                        from scratch.
-                      </p>
-                    ) : null}
+                    )}
                   </>
                 )}
               </div>
@@ -288,16 +296,16 @@ export function TemplateMenu() {
                   <button
                     type="button"
                     className="modal-btn-save"
-                    disabled={!choice || isCloning}
+                    disabled={isCloning || (how === 'template' && !choice)}
                     onClick={async () => {
-                      if (choice === 'scratch') await startFromScratch();
+                      if (how === 'scratch') await startFromScratch();
                       else await applyTemplate(choice);
                       close();
                     }}
                   >
                     {isCloning
                       ? 'Replacing…'
-                      : choice === 'scratch'
+                      : how === 'scratch'
                         ? 'Empty this moodboard'
                         : 'Replace moodboard'}
                   </button>

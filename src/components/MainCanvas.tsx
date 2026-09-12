@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Check, Lock } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { SlideCanvas } from './SlideCanvas';
 import { ElementToolbar } from './ElementToolbar';
@@ -120,7 +120,7 @@ export function MainCanvas() {
             }
             tabIndex={0}
           >
-            {locked ? <Lock size={15} strokeWidth={2} /> : <Check size={15} strokeWidth={2.4} />}
+            <Lock size={15} strokeWidth={2} />
           </span>
         )}
         <ElementToolbar />

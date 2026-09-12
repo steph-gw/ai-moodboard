@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, ChevronDown, MessageCircle } from 'lucide-react';
+import { Check, ChevronDown, Lock, MessageCircle } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import type { Section } from '../types';
 import { useHost } from '../embed/HostProvider';
@@ -53,14 +53,16 @@ export function SectionStatusSelect({ section }: { section: Section }) {
     };
   }, [anchor]);
 
-  const label =
-    current === 'approved'
-      ? `Approved${section.approvedDate ? ` ${section.approvedDate}` : ''}`
-      : 'Open';
+  // The date is recorded on the section but not shown. It was rendered raw, which on a
+  // board whose date came from Bubble rather than from today() meant a full ISO string
+  // sitting in the pill — and the pill is a status, not a log.
+  const label = current === 'approved' ? 'Approved' : 'Open';
 
+  // Approval freezes the section, so it is drawn with the same padlock the canvas and the
+  // filmstrip use. One idea, one symbol — a tick said "good" where the truth is "closed".
   const icon =
     current === 'approved' ? (
-      <Check size={12} strokeWidth={2} />
+      <Lock size={11} strokeWidth={2} />
     ) : (
       <MessageCircle size={12} strokeWidth={1.8} />
     );
