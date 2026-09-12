@@ -65,7 +65,7 @@ editor-time toggles rather than data, stay checkboxes.
 | Current user name | `current_user_name` | Dynamic value / text | — | `Current User's Name` |
 | Current user initials | `current_user_initials` | Dynamic value / text | — | leave blank — derived from the name |
 | Is planner | `is_planner` | Dynamic value / yes-no | — | `Current User's Business is not empty` |
-| Read only | `read_only` | Dynamic value / yes-no | — | `Current page Event's Collaborator Access for Current User's Moodboard access is not Write` — the tab permission, inverted. Leave it **no** for an admin. |
+| Read only | `read_only` | Dynamic value / yes-no | — | see **Who can do what** below — the moodboard tab's own permission |
 | Logo url | `logo_url` | Dynamic value / text | — | your wordmark's file URL |
 | Height css | `height_css` | Dynamic value / text | `100%` | — |
 | API base | `api_base` | Dynamic value / text | — | leave blank |
@@ -86,9 +86,27 @@ editor-time toggles rather than data, stay checkboxes.
 ## Who can do what
 
 Two fields decide it, and the board derives the rest. `read_only` is the moodboard tab's
-permission for this person — bind it to the same access the tab itself uses, so the two can
-never disagree — and `is_planner` separates the planner's own team from the client side.
-An admin is simply somebody the page never marks read-only.
+permission for this person, and `is_planner` separates the planner's own team from the
+client side. An admin is simply somebody the page never marks read-only.
+
+`Collaborator Access` has no "write" field: it has `Tabs with Hidden Access` (the tab never
+opens) and `Tabs with View Access` (the tab opens read-only). Anything in neither list is
+write. So `read_only` reads the same lists the event's own tabs read — bound as:
+
+```
+( Current page's 1 Project / Event's Collaborator Accesses
+    :filtered (User = Current User)
+    :first item's Tabs with View Access
+    contains moodboard )
+and
+( Current User's Role is not Wedding Planner Admin )
+```
+
+The first half is exactly what the event page's tab gating uses, so the board and the tab
+can never disagree. The second is the admin escape: somebody with no Collaborator Access
+row already comes out as write (an empty list contains nothing), and this covers an admin
+who *does* have a row that happens to say view-only. Add `App admin` or `Billing Owner` the
+same way if those should also never be read-only.
 
 | | read-only | write |
 |---|---|---|
