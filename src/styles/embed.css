@@ -61,6 +61,18 @@
   outline: none;
 }
 
+/* The ring that is not ours. Bubble draws a focus box on the element *wrapper* — the div
+   the board is mounted into — which sits outside .gw-mb and so cannot be reached by any
+   rule in app.css, all of which are prefixed with it. This file is concatenated verbatim,
+   which makes it the only place this selector can live. */
+:has(> .gw-mb):focus,
+:has(> .gw-mb):focus-visible,
+:has(> .gw-mb-portals):focus,
+:has(> .gw-mb-portals):focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* Shown while the board loads; deliberately quiet rather than a spinner. */
 .gw-mb .app-loading {
   flex-direction: column;
