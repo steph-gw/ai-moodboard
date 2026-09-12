@@ -209,11 +209,11 @@ export class BoardRepo {
    * elements JSON is rewritten through an old-id → new-id map, so deleting an image in
    * the copy can never reach the original and editing the original never reaches the copy.
    *
-   * The one thing still shared is the file behind each image: Bubble's CDN sends no CORS
-   * headers, so the bundle cannot read a file's bytes to re-upload them. Re-hosting has to
-   * happen server-side — see bubble/PHASE-11-TEMPLATES.md. Until it runs the rows are
-   * independent and the files are shared, which is the right order: the board opens at
-   * once and separates behind the scenes.
+   * The one thing shared is the file behind each image, and that is a deliberate choice.
+   * Deleting a thing in Bubble does not delete its file, so a template can go and every
+   * fork keeps working — measured, not assumed. See bubble/PHASE-11-TEMPLATES.md for the
+   * evidence, the one operating rule it implies (never hard-delete image files), and the
+   * proven recipe if privacy work ever makes separating them necessary.
    */
   async cloneInto(sourceMoodboardId: string, targetMoodboardId: string): Promise<void> {
     const [source, sectionRows, imageRows] = await Promise.all([

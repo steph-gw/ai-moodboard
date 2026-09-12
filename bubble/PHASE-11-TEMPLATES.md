@@ -53,25 +53,60 @@ rewrite a text field server-side, so a workflow copy would have to leave the cop
 at the template's image rows — and deleting the template would then break every board made
 from it.
 
-## What is still shared, and how to finish separating it
+## What is shared, and why that is fine
 
 The rows are independent immediately. The **file** behind each image is not: the copy's new
-`Moodboard Image` row points at the same URL.
+`Moodboard Image` row points at the same URL. Measured on version-test 2026-09-11 — 90 image
+rows, 32 distinct files, 31 of those files used by more than one row.
 
-The bundle cannot fix this. Verified 2026-09-11:
+**This was investigated and deliberately left alone.** The reason to separate them would be
+that deleting a template could break the boards made from it. It cannot:
+
+```
+DELETE /api/1.1/obj/moodboardimage/<id>   → 204
+the row afterwards                         → 404
+its file five seconds later                → still renders, 600 × 450
+```
+
+Deleting a *thing* in Bubble does not delete its *file*. So a template, or any of its image
+rows, can go and every fork keeps working — the bytes are already hosted. A fork breaks only
+if the **file itself** is deleted, which takes a deliberate act: File Manager, or the
+"Delete an uploaded file" action, neither of which this app uses. Removing an image from a
+canvas sets `In use? = no`; deleting a section archives it. Nothing in the product can
+orphan a fork.
+
+**The one operating rule that follows: never hard-delete moodboard image files.** Tidying
+File Manager would break forks silently.
+
+### If it ever does need doing
+
+Two reasons might bring it back: making image files private (a file attached to the
+template's row may then be refused to a fork's viewer — test before relying on it), and
+wanting File Manager to be legible. The recipe is proven and takes about ten minutes to
+rebuild. The bundle cannot do it — verified 2026-09-11:
 
 ```js
 fetch('https://…cdn.bubble.io/…/gatherwise-logo.png')
 // TypeError: Failed to fetch — no CORS headers on the CDN
 ```
 
-So re-hosting is a backend job: an API workflow that takes the new moodboard, loops its
-images, GETs each source URL through the API Connector and saves the result back into the
-row's `Image` field. The plugin can trigger it once the clone returns.
+Server-side there is no such wall. An API Connector call — `GET [url]`, *Use as: Data*,
+*Data type: Image* — fetches a Bubble CDN file happily. Because it is a data source rather
+than an action, the re-host is a single step, not two:
 
-Run it after the clone, not before — the board is usable the moment the rows exist, and
-the files separate behind the scenes. Until it has run, do not hard-delete a template's
-images.
+```
+Make changes to Moodboard Image
+  Image = Get data from an external API → Fetch file (url = This Image's Image)
+```
+
+Run once against a real row, this produced a genuinely new file: a fresh Bubble file id,
+distinct file count 32 → 33 with rows unchanged, the new URL used by exactly one row, the
+old URL still serving the rows that had it. Note the re-saved URL comes back
+**protocol-relative** (`//…`), the same shape `context.uploadContent` returns — prefix
+`https:` anywhere it leaves the browser, the export sheet especially.
+
+There is no dedupe win to be had: within a board every row already has its own distinct
+file (the starter: 26 rows, 26 files), so a fork is a flat 26 fetches and 26 writes.
 
 ## Starting a board from a template
 
