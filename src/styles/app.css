@@ -2839,6 +2839,35 @@
   cursor: not-allowed;
 }
 
+/* ── Template banner ──
+   A statement about the board, so it reads as a line of prose rather than an alert: no
+   icon, no colour block shouting at the planner every time they open a template. `em` is
+   underlined rather than italic here because the emphasis is on *which* copies, and the
+   word has to be scannable at a glance. */
+.template-banner {
+  flex: none;
+  padding: 7px 18px;
+  border-bottom: 1px solid var(--border);
+  background: var(--gold-light);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.template-banner strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.template-banner em {
+  font-style: normal;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 /* ── Narrow confirm dialog ── */
 .modal-card-narrow {
   max-width: 380px;

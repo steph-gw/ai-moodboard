@@ -155,6 +155,7 @@ export class BoardRepo {
 
     return {
       board: {
+        isTemplate: moodboard[K.moodboard.template] === true,
         weddingName: eventName || str(moodboard[K.moodboard.name]),
         weddingDate: eventDate,
         visionBrief: str(moodboard[K.moodboard.visionBrief]),

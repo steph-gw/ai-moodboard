@@ -145,6 +145,12 @@ export interface Suggestion {
 }
 
 export interface Board {
+  /**
+   * A template rather than an event's board: no Event, reusable, and the source future
+   * copies are made from. Only changes what the board says about itself — a template is
+   * edited exactly like any other board.
+   */
+  isTemplate?: boolean;
   weddingName: string;
   /** ISO date (YYYY-MM-DD); formatted for display by formatEventDate. */
   weddingDate: string;
