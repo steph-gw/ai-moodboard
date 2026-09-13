@@ -36,6 +36,16 @@
   cursor: pointer;
 }
 
+/* Firefox draws its own focus ring *inside* the button, as a dotted border on the
+   ::-moz-focus-inner pseudo-element. `outline: none` does not reach that one, so on Firefox
+   a dotted rectangle appears around a button the moment it is clicked and leaves when focus
+   moves on — a flash, on any button, that no amount of outline suppression removes. */
+.gw-mb button::-moz-focus-inner,
+.gw-mb-portals button::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+
 /*
  * Menus, modals and the export sheet portal here rather than to document.body,
  * so they keep their styling (every rule needs a .gw-mb ancestor) while
