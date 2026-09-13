@@ -1,5 +1,7 @@
+import { createPortal } from 'react-dom';
 import { useEffect, useState } from 'react';
 import { useBoard } from '../context/BoardContext';
+import { useHost } from '../embed/HostProvider';
 import { SlideCanvas } from './SlideCanvas';
 import { exitFullscreen, isFullscreen } from '../utils/fullscreen';
 
@@ -13,6 +15,7 @@ export function PresentOverlay() {
     selectCommentPin,
     selectElement,
   } = useBoard();
+  const { portalHost } = useHost();
 
   const [showHint, setShowHint] = useState(true);
 
@@ -58,7 +61,11 @@ export function PresentOverlay() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [setPresenting, goToNextSlide, goToPrevSlide]);
 
-  return (
+  // Portalled out of the element for the same reason menus and modals are: .gw-mb isolates
+  // its stacking context, so nothing inside it can paint above the host page's own floating
+  // header and sidebar however high its z-index. Present mode has to cover the page, not
+  // just our corner of it.
+  return createPortal(
     <div className="present-overlay">
       <div className={`present-hint-toast ${showHint ? '' : 'hidden'}`} role="status">
         To exit full screen, press ESC
@@ -66,6 +73,7 @@ export function PresentOverlay() {
       <div className="present-slide-area">
         <SlideCanvas fullWidth readOnly fitMode="contain" />
       </div>
-    </div>
+    </div>,
+    portalHost
   );
 }

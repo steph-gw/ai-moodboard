@@ -12,6 +12,7 @@ export function TopNav() {
     summarizeVision,
     isSummarizing,
     setPresenting,
+    isPresenting,
     isCommentsOpen,
     setCommentsOpen,
   } = useBoard();
@@ -25,12 +26,15 @@ export function TopNav() {
         {/* No logo configured is a normal state — the host may simply not have set one —
             and an <img> with an empty src renders as a broken-image icon, which reads as
             a bug. Fall back to the wordmark as text. */}
-        {logoUrl ? (
-          <img className="topnav-logo" src={logoUrl} alt="GatherWise" />
-        ) : (
-          <span className="topnav-wordmark">GatherWise</span>
-        )}
-        <span className="topnav-sep">/</span>
+        {/* The wordmark and its separator are branding, and an audience watching a
+            presentation is not being sold to — what they need is the event's name. */}
+        {!isPresenting &&
+          (logoUrl ? (
+            <img className="topnav-logo" src={logoUrl} alt="GatherWise" />
+          ) : (
+            <span className="topnav-wordmark">GatherWise</span>
+          ))}
+        {!isPresenting && <span className="topnav-sep">/</span>}
         <span className="topnav-event">{board.weddingName}</span>
         <span className="topnav-date">{formatEventDate(board.weddingDate)}</span>
       </div>
