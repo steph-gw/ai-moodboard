@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useBoard } from '../context/BoardContext';
 import { useHost } from '../embed/HostProvider';
 import { rememberColor, useRecentColors } from '../utils/recentColors';
+import { readHex } from '../utils/hex';
 
 /**
  * One swatch that opens the palette, rather than the whole palette inline.
@@ -33,6 +34,8 @@ export function ColorField({
   const popRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [at, setAt] = useState<{ left: number; top: number } | null>(null);
+  /** What the hex box shows while it is being typed in. Null means "follow the value". */
+  const [typed, setTyped] = useState<string | null>(null);
   const none = value === 'transparent';
 
   const pick = (color: string) => {
@@ -157,6 +160,31 @@ export function ColorField({
               </div>
             </>
           )}
+          {/* The hex, readable and copyable. Asked for so a color can be taken out of the
+              board and used somewhere else — and it takes one too, which is quicker than
+              hunting for a shade in the system picker. */}
+          <div className="color-field-hex">
+            <input
+              value={typed ?? (none ? '' : value.toUpperCase())}
+              placeholder="#F6EFE0"
+              spellCheck={false}
+              aria-label="Hex code"
+              onFocus={(e) => e.currentTarget.select()}
+              onChange={(e) => {
+                setTyped(e.target.value);
+                const hex = readHex(e.target.value);
+                if (hex) pick(hex);
+              }}
+              onBlur={() => setTyped(null)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setTyped(null);
+                  setOpen(false);
+                }
+              }}
+            />
+          </div>
+
           <label className="color-field-custom">
             <input
               type="color"

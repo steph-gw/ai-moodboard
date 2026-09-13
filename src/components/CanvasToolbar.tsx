@@ -94,7 +94,6 @@ export function CanvasToolbar() {
             Add image
           </button>
         )}
-        <PaletteMenu />
         <button
           type="button"
           className="btn-ghost btn-sm"
@@ -104,6 +103,7 @@ export function CanvasToolbar() {
           <ImageIcon size={13} strokeWidth={1.5} />
           {isUploading ? 'Uploading…' : 'Upload'}
         </button>
+        <PaletteMenu />
         {/* After Upload: the two image routes sit together, and the menu that opens
             downward is at the end of the row rather than in the middle of it. */}
         <AddElementsMenu />

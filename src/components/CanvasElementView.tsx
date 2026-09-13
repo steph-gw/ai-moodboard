@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { DraggableBox } from './DraggableBox';
@@ -13,6 +13,16 @@ import type {
   TextElement,
 } from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH, DEFAULT_LINE_HEIGHT } from '../types';
+
+/**
+ * How far a solely-selected element rises above its neighbours.
+ *
+ * Its handles are drawn inside its own box, so a neighbour stacked above it paints over
+ * them — the rotate handle under a color chip was landing behind the hex label beneath it
+ * and could not be grabbed. The lift is while selected only: nothing about the stored
+ * order changes, so the board looks exactly as it was arranged the moment you click away.
+ */
+const SELECTED_LIFT = 1000;
 import { textFontCss } from '../utils/textFonts';
 import { ElementContextMenu } from './ElementContextMenu';
 
@@ -190,6 +200,43 @@ function TextElementView({
   const isOnly = isSelected && selectedElementIds.length === 1;
   const ref = useRef<HTMLDivElement>(null);
   const didAutoFocus = useRef(false);
+  /**
+   * The height the text needs while it is being typed.
+   *
+   * Local, not committed: the box has to grow under the cursor, and writing a height on
+   * every keystroke would be an undo entry and a save per character. It is written once,
+   * with the content, when the field is left.
+   */
+  const [liveHeight, setLiveHeight] = useState<number | null>(null);
+
+  /**
+   * What the content actually occupies, in slide units.
+   *
+   * Measured with the box released to `auto` first. The inner is a flex container sized to
+   * the element, and asking a constrained flex box for its scrollHeight reports the squeeze
+   * rather than the content — which is why the box grew part of the way and stopped.
+   */
+  const measure = () => {
+    const node = ref.current;
+    if (!node) return null;
+    const prev = node.style.height;
+    node.style.height = 'auto';
+    const content = node.scrollHeight;
+    node.style.height = prev;
+    return Math.min(SLIDE_HEIGHT, Math.max(30, Math.ceil(content / scale)));
+  };
+
+  // A box whose text no longer fits is the same bug whether the text grew or the type did,
+  // so a size or font change re-measures too. Only while this element is the selection:
+  // the user is working on it, and a board nobody has touched is never rewritten on open.
+  useLayoutEffect(() => {
+    if (editing || readOnly || !isOnly) return;
+    const needed = measure();
+    // Grows only. Shrinking would fight anyone who deliberately gave a caption room.
+    if (needed && needed > element.height + 1) {
+      updateElement(slideId, element.id, { height: needed });
+    }
+  });
 
   useEffect(() => {
     if (isOnly && !readOnly && !didAutoFocus.current && ref.current) {
@@ -222,7 +269,7 @@ function TextElementView({
       x={element.x}
       y={element.y}
       width={element.width}
-      height={element.height}
+      height={liveHeight ?? element.height}
       scale={scale}
       selected={isOnly}
       readOnly={readOnly}
@@ -231,7 +278,7 @@ function TextElementView({
       minWidth={80}
       minHeight={30}
       className={`canvas-element-text${isSelected && !isOnly ? ' in-selection' : ''}`}
-      style={{ zIndex: element.zIndex }}
+      style={{ zIndex: isOnly ? element.zIndex + SELECTED_LIFT : element.zIndex }}
       rotation={element.rotation}
       onSelect={handleSelect}
       onMoveBy={isSelected && !isOnly ? (dx, dy) => moveSelectionBy(slideId, dx, dy) : undefined}
@@ -266,12 +313,21 @@ function TextElementView({
                 : 'center',
           whiteSpace: 'pre-wrap',
         }}
+        onInput={() => {
+          const needed = measure();
+          if (needed !== null) setLiveHeight(needed);
+        }}
         onBlur={() => {
           if (ref.current) {
+            const needed = measure();
             updateElement(slideId, element.id, {
               content: ref.current.innerText,
+              // Committed with the text, in one entry: the box and what is in it changed
+              // together and should be undone together.
+              ...(needed !== null && needed !== element.height ? { height: needed } : {}),
             });
           }
+          setLiveHeight(null);
           setEditing(false);
         }}
         onFocus={() => !readOnly && setEditing(true)}
@@ -390,7 +446,7 @@ function BoxElementView({
       minWidth={8}
       minHeight={8}
       className={`canvas-element-shape${isSelected && !isOnly ? ' in-selection' : ''}`}
-      style={{ zIndex: element.zIndex }}
+      style={{ zIndex: isOnly ? element.zIndex + SELECTED_LIFT : element.zIndex }}
       rotation={element.rotation}
       onSelect={(additive) => selectElement(element.id, additive)}
       onMoveBy={isSelected && !isOnly ? (dx, dy) => moveSelectionBy(slideId, dx, dy) : undefined}

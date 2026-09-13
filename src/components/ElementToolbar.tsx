@@ -3,6 +3,7 @@ import { BringToFront, Download, Lock, SendToBack, Trash2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { downloadImage, imageFilename } from '../utils/downloadImage';
 import { ShapeFormatControls } from './ShapeFormatControls';
+import { ColorField } from './ColorField';
 
 const GAP = 10;
 const EDGE = 8;
@@ -31,6 +32,7 @@ export function ElementToolbar() {
     deleteSelection,
     canDeleteElement,
     ungroupElement,
+    updateElement,
     getImageById,
     activeSectionName,
   } = useBoard();
@@ -137,6 +139,23 @@ export function ElementToolbar() {
             <Lock size={13} strokeWidth={1.9} />
             Locked
           </button>
+          <span className="text-format-divider" />
+        </>
+      )}
+
+      {/* A loose chip's color, changed on the slide. It overrides this one placement only:
+          the palette is a set of colors someone saved, and a swatch is a copy of one, so
+          repainting a copy must not reach back and edit the original. */}
+      {element.type === 'swatch' && sameType && (
+        <>
+          <span className="shape-format-label">Color</span>
+          <ColorField
+            label="Swatch color"
+            value={element.color}
+            onChange={(color) =>
+              selected.forEach((el) => updateElement(activeSlideId, el.id, { color }))
+            }
+          />
           <span className="text-format-divider" />
         </>
       )}
