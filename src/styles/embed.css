@@ -8,6 +8,10 @@
  */
 
 .gw-mb {
+  /* The host page's line-height inherits in unless we set one, and Bubble's is tight
+     enough to shave the descenders off a title set in Playfair — the p in "Steph" lost
+     its tail. Stated here so the board's typography is the board's own. */
+  line-height: 1.45;
   /* The two bottom-anchored widgets position against this. */
   position: relative;
   /* Contains every internal z-index so the app can't fight the host page's

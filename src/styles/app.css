@@ -56,6 +56,9 @@
   font-family: var(--font-display);
   min-width: 0;
   font-size: 15px;
+  /* Tall enough for a descender: this box is clipped to ellipsise a long event name, so
+     anything the line box does not cover gets cut off rather than merely overflowing. */
+  line-height: 1.5;
   font-weight: 500;
   color: var(--text-primary);
   white-space: nowrap;

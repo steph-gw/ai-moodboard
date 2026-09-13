@@ -78,6 +78,28 @@ export function TextFormatControls({
         <Italic size={13} strokeWidth={2.2} />
       </button>
 
+      {/* Alignment. Icons rather than a dropdown: three mutually exclusive choices that are
+          read at a glance are cheaper as three buttons than as a menu hiding two of them. */}
+      {ALIGNMENTS.map(({ value, Icon, label }) => (
+        <button
+          key={value}
+          type="button"
+          className={`text-format-btn ${text.align === value ? 'active' : ''}`}
+          onClick={() => patch({ align: value })}
+          aria-label={label}
+          aria-pressed={text.align === value}
+          data-tooltip={label}
+        >
+          <Icon size={14} strokeWidth={1.8} />
+        </button>
+      ))}
+
+      <ColorField
+        label="Text color"
+        value={text.color}
+        onChange={(color) => patch({ color })}
+      />
+
       <span className="text-format-divider" />
 
       <div className="text-format-size">
@@ -136,32 +158,6 @@ export function TextFormatControls({
           aria-label="Line height"
         />
       </div>
-
-      <span className="text-format-divider" />
-
-      {/* Alignment. Icons rather than a dropdown: three mutually exclusive choices that are
-          read at a glance are cheaper as three buttons than as a menu hiding two of them. */}
-      {ALIGNMENTS.map(({ value, Icon, label }) => (
-        <button
-          key={value}
-          type="button"
-          className={`text-format-btn ${text.align === value ? 'active' : ''}`}
-          onClick={() => patch({ align: value })}
-          aria-label={label}
-          aria-pressed={text.align === value}
-          data-tooltip={label}
-        >
-          <Icon size={14} strokeWidth={1.8} />
-        </button>
-      ))}
-
-      <span className="text-format-divider" />
-
-      <ColorField
-        label="Text color"
-        value={text.color}
-        onChange={(color) => patch({ color })}
-      />
     </>
   );
 }
