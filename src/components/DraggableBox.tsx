@@ -93,6 +93,9 @@ function isShift(e: { shiftKey: boolean }): boolean {
   return e.shiftKey || shiftHeld;
 }
 
+/** How far a Shift-held drag must travel before its direction is taken as meant. */
+const AXIS_SLOP = 4;
+
 const CLICK_SLOP = 3;
 
 export function DraggableBox({
@@ -134,6 +137,8 @@ export function DraggableBox({
     centerY: number;
     startAngle: number;
     moved: boolean;
+    /** Which way a Shift-held move is pinned, once the gesture has shown its hand. */
+    axis: 'x' | 'y' | null;
   } | null>(null);
 
   const clamp = useCallback(
@@ -193,14 +198,27 @@ export function DraggableBox({
         if (Math.abs(dx * scale) > CLICK_SLOP || Math.abs(dy * scale) > CLICK_SLOP) {
           drag.moved = true;
         }
-        // Shift holds the drag to one axis, the way it does when rotating. Which axis is
-        // decided by the larger travel and re-decided on every move, so letting go of one
-        // direction and pulling the other way switches tracks rather than sticking.
+        // Shift holds the drag to one axis, the way it does when rotating. The axis is
+        // decided once, from the first travel worth reading, and then held for the rest of
+        // the gesture — deciding afresh on every move made a long vertical drag flick
+        // sideways on any wobble. Until it is decided the element stays put, so the lock
+        // never starts by taking the wrong direction.
         let mx = dx;
         let my = dy;
         if (isShift(e)) {
-          if (Math.abs(dx) >= Math.abs(dy)) my = 0;
-          else mx = 0;
+          if (!drag.axis && Math.max(Math.abs(dx), Math.abs(dy)) * scale > AXIS_SLOP) {
+            drag.axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+          }
+          if (drag.axis === 'x') my = 0;
+          else if (drag.axis === 'y') mx = 0;
+          else {
+            mx = 0;
+            my = 0;
+          }
+        } else {
+          // Letting go of Shift frees the drag, and pressing it again reads the direction
+          // afresh rather than resuming the axis it had before.
+          drag.axis = null;
         }
         if (onMoveBy) onMoveBy(mx, my);
         else onChange(clamp(drag.origX + mx, drag.origY + my, drag.origW, drag.origH));
@@ -262,6 +280,13 @@ export function DraggableBox({
     if (readOnly) return;
     e.stopPropagation();
     e.preventDefault();
+    // Shift is also the browser's "extend the selection" key, so a Shift-drag that starts
+    // anywhere near text leaves a highlight trailing behind the element. Nothing outside a
+    // text box being edited has a selection worth keeping, so drop it.
+    if (!(e.target as HTMLElement | null)?.closest?.('[contenteditable="true"]')) {
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) selection.removeAllRanges();
+    }
     // Opened before onSelect so the raise-to-front that selection triggers folds into
     // the same undo step as the drag itself. One gesture, one entry.
     onInteractionStart?.();
@@ -288,6 +313,7 @@ export function DraggableBox({
       centerY,
       startAngle: (Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180) / Math.PI,
       moved: false,
+      axis: null,
     };
   };
 
