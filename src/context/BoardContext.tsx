@@ -40,6 +40,12 @@ import { useExportPdf } from '../embed/useExportPdf';
 import type { SlideVersions } from '../embed/boardRepo';
 
 const HISTORY_LIMIT = 60;
+/**
+ * Put on the clipboard for an element with no text of its own — a shape, an image, a
+ * palette. Zero-width, so pasting one into another app leaves nothing visible behind.
+ */
+const CLIPBOARD_MARKER = '\u200b';
+
 /** Offset a pasted element so it does not land exactly on top of the original. */
 const PASTE_OFFSET = 16;
 
@@ -2204,6 +2210,26 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     deleteElements(activeSlideId, selectedElementIds);
   }, [activeSlideId, selectedElementIds, deleteElements]);
 
+  /**
+   * What an element puts on the system clipboard.
+   *
+   * Paste recognises our own elements by matching this back, so it has to be something the
+   * clipboard will actually take: writing an empty string leaves the previous contents in
+   * place on some browsers, and then a pasted shape came back as a text box of whatever
+   * had been copied before it. Anything with no words of its own gets the zero-width
+   * marker — invisible if it is ever pasted into another app, but a real change.
+   */
+  const clipboardTextFor = (elements: readonly CanvasElement[]): string => {
+    const parts = elements.map((el) => {
+      if (el.type === 'text') return el.content;
+      if (el.type === 'swatch') return el.color;
+      if (el.type === 'paletteGroup') return el.colors.join(' ');
+      return '';
+    });
+    const text = parts.filter(Boolean).join('\n');
+    return text || CLIPBOARD_MARKER;
+  };
+
   const cutSelection = useCallback(
     (writeClipboard: (text: string) => void): boolean => {
       // Cut carries one element, because paste puts one back. Several selected is a
@@ -2219,7 +2245,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       if (Date.now() - lastCutAtRef.current < 300) return false;
       lastCutAtRef.current = Date.now();
 
-      const clipboardText = element.type === 'text' ? element.content : '';
+      const clipboardText = clipboardTextFor([element]);
       cutRef.current = { elements: [element], clipboardText };
       writeClipboard(clipboardText);
       deleteElement(activeSlideId, selectedElementId);
@@ -2312,10 +2338,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       if (Date.now() - lastCopyAtRef.current < 300) return false;
       lastCopyAtRef.current = Date.now();
 
-      const clipboardText = elements
-        .map((el) => (el.type === 'text' ? el.content : ''))
-        .filter(Boolean)
-        .join('\n');
+      const clipboardText = clipboardTextFor(elements);
       cutRef.current = { elements, clipboardText };
       writeClipboard(clipboardText);
       return true;
@@ -2327,9 +2350,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   // place the system clipboard can be written synchronously.
   useEffect(() => {
     const onCopy = (e: ClipboardEvent) => {
+      // Editing a text box copies the words, not the element — isTypingTarget is what
+      // tells the two apart, and it reads the focused element rather than the DOM
+      // selection, which the host page can leave lying around non-collapsed.
       if (isTypingTarget(e.target)) return;
-      // A real text selection is the user copying words, not elements.
-      if (!window.getSelection()?.isCollapsed) return;
       const did = copySelection((text) => e.clipboardData?.setData('text/plain', text));
       if (did) e.preventDefault();
     };
@@ -2367,7 +2391,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       const cut = cutRef.current;
 
       // Our own cut still owns the clipboard, so restore the real element.
-      if (cut && text === cut.clipboardText) {
+      if (cut && (text === cut.clipboardText.trim() || text === CLIPBOARD_MARKER)) {
         e.preventDefault();
         insertElements(cut.elements);
         return;
@@ -2411,7 +2435,6 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       // later, and stands down if the real event did arrive.
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c') {
         if (typing) return;
-        if (!window.getSelection()?.isCollapsed) return;
         const at = Date.now();
         window.setTimeout(() => {
           if (lastCopyAtRef.current >= at) return;
