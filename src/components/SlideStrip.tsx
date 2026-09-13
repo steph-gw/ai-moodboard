@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { SlideContextMenu } from './SlideContextMenu';
 import { ClipboardPaste, Copy, CopyPlus, Lock, Plus, Trash2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { useHost } from '../embed/HostProvider';
@@ -6,7 +7,7 @@ import { ShapeView } from './ShapeView';
 import { PaletteGroupView, SwatchView } from './SwatchView';
 import type { CanvasElement, Slide } from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
-import { textFontCss } from '../utils/textFonts';
+import { letterSpacingCss, textFontCss } from '../utils/textFonts';
 
 function MiniElement({
   element,
@@ -68,6 +69,7 @@ function MiniElement({
         ...style,
         fontSize: element.fontSize,
         fontFamily: textFontCss(element.fontFamily),
+        letterSpacing: letterSpacingCss(element.letterSpacing),
         fontWeight: element.bold ? 700 : 400,
         fontStyle: element.italic ? 'italic' : 'normal',
         color: element.color,
@@ -151,6 +153,7 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
     unlockedSlideIds,
   } = useBoard();
   const { features } = useHost();
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null);
 
   const section = board.sections.find((s) => s.id === activeSectionId);
   const slide = section?.slides.find((s) => s.id === slideId);
@@ -178,6 +181,13 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
   return (
     <div
       className={`slide-tab ${isActive ? 'active' : ''} ${locked ? 'is-locked' : ''}`}
+      // Right-clicking a thumbnail is where people look for "copy this slide", so that is
+      // where it is — the buttons and the shortcut are the same actions by other routes.
+      onContextMenu={(e) => {
+        e.preventDefault();
+        setActiveSlideId(slideId);
+        setMenuAt({ x: e.clientX, y: e.clientY });
+      }}
       onKeyDown={(e) => {
         // Focus is inside the filmstrip, so Delete/Backspace removes the whole
         // slide rather than the element selected on the canvas.
@@ -252,6 +262,9 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
           </div>
         )}
       </div>
+      {menuAt && (
+        <SlideContextMenu slideId={slideId} at={menuAt} onClose={() => setMenuAt(null)} />
+      )}
     </div>
   );
 }

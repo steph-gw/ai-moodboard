@@ -1594,7 +1594,14 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     [activeSection]
   );
 
-  /** Put the copied slide into the section being looked at now, after the last slide. */
+  /**
+   * Put the copied slide into the section being looked at now, after the last slide.
+   *
+   * Its pictures are re-registered rather than shared: a vote belongs to an image on a
+   * slide, and pointing the copy at the same rows would have it arrive carrying whatever
+   * the original had collected. Same files, same URLs — nothing is re-uploaded — but its
+   * own images, so its own votes. Comment threads are dropped at copy time.
+   */
   const pasteSlide = useCallback(async () => {
     if (!canEditRef.current) return;
     const held = cutRef.current;
@@ -1607,21 +1614,55 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     // called Ceremony is not a clash — it is the same idea in two places.
     const sameSection = section.slides.some((s) => s.id === held.slide.id);
     const name = sameSection ? `${held.slide.name} (copy)` : held.slide.name;
-    const elements = held.slide.elements.map((el, i) => ({ ...el, id: `${el.id}-paste-${stamp}-${i}` }));
-    let newId = `slide-${activeSectionId}-${stamp}`;
 
+    const used = Array.from(
+      new Set(held.slide.elements.filter((el) => el.type === 'image').map((el) => el.imageId))
+    );
+    const imageMap = new Map<string, string>();
+    const fresh: BoardImage[] = [];
+    for (const imageId of used) {
+      const source = boardRef.current.images.find((img) => img.id === imageId);
+      if (!source) continue;
+      let newImageId = `img-${stamp}-${imageMap.size}`;
+      if (repo && identity) {
+        try {
+          newImageId = await repo.createImage(identity.moodboardId, source.url);
+        } catch {
+          onError?.('That slide could not be pasted. Please try again.');
+          return;
+        }
+      }
+      imageMap.set(imageId, newImageId);
+      // The copy is its own picture, so it starts with no vote on it.
+      fresh.push({ ...source, id: newImageId, sectionId: activeSectionId, clientVote: undefined });
+    }
+
+    const elements = held.slide.elements
+      .map((el, i) => {
+        const copy = { ...el, id: `${el.id}-paste-${stamp}-${i}` };
+        if (copy.type !== 'image') return copy;
+        const mapped = imageMap.get(copy.imageId);
+        // A picture that could not be re-registered would render as a hole; leaving it out
+        // is the honest outcome, and the rest of the slide still arrives.
+        return mapped ? { ...copy, imageId: mapped } : null;
+      })
+      .filter((el): el is CanvasElement => el !== null);
+
+    let newId = `slide-${activeSectionId}-${stamp}`;
     if (repo) {
       const ok = await runStructural(async () => {
         newId = await repo.createSlide(activeSectionId, name, section.slides.length);
         // Written here rather than left to the autosave, so the pasted slide is whole the
-        // moment it appears — and stays whole if the tab closes a second later.
-        await repo.saveSlide(newId, elements);
+        // moment it appears — background included, which is the slide's formatting as much
+        // as anything drawn on it.
+        await repo.saveSlide(newId, elements, held.slide.background);
       });
       if (!ok) return;
     }
 
     applyStructural((prev) => ({
       ...prev,
+      images: [...prev.images, ...fresh],
       sections: prev.sections.map((s) =>
         s.id === activeSectionId
           ? {
@@ -1632,7 +1673,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       ),
     }));
     setActiveSlideId(newId);
-  }, [activeSectionId, applyStructural, repo, runStructural]);
+  }, [activeSectionId, applyStructural, identity, onError, repo, runStructural]);
 
   // Paste reaches this through a ref: it runs inside a clipboard listener that is set up
   // before this point in the file, and re-registering that listener on every board change
