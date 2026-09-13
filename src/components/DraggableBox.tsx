@@ -170,8 +170,17 @@ export function DraggableBox({
         if (Math.abs(dx * scale) > CLICK_SLOP || Math.abs(dy * scale) > CLICK_SLOP) {
           drag.moved = true;
         }
-        if (onMoveBy) onMoveBy(dx, dy);
-        else onChange(clamp(drag.origX + dx, drag.origY + dy, drag.origW, drag.origH));
+        // Shift holds the drag to one axis, the way it does when rotating. Which axis is
+        // decided by the larger travel and re-decided on every move, so letting go of one
+        // direction and pulling the other way switches tracks rather than sticking.
+        let mx = dx;
+        let my = dy;
+        if (e.shiftKey) {
+          if (Math.abs(dx) >= Math.abs(dy)) my = 0;
+          else mx = 0;
+        }
+        if (onMoveBy) onMoveBy(mx, my);
+        else onChange(clamp(drag.origX + mx, drag.origY + my, drag.origW, drag.origH));
         return;
       }
 
