@@ -3,6 +3,7 @@ import {
   AlignLeft,
   AlignRight,
   AlignVerticalSpaceAround,
+  AlignHorizontalSpaceAround,
   Bold,
   Italic,
   Minus,
@@ -12,7 +13,14 @@ import { useBoard } from '../context/BoardContext';
 import { ColorField } from './ColorField';
 import { loadFont } from '../utils/loadFont';
 import type { TextElement } from '../types';
-import { DEFAULT_LINE_HEIGHT, MAX_LINE_HEIGHT, MIN_LINE_HEIGHT } from '../types';
+import {
+  DEFAULT_LETTER_SPACING,
+  DEFAULT_LINE_HEIGHT,
+  MAX_LETTER_SPACING,
+  MAX_LINE_HEIGHT,
+  MIN_LETTER_SPACING,
+  MIN_LINE_HEIGHT,
+} from '../types';
 import { TEXT_FONT_OPTIONS } from '../utils/textFonts';
 
 /**
@@ -156,6 +164,29 @@ export function TextFormatControls({
             });
           }}
           aria-label="Line height"
+        />
+      </div>
+
+      {/* And beside that, the spacing between the letters — the other half of how loose
+          the type is set. In em, so it holds its proportion when the size changes, the
+          same way line height does. */}
+      <div className="text-format-size" data-tooltip="Letter spacing">
+        <AlignHorizontalSpaceAround size={12} strokeWidth={1.7} className="text-format-lh-icon" />
+        <input
+          type="number"
+          className="text-format-size-input"
+          value={text.letterSpacing ?? DEFAULT_LETTER_SPACING}
+          min={MIN_LETTER_SPACING}
+          max={MAX_LETTER_SPACING}
+          step={0.01}
+          onChange={(e) => {
+            const value = Number(e.target.value);
+            if (Number.isNaN(value)) return;
+            patch({
+              letterSpacing: Math.min(MAX_LETTER_SPACING, Math.max(MIN_LETTER_SPACING, value)),
+            });
+          }}
+          aria-label="Letter spacing"
         />
       </div>
     </>

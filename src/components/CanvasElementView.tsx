@@ -13,6 +13,7 @@ import type {
   TextElement,
 } from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH, DEFAULT_LINE_HEIGHT } from '../types';
+import { letterSpacingCss } from '../utils/textFonts';
 
 import { textFontCss } from '../utils/textFonts';
 import { ElementContextMenu } from './ElementContextMenu';
@@ -343,6 +344,7 @@ function TextElementView({
         style={{
           fontSize: element.fontSize * scale,
           lineHeight: element.lineHeight ?? DEFAULT_LINE_HEIGHT,
+          letterSpacing: letterSpacingCss(element.letterSpacing),
           fontFamily: textFontCss(element.fontFamily),
           fontWeight: element.bold ? 700 : 400,
           fontStyle: element.italic ? 'italic' : 'normal',

@@ -26,3 +26,14 @@ export const TEXT_FONT_OPTIONS: { value: TextFontFamily; label: string; css: str
 export function textFontCss(family: TextFontFamily): string {
   return TEXT_FONT_OPTIONS.find((o) => o.value === family)?.css ?? TEXT_FONT_OPTIONS[0].css;
 }
+
+/**
+ * Letter spacing as CSS, in em.
+ *
+ * em rather than px so it scales with the type: the artboard is drawn at whatever size
+ * fits the window, and spacing set in px would tighten as the slide shrank. Undefined and
+ * zero both come back as `normal`, which is the font's own spacing rather than a flat 0.
+ */
+export function letterSpacingCss(em?: number): string | undefined {
+  return em ? `${em}em` : undefined;
+}

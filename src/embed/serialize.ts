@@ -1,6 +1,9 @@
 import {
+  DEFAULT_LETTER_SPACING,
   DEFAULT_LINE_HEIGHT,
+  MAX_LETTER_SPACING,
   MAX_LINE_HEIGHT,
+  MIN_LETTER_SPACING,
   MIN_LINE_HEIGHT,
   SLIDE_HEIGHT,
   SLIDE_WIDTH,
@@ -117,6 +120,15 @@ function coerceElement(item: unknown, knownImageIds: ReadonlySet<string>): Canva
       ...(o.lineHeight === undefined
         ? {}
         : { lineHeight: clamp(num(o.lineHeight, DEFAULT_LINE_HEIGHT), MIN_LINE_HEIGHT, MAX_LINE_HEIGHT) }),
+      ...(o.letterSpacing === undefined
+        ? {}
+        : {
+            letterSpacing: clamp(
+              num(o.letterSpacing, DEFAULT_LETTER_SPACING),
+              MIN_LETTER_SPACING,
+              MAX_LETTER_SPACING
+            ),
+          }),
       fontFamily: FONTS.includes(o.fontFamily as TextFontFamily)
         ? (o.fontFamily as TextFontFamily)
         : 'sans',

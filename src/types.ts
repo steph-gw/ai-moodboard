@@ -86,6 +86,8 @@ export interface TextElement extends CanvasElementBase {
   align: 'left' | 'center' | 'right';
   /** Multiplier, not px, so it holds when the font size changes. Default DEFAULT_LINE_HEIGHT. */
   lineHeight?: number;
+  /** Space between characters, in em for the same reason line height is a multiplier. */
+  letterSpacing?: number;
   bold?: boolean;
   italic?: boolean;
 }
@@ -94,6 +96,11 @@ export interface TextElement extends CanvasElementBase {
 export const DEFAULT_LINE_HEIGHT = 1.3;
 export const MIN_LINE_HEIGHT = 0.8;
 export const MAX_LINE_HEIGHT = 3;
+
+/** Letter spacing, in em. Negative tightens; a display face set large usually wants it. */
+export const DEFAULT_LETTER_SPACING = 0;
+export const MIN_LETTER_SPACING = -0.1;
+export const MAX_LETTER_SPACING = 1;
 
 /** Straight line, or a closed shape drawn to fill its box. */
 export type ShapeKind = 'line' | 'rect' | 'ellipse' | 'triangle' | 'polygon';

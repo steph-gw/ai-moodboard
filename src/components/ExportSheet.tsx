@@ -2,7 +2,7 @@ import { createPortal } from 'react-dom';
 import { useBoard } from '../context/BoardContext';
 import type { CanvasElement } from '../types';
 import { DEFAULT_LINE_HEIGHT, SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
-import { textFontCss } from '../utils/textFonts';
+import { letterSpacingCss, textFontCss } from '../utils/textFonts';
 import { ShapeView } from './ShapeView';
 import { PaletteGroupView, SwatchView } from './SwatchView';
 
@@ -66,6 +66,7 @@ function StaticElement({
         ...style,
         fontSize: element.fontSize,
         lineHeight: element.lineHeight ?? DEFAULT_LINE_HEIGHT,
+        letterSpacing: letterSpacingCss(element.letterSpacing),
         fontFamily: textFontCss(element.fontFamily),
         fontWeight: element.bold ? 700 : 400,
         fontStyle: element.italic ? 'italic' : 'normal',
