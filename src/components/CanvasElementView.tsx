@@ -457,9 +457,9 @@ function BoxElementView({
       }}
     >
       {element.type === 'swatch' ? (
-        <SwatchView element={element} />
+        <SwatchView element={element} scale={scale} />
       ) : element.type === 'paletteGroup' ? (
-        <PaletteGroupView element={element} />
+        <PaletteGroupView element={element} scale={scale} />
       ) : (
         <ShapeView element={element} />
       )}

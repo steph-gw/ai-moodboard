@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
-import type { PaletteGroupElement, SwatchElement } from '../types';
+import type { PaletteGroupElement, SwatchElement, TextFontFamily } from '../types';
+import { textFontCss } from '../utils/textFonts';
 
 /** Gap between chips in a group, as a share of the chip width. */
 const GROUP_GAP = 0.12;
@@ -51,16 +52,20 @@ export function swatchCaption(height: number): {
   return { captionH, gap: clamp(captionH * 0.28, 3, 8), fontSize: clamp(captionH * 0.58, 6.5, 15) };
 }
 
+export const DEFAULT_CAPTION_FONT: TextFontFamily = 'display';
+
 export function SwatchChip({
   color,
   width,
   height,
   showHex,
+  fontFamily,
 }: {
   color: string;
   width: number;
   height: number;
   showHex: boolean;
+  fontFamily?: TextFontFamily;
 }) {
   const caption = swatchCaption(height);
   const captionH = showHex ? caption.captionH : 0;
@@ -76,7 +81,12 @@ export function SwatchChip({
       {showHex && (
         <span
           className="swatch-hex"
-          style={{ height: captionH, fontSize, lineHeight: `${captionH}px` }}
+          style={{
+            height: captionH,
+            fontSize,
+            lineHeight: `${captionH}px`,
+            fontFamily: textFontCss(fontFamily ?? DEFAULT_CAPTION_FONT),
+          }}
         >
           {color.toUpperCase()}
         </span>
@@ -85,14 +95,22 @@ export function SwatchChip({
   );
 }
 
-/** A single color, placed on its own — what a group becomes when it is unlocked. */
-export function SwatchView({ element }: { element: SwatchElement }) {
+/**
+ * A single color, placed on its own — what a group becomes when it is unlocked.
+ *
+ * `scale` is the artboard's, because the element's box is drawn at slide units × scale
+ * while everything in here is plain CSS pixels. Without it the chip is laid out at full
+ * slide size inside a box that has been shrunk to fit the screen, and the caption hangs
+ * out of the bottom — which is what pushed it outside the selection ring.
+ */
+export function SwatchView({ element, scale = 1 }: { element: SwatchElement; scale?: number }) {
   return (
     <SwatchChip
       color={element.color}
-      width={element.width}
-      height={element.height}
+      width={element.width * scale}
+      height={element.height * scale}
       showHex={element.showHex !== false}
+      fontFamily={element.fontFamily}
     />
   );
 }
@@ -106,13 +124,13 @@ export function SwatchView({ element }: { element: SwatchElement }) {
  */
 export function PaletteGroupView({
   element,
-  widthOverride,
+  scale = 1,
 }: {
   element: PaletteGroupElement;
-  /** The rendered width when it differs from the stored one — the export sheet scales. */
-  widthOverride?: number;
+  /** The artboard's scale — see SwatchView. */
+  scale?: number;
 }) {
-  const cells = paletteGroupCells(widthOverride ?? element.width, element.colors.length);
+  const cells = paletteGroupCells(element.width * scale, element.colors.length);
 
   return (
     <div className="palette-group" style={{ gap: cells.gap }}>
@@ -121,8 +139,9 @@ export function PaletteGroupView({
           key={`${color}-${i}`}
           color={color}
           width={cells.width}
-          height={element.height}
+          height={element.height * scale}
           showHex={element.showHex !== false}
+          fontFamily={element.fontFamily}
         />
       ))}
     </div>

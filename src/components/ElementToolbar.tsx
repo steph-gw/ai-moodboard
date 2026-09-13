@@ -4,6 +4,10 @@ import { useBoard } from '../context/BoardContext';
 import { downloadImage, imageFilename } from '../utils/downloadImage';
 import { ShapeFormatControls } from './ShapeFormatControls';
 import { ColorField } from './ColorField';
+import { TEXT_FONT_OPTIONS } from '../utils/textFonts';
+import { loadFont } from '../utils/loadFont';
+import { DEFAULT_CAPTION_FONT } from './SwatchView';
+import type { TextFontFamily } from '../types';
 
 const GAP = 10;
 const EDGE = 8;
@@ -139,6 +143,32 @@ export function ElementToolbar() {
             <Lock size={13} strokeWidth={1.9} />
             Locked
           </button>
+          <span className="text-format-divider" />
+        </>
+      )}
+
+      {/* The captions are text, so they answer to the same typeface everything else on the
+          board does — a palette in DM Sans on a Playfair board reads as a mistake. */}
+      {(element.type === 'paletteGroup' || element.type === 'swatch') && sameType && (
+        <>
+          <select
+            className="text-format-select"
+            value={element.fontFamily ?? DEFAULT_CAPTION_FONT}
+            onChange={(e) => {
+              const family = e.target.value as TextFontFamily;
+              loadFont(family);
+              selected.forEach((el) =>
+                updateElement(activeSlideId, el.id, { fontFamily: family })
+              );
+            }}
+            aria-label="Caption font"
+          >
+            {TEXT_FONT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
           <span className="text-format-divider" />
         </>
       )}

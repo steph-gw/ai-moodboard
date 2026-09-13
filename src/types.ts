@@ -128,6 +128,8 @@ export interface SwatchElement extends CanvasElementBase {
   color: string;
   /** The hex caption under the box. Absent reads as shown. */
   showHex?: boolean;
+  /** The caption's typeface, so it can match the board's other text. */
+  fontFamily?: TextFontFamily;
 }
 
 /**
@@ -142,6 +144,8 @@ export interface PaletteGroupElement extends CanvasElementBase {
   colors: string[];
   /** The hex captions under each chip. Absent reads as shown. */
   showHex?: boolean;
+  /** The captions' typeface, carried into the text elements when it is unlocked. */
+  fontFamily?: TextFontFamily;
 }
 
 export type CanvasElement =

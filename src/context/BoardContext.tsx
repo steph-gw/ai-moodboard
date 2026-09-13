@@ -1750,6 +1750,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       if (!group || group.type !== 'paletteGroup') return;
 
       const cells = paletteGroupCells(group.width, group.colors.length);
+      // The labels keep the typeface the group was wearing, so opening a palette changes
+      // what you can grab and nothing about how it looks.
+      const font = group.fontFamily ?? 'display';
       const showHex = group.showHex !== false;
       const caption = swatchCaption(group.height);
       const chipH = showHex ? group.height - caption.captionH - caption.gap : group.height;
@@ -1763,6 +1766,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           type: 'swatch',
           color,
           showHex: false,
+          fontFamily: font,
           x,
           y: group.y,
           width,
@@ -1783,7 +1787,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           rotation: group.rotation,
           zIndex: group.zIndex + i * 2 + 1,
           fontSize: Math.round(caption.fontSize),
-          fontFamily: 'sans',
+          fontFamily: font,
           color: '#6b645a',
           align: 'center',
           lineHeight: 1,

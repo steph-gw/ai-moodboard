@@ -1537,10 +1537,13 @@
   flex-shrink: 0;
 }
 
+/* No border. It existed to reserve room for the old selection ring so selecting an element
+   did not shift it; the ring is drawn by .selection-chrome now, in a layer above. Left in
+   place it stole 3px from every element's content box — so the canvas laid out an image or
+   a palette 3px smaller than its stored size, while the export sheet, which has no such
+   border, laid it out correctly. Screen and print were quietly disagreeing. */
 .canvas-element {
-  border: 1.5px solid transparent;
   border-radius: 4px;
-  transition: border-color 0.15s;
   touch-action: none;
   user-select: none;
   /* Anything you can pick up should say so before you press. The resize handles set

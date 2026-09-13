@@ -73,6 +73,8 @@ const FONTS: readonly TextFontFamily[] = [
   'lora',
 ];
 const ALIGNS = ['left', 'center', 'right'] as const;
+/** What a caption written before it could choose renders as — the same as new text. */
+const DEFAULT_CAPTION_FONT: TextFontFamily = 'display';
 const SHAPES: readonly ShapeKind[] = ['line', 'rect', 'ellipse', 'triangle', 'polygon'];
 const STROKES: readonly StrokeStyle[] = ['solid', 'dashed', 'dotted'];
 
@@ -134,7 +136,15 @@ function coerceElement(item: unknown, knownImageIds: ReadonlySet<string>): Canva
     // A group with nothing in it would render as an invisible box that still selects and
     // drags — worse than being dropped.
     if (colors.length === 0) return null;
-    return { ...base, type: 'paletteGroup', colors, showHex: o.showHex !== false };
+    return {
+      ...base,
+      type: 'paletteGroup',
+      colors,
+      showHex: o.showHex !== false,
+      fontFamily: FONTS.includes(o.fontFamily as TextFontFamily)
+        ? (o.fontFamily as TextFontFamily)
+        : DEFAULT_CAPTION_FONT,
+    };
   }
 
   if (o.type === 'swatch') {
@@ -142,6 +152,9 @@ function coerceElement(item: unknown, knownImageIds: ReadonlySet<string>): Canva
       ...base,
       type: 'swatch',
       color: typeof o.color === 'string' ? o.color : '#cccccc',
+      fontFamily: FONTS.includes(o.fontFamily as TextFontFamily)
+        ? (o.fontFamily as TextFontFamily)
+        : DEFAULT_CAPTION_FONT,
       // Absent means shown: swatches written before the caption could be turned off all
       // had one, and a missing flag must not silently strip it from them.
       showHex: o.showHex !== false,
