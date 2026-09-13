@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Plus, Copy, Lock, Trash2 } from 'lucide-react';
+import { ClipboardPaste, Copy, CopyPlus, Lock, Plus, Trash2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { useHost } from '../embed/HostProvider';
 import { ShapeView } from './ShapeView';
@@ -146,6 +146,7 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
     canEdit,
     deleteSlide,
     duplicateSlide,
+    copySlide,
     lockedSlideIds,
     unlockedSlideIds,
   } = useBoard();
@@ -217,6 +218,21 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
                 duplicateSlide(slideId);
               }}
             >
+              <CopyPlus size={12} strokeWidth={1.75} />
+            </button>
+            {/* Duplicate puts a second copy here; copy takes one away with you, to be
+                pasted into whichever section you open next. Different enough to be worth
+                its own button rather than a mode of the first. */}
+            <button
+              type="button"
+              className="slide-hover-btn"
+              data-tooltip="Copy slide"
+              aria-label="Copy slide"
+              onClick={(e) => {
+                e.stopPropagation();
+                copySlide(slideId);
+              }}
+            >
               <Copy size={12} strokeWidth={1.75} />
             </button>
             {canDelete && (
@@ -241,7 +257,7 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
 }
 
 export function SlideStrip() {
-  const { board, activeSectionId, canEdit, addSlide } = useBoard();
+  const { board, activeSectionId, canEdit, addSlide, pasteSlide, copiedSlideName } = useBoard();
   
   const section = board.sections.find((s) => s.id === activeSectionId);
   if (!section) return null;
@@ -253,8 +269,21 @@ export function SlideStrip() {
           <SlideThumbnail key={slide.id} slideId={slide.id} index={index} />
         ))}
         {canEdit && (
-          <button type="button" className="slide-tab-add" onClick={addSlide}>
+          <button type="button" className="slide-tab-add" onClick={addSlide} data-tooltip="Add slide" aria-label="Add slide">
             <Plus size={16} strokeWidth={1.5} />
+          </button>
+        )}
+        {/* Only while something is held. A paste button that is usually dead is a button
+            you learn to ignore, and the name says which slide is about to land. */}
+        {canEdit && copiedSlideName && (
+          <button
+            type="button"
+            className="slide-tab-add is-paste"
+            onClick={() => void pasteSlide()}
+            data-tooltip={`Paste "${copiedSlideName}" here`}
+            aria-label={`Paste slide ${copiedSlideName}`}
+          >
+            <ClipboardPaste size={15} strokeWidth={1.5} />
           </button>
         )}
       </div>

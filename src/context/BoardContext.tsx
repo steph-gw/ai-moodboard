@@ -46,6 +46,9 @@ const HISTORY_LIMIT = 60;
  */
 const CLIPBOARD_MARKER = '\u200b';
 
+/** The same idea for a whole slide, told apart from a single element by its length. */
+const SLIDE_CLIPBOARD_MARKER = '\u200b\u200b';
+
 /** Offset a pasted element so it does not land exactly on top of the original. */
 const PASTE_OFFSET = 16;
 
@@ -70,6 +73,12 @@ interface BoardContextValue {
   selectedElementIds: readonly string[];
   deleteSelection: () => void;
   moveSelectionBy: (slideId: string, dx: number, dy: number) => void;
+  /** Take a copy of a slide, for pasting into another section. */
+  copySlide: (slideId: string) => boolean;
+  /** Drop the copied slide into the section being looked at now. */
+  pasteSlide: () => Promise<void>;
+  /** The copied slide's name, or null when nothing is held. */
+  copiedSlideName: string | null;
   selectedCommentPinId: string | null;
   selectedCommentPin: CommentPin | null;
   selectElement: (elementId: string | null, additive?: boolean) => void;
@@ -294,7 +303,13 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    * carries is a marker, and this is the thing paste actually puts back. Set by both
    * cut and copy, which is why it is a list: cut takes one, copy takes the selection.
    */
-  const cutRef = useRef<{ elements: CanvasElement[]; clipboardText: string } | null>(null);
+  const cutRef = useRef<
+    | { kind: 'elements'; elements: CanvasElement[]; clipboardText: string }
+    | { kind: 'slide'; slide: Slide; clipboardText: string }
+    | null
+  >(null);
+  /** Mirrors the slide in the clipboard, so the filmstrip can offer to paste it. */
+  const [copiedSlideName, setCopiedSlideName] = useState<string | null>(null);
   const lastCutAtRef = useRef(0);
   const lastCopyAtRef = useRef(0);
 
@@ -1553,6 +1568,79 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     [activeSection, activeSectionId, applyStructural, repo, runStructural]
   );
 
+  /**
+   * Take a copy of a slide, to be pasted into another section.
+   *
+   * The snapshot is taken now rather than read back at paste time: the point of a copy is
+   * that the two go their own ways, so what lands is the slide as it was when it was
+   * copied, and editing either one afterwards leaves the other alone.
+   *
+   * Its comment threads stay behind. A thread is a conversation about a slide, held by the
+   * people who had it — pasting a second copy of it into another section would put words
+   * in their mouths about a slide they have never seen.
+   */
+  const copySlide = useCallback(
+    (slideId: string): boolean => {
+      const slide = activeSection?.slides.find((s) => s.id === slideId);
+      if (!slide) return false;
+      cutRef.current = {
+        kind: 'slide',
+        slide: { ...slide, elements: slide.elements.map((el) => ({ ...el })), commentPins: [] },
+        clipboardText: SLIDE_CLIPBOARD_MARKER,
+      };
+      setCopiedSlideName(slide.name);
+      return true;
+    },
+    [activeSection]
+  );
+
+  /** Put the copied slide into the section being looked at now, after the last slide. */
+  const pasteSlide = useCallback(async () => {
+    if (!canEditRef.current) return;
+    const held = cutRef.current;
+    if (!held || held.kind !== 'slide') return;
+    const section = boardRef.current.sections.find((s) => s.id === activeSectionId);
+    if (!section) return;
+
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    // Named "(copy)" only where the original is, since two sections each holding a slide
+    // called Ceremony is not a clash — it is the same idea in two places.
+    const sameSection = section.slides.some((s) => s.id === held.slide.id);
+    const name = sameSection ? `${held.slide.name} (copy)` : held.slide.name;
+    const elements = held.slide.elements.map((el, i) => ({ ...el, id: `${el.id}-paste-${stamp}-${i}` }));
+    let newId = `slide-${activeSectionId}-${stamp}`;
+
+    if (repo) {
+      const ok = await runStructural(async () => {
+        newId = await repo.createSlide(activeSectionId, name, section.slides.length);
+        // Written here rather than left to the autosave, so the pasted slide is whole the
+        // moment it appears — and stays whole if the tab closes a second later.
+        await repo.saveSlide(newId, elements);
+      });
+      if (!ok) return;
+    }
+
+    applyStructural((prev) => ({
+      ...prev,
+      sections: prev.sections.map((s) =>
+        s.id === activeSectionId
+          ? {
+              ...s,
+              slides: [...s.slides, { ...held.slide, id: newId, name, elements, commentPins: [] }],
+            }
+          : s
+      ),
+    }));
+    setActiveSlideId(newId);
+  }, [activeSectionId, applyStructural, repo, runStructural]);
+
+  // Paste reaches this through a ref: it runs inside a clipboard listener that is set up
+  // before this point in the file, and re-registering that listener on every board change
+  // would mean losing a keystroke mid-gesture.
+  const pasteSlideRef = useRef(pasteSlide);
+  pasteSlideRef.current = pasteSlide;
+
+
   const setSectionBrief = useCallback(
     (sectionId: string, text: string) => {
       if (!canManageRef.current) return;
@@ -2246,7 +2334,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       lastCutAtRef.current = Date.now();
 
       const clipboardText = clipboardTextFor([element]);
-      cutRef.current = { elements: [element], clipboardText };
+      cutRef.current = { kind: 'elements', elements: [element], clipboardText };
       writeClipboard(clipboardText);
       deleteElement(activeSlideId, selectedElementId);
       return true;
@@ -2333,17 +2421,25 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       const elements = (activeSlide?.elements ?? []).filter((el) =>
         selectedElementIds.includes(el.id)
       );
-      if (!elements.length) return false;
+      // Nothing picked out on the slide means the slide itself is what is selected — the
+      // same reading the background control uses — so Cmd+C copies the whole thing.
+      if (!elements.length) {
+        if (Date.now() - lastCopyAtRef.current < 300) return false;
+        if (!copySlide(activeSlideId)) return false;
+        lastCopyAtRef.current = Date.now();
+        writeClipboard(SLIDE_CLIPBOARD_MARKER);
+        return true;
+      }
       // Chrome delivers both keydown and the native copy event for one gesture.
       if (Date.now() - lastCopyAtRef.current < 300) return false;
       lastCopyAtRef.current = Date.now();
 
       const clipboardText = clipboardTextFor(elements);
-      cutRef.current = { elements, clipboardText };
+      cutRef.current = { kind: 'elements', elements, clipboardText };
       writeClipboard(clipboardText);
       return true;
     },
-    [activeSlide, activeSlideId, selectedElementIds]
+    [activeSlide, activeSlideId, selectedElementIds, copySlide]
   );
 
   // The native copy event, for the same reason cut listens for its own: it is the only
@@ -2391,9 +2487,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       const cut = cutRef.current;
 
       // Our own cut still owns the clipboard, so restore the real element.
-      if (cut && (text === cut.clipboardText.trim() || text === CLIPBOARD_MARKER)) {
+      if (cut && (text === cut.clipboardText.trim() || text === cut.clipboardText)) {
         e.preventDefault();
-        insertElements(cut.elements);
+        if (cut.kind === 'slide') void pasteSlideRef.current();
+        else insertElements(cut.elements);
         return;
       }
 
@@ -2488,6 +2585,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         selectedElementIds,
         deleteSelection,
         moveSelectionBy,
+        copySlide,
+        pasteSlide,
+        copiedSlideName,
         selectedCommentPinId,
         selectedCommentPin,
         selectElement,
