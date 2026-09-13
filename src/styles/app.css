@@ -3519,10 +3519,13 @@
   box-shadow: 0 0 0 1px var(--border-strong);
 }
 
-/* The stack overlaps by -6px, so a hovered avatar has to come forward or its tooltip is
-   painted over by the neighbour sitting on top of it. */
-.viewer-avatar:hover {
-  z-index: 2;
+/* The hovered avatar stays where it is in the overlap. It used to come forward so its
+   tooltip cleared the neighbour sitting on top of it, but that made the stack reshuffle
+   under the cursor. The avatar has no stacking context of its own, so lifting the tooltip
+   and its caret instead is enough — they paint over the neighbours while the order of the
+   faces never changes. */
+.viewer-avatar[data-tooltip]::before {
+  z-index: 500;
 }
 
 /* A selected slide gets the same treatment an element does — otherwise the background

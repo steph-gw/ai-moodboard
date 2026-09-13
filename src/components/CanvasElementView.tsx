@@ -217,14 +217,20 @@ function TextElementView({
     return Math.min(SLIDE_HEIGHT, Math.max(30, Math.ceil(content / scale)));
   };
 
-  // A box whose text no longer fits is the same bug whether the text grew or the type did,
-  // so a size or font change re-measures too. Only while this element is the selection:
-  // the user is working on it, and a board nobody has touched is never rewritten on open.
+  /**
+   * Keeps the box the size of the text in it.
+   *
+   * Both directions, not just growth: a box left taller than its text made the selection
+   * ring appear at one size and settle at another the moment it was let go, which reads as
+   * the editor changing its mind. The ring is meant to show what you have hold of.
+   *
+   * Only while this element is the selection — the user is working on it, so a board that
+   * nobody has touched is never rewritten on open.
+   */
   useLayoutEffect(() => {
     if (editing || readOnly || !isOnly) return;
     const needed = measure();
-    // Grows only. Shrinking would fight anyone who deliberately gave a caption room.
-    if (needed && needed > element.height + 1) {
+    if (needed && Math.abs(needed - element.height) > 1) {
       updateElement(slideId, element.id, { height: needed });
     }
   });

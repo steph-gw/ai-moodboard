@@ -12,11 +12,10 @@ export function TopNav() {
     summarizeVision,
     isSummarizing,
     setPresenting,
-    isPresenting,
     isCommentsOpen,
     setCommentsOpen,
   } = useBoard();
-  const { features, logoUrl } = useHost();
+  const { features } = useHost();
   const { isDirty, saveState, saveNow, exportPdf, isExporting } = useBoard();
   const isPlanner = role === 'planner';
 
@@ -26,15 +25,10 @@ export function TopNav() {
         {/* No logo configured is a normal state — the host may simply not have set one —
             and an <img> with an empty src renders as a broken-image icon, which reads as
             a bug. Fall back to the wordmark as text. */}
-        {/* The wordmark and its separator are branding, and an audience watching a
-            presentation is not being sold to — what they need is the event's name. */}
-        {!isPresenting &&
-          (logoUrl ? (
-            <img className="topnav-logo" src={logoUrl} alt="GatherWise" />
-          ) : (
-            <span className="topnav-wordmark">GatherWise</span>
-          ))}
-        {!isPresenting && <span className="topnav-sep">/</span>}
+        {/* No wordmark and no separator. The board sits inside Gatherwise's own page,
+            which has already said whose product this is — saying it twice, a centimetre
+            apart, is just noise above the event's name. The logo_url field stays on the
+            element so the standalone page can use it again if it ever needs to. */}
         <span className="topnav-event">{board.weddingName}</span>
         <span className="topnav-date">{formatEventDate(board.weddingDate)}</span>
       </div>
