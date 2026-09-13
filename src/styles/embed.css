@@ -171,6 +171,14 @@
     display: block !important;
   }
 
+  /* Back into the flow for printing: on screen the sheet is parked off to one side at
+     almost no opacity so its images are decoded before the dialog opens. */
+  .gw-mb-export .export-sheet {
+    position: static !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+  }
+
   .gw-mb-export .export-page {
     break-after: page;
     page-break-after: always;

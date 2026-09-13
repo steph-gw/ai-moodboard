@@ -2978,8 +2978,25 @@
 }
 
 /* ── PDF export: slides only, one 16:9 page each ── */
+/*
+ * Off the screen, but painted.
+ *
+ * This used to be `display: none` until the print stylesheet revealed it, which loads the
+ * images but never rasterises them — a subtree that is not displayed is never drawn. The
+ * browser then meets them for the first time while building the print output, and prints a
+ * blank frame for any it has not finished decoding. Small pictures win that race; a large
+ * photograph does not, which is why one big image came out missing and everything around
+ * it was fine.
+ *
+ * Painted here at a hundredth of a percent: invisible to anyone looking at the page, real
+ * work for the compositor, so every image is decoded before the print dialog opens.
+ */
 .export-sheet {
-  display: none;
+  position: fixed;
+  inset: 0;
+  opacity: 0.0001;
+  pointer-events: none;
+  overflow: hidden;
 }
 
 .export-page {

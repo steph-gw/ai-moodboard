@@ -63,6 +63,12 @@ export function useExportPdf(onError: (message: string) => void): PdfExport {
       setTarget(host);
       await nextPaint();
       await Promise.all([waitForImages(document), document.fonts?.ready].filter(Boolean));
+      // Loaded is not the same as ready to draw. decode() forces the work that the print
+      // renderer would otherwise do while capturing the page, and waits for it — which is
+      // what keeps a large photograph from printing as an empty frame. It only settles for
+      // a rendered image, which is why the sheet is parked on screen at almost no opacity
+      // rather than display: none.
+      await decodeImages(host);
 
       window.print();
       // Some browsers never fire afterprint; don't leave the sheet in the DOM if so.
@@ -112,6 +118,23 @@ function waitForImages(doc: Document): Promise<void> {
   );
   return Promise.race([
     Promise.all(settled).then(() => undefined),
+    new Promise<void>((resolve) => setTimeout(resolve, RENDER_TIMEOUT_MS)),
+  ]);
+}
+
+/**
+ * Decode every image in the export sheet before printing.
+ *
+ * Raced against the same timeout as loading: one picture that will not decode is not worth
+ * a PDF nobody gets. An image that rejects is skipped rather than failing the export — it
+ * would have printed blank either way, and the other slides are still worth having.
+ */
+function decodeImages(root: HTMLElement): Promise<void> {
+  const decoded = [...root.querySelectorAll('img')].map((img) =>
+    img.decode ? img.decode().catch(() => undefined) : Promise.resolve()
+  );
+  return Promise.race([
+    Promise.all(decoded).then(() => undefined),
     new Promise<void>((resolve) => setTimeout(resolve, RENDER_TIMEOUT_MS)),
   ]);
 }
