@@ -64,7 +64,7 @@ editor-time toggles rather than data, stay checkboxes.
 | Current user id | `current_user_id` | Dynamic value / text | — | `Current User's unique id` |
 | Current user name | `current_user_name` | Dynamic value / text | — | `Current User's Name` |
 | Current user initials | `current_user_initials` | Dynamic value / text | — | leave blank — derived from the name |
-| Is planner | `is_planner` | Dynamic value / yes-no | — | `Current User's Business is not empty` |
+| Is planner | `is_planner` | Dynamic value / yes-no | — | `Current User's Role is not Client` — what is actually bound in the app |
 | Read only | `read_only` | Dynamic value / yes-no | — | see **Who can do what** below — the moodboard tab's own permission |
 | Logo url | `logo_url` | Dynamic value / text | — | your wordmark's file URL |
 | Height css | `height_css` | Dynamic value / text | `100%` | — |
@@ -111,7 +111,7 @@ same way if those should also never be read-only.
 | | read-only | write |
 |---|---|---|
 | **Client** | vote, comment | plus: canvas edits, upload, add a section, add or duplicate a slide, palette. Deletes **only what they added**. |
-| **Team member / admin** | vote, comment | everything, including approve, lock, rename and delete, and templates |
+| **Team member / admin** | vote, comment | everything, including approve, rename and delete, and templates |
 
 **Nothing freezes a slide.** Access to the moodboard tab decides who may edit, and that is
 the whole of it. Approving a section records that the work was agreed; it does not put a
