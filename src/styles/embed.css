@@ -197,21 +197,4 @@
     print-color-adjust: exact;
   }
 
-  /*
-   * Except the slide's own background, which is left to the print dialog's "Background
-   * graphics" setting.
-   *
-   * A browser cannot tell saving a PDF from printing on paper — it is one dialog and one
-   * render — so the choice has to be made by the person in front of it. That checkbox is
-   * already the choice: ticked, the slide keeps the colour it has on screen, which is what
-   * a PDF sent to a client should look like; unticked, the slides come out white and a
-   * deck can be run off on paper without flooding it with ink.
-   *
-   * Only this one rule steps aside. Photographs, palettes, shapes and coloured type are
-   * the work itself, not decoration, and they print either way.
-   */
-  .gw-mb-export .export-page {
-    -webkit-print-color-adjust: economy;
-    print-color-adjust: economy;
-  }
 }

@@ -2946,10 +2946,10 @@
 
 /* ── Narrow confirm dialog ── */
 .modal-card-narrow {
-  /* Wide enough for the two ways to start to sit side by side on one line each. At 340
-     "Start from scratch" wrapped, so one choice was a line taller than the other and the
-     pair read as two different kinds of thing. */
-  max-width: 430px;
+  /* Wide enough for the two ways to start to sit side by side on one line each, and no
+     wider — at 340 "Start from scratch" wrapped and the two choices were different
+     heights, which made them read as two different kinds of thing. */
+  max-width: 388px;
 }
 
 .modal-title-sm {

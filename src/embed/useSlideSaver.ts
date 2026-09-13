@@ -112,8 +112,16 @@ export function useSlideSaver({ repo, boardRef, versionsRef, onError, onConflict
     }
 
     const dirty = collectDirty();
-    if (!dirty.length) return;
     dirtySinceRef.current = null;
+    if (!dirty.length) {
+      // Nothing outstanding, so say so. The flag is set optimistically on change and can
+      // outlive what caused it — an undo putting a slide back the way it was, say — and a
+      // Save button that answers a click by doing nothing visible is worse than one that
+      // admits there was nothing to do.
+      setIsDirty(false);
+      setState((prev) => (prev === 'conflict' ? prev : 'idle'));
+      return;
+    }
 
     const run = (async () => {
       setState('saving');

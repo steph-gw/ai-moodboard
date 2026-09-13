@@ -125,6 +125,12 @@ function SaveStatus({
   onSave: () => Promise<void>;
 }) {
   if (state === 'saving') return <span className="save-status">Saving…</span>;
+  // Somebody else wrote to a slide we were about to write. The board reloads itself, but
+  // until it does, writes are held — and the dirty chip below would otherwise offer a Save
+  // button that is refused before it starts, with nothing on screen to say why.
+  if (state === 'conflict') {
+    return <span className="save-status is-dirty">Someone else edited this — reloading…</span>;
+  }
   if (state === 'error') {
     return (
       <button type="button" className="save-status is-error" onClick={() => void onSave()}>
