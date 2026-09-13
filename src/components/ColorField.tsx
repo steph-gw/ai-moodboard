@@ -160,16 +160,24 @@ export function ColorField({
               </div>
             </>
           )}
-          {/* The hex, readable and copyable. Asked for so a color can be taken out of the
-              board and used somewhere else — and it takes one too, which is quicker than
-              hunting for a shade in the system picker. */}
-          <div className="color-field-hex">
+          {/* The system picker and the hex, as one row. The swatch opens the picker; the
+              field is the same color written out, to copy or to type into. It carries no
+              placeholder and selects nothing on open — a box of highlighted text reads as
+              something you are in the middle of editing. */}
+          <div className="color-field-hex-row">
+            <label className="color-field-custom" data-tooltip="Color picker">
+              <input
+                type="color"
+                value={none ? '#ffffff' : value}
+                onChange={(e) => pick(e.target.value)}
+                aria-label="Pick a color"
+              />
+            </label>
             <input
+              type="text"
               value={typed ?? (none ? '' : value.toUpperCase())}
-              placeholder="#F6EFE0"
               spellCheck={false}
               aria-label="Hex code"
-              onFocus={(e) => e.currentTarget.select()}
               onChange={(e) => {
                 setTyped(e.target.value);
                 const hex = readHex(e.target.value);
@@ -184,15 +192,6 @@ export function ColorField({
               }}
             />
           </div>
-
-          <label className="color-field-custom">
-            <input
-              type="color"
-              value={none ? '#ffffff' : value}
-              onChange={(e) => pick(e.target.value)}
-            />
-            <span>Custom…</span>
-          </label>
           </div>,
           portalHost
         )}

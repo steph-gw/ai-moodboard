@@ -118,7 +118,10 @@
  */
 @media print {
   @page {
-    size: 960px 540px;
+    /* Inches, not pixels: Chrome ignores a px @page size on some platforms and falls back
+       to portrait Letter, which clips the right-hand side of every slide. 10 x 5.625in is
+       the same 16:9 at 96dpi. */
+    size: 10in 5.625in;
     margin: 0;
   }
 
@@ -132,6 +135,21 @@
   /* Everything except the export sheet, including whatever the host page renders. */
   body > *:not(.gw-mb-export) {
     display: none !important;
+  }
+
+  /*
+   * The export host carries .gw-mb so the app's styles reach inside it — and .gw-mb is
+   * `height: 100%; overflow: hidden`, which is right for an element sitting in a Bubble
+   * page and catastrophic here: every slide after the first was clipped away, so the PDF
+   * came out one page long however many slides the board had.
+   */
+  .gw-mb-export {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    isolation: auto !important;
+    background: #fff !important;
   }
 
   .gw-mb-export,

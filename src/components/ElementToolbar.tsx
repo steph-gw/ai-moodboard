@@ -148,7 +148,6 @@ export function ElementToolbar() {
           repainting a copy must not reach back and edit the original. */}
       {element.type === 'swatch' && sameType && (
         <>
-          <span className="shape-format-label">Color</span>
           <ColorField
             label="Swatch color"
             value={element.color}
