@@ -7,7 +7,12 @@ import { ColorField } from './ColorField';
 import { TEXT_FONT_OPTIONS } from '../utils/textFonts';
 import { loadFont } from '../utils/loadFont';
 import { DEFAULT_CAPTION_FONT } from './SwatchView';
-import type { TextFontFamily } from '../types';
+import type {
+  CanvasElement,
+  PaletteGroupElement,
+  SwatchElement,
+  TextFontFamily,
+} from '../types';
 
 const GAP = 10;
 const EDGE = 8;
@@ -148,8 +153,11 @@ export function ElementToolbar() {
       )}
 
       {/* The captions are text, so they answer to the same typeface everything else on the
-          board does — a palette in DM Sans on a Playfair board reads as a mistake. */}
-      {(element.type === 'paletteGroup' || element.type === 'swatch') && sameType && (
+          board does — a palette in DM Sans on a Playfair board reads as a mistake.
+          Only while the caption is the element's own, though: unlocking a palette turns
+          each hex into a real text element with its own font control, and leaves the chip
+          with nothing to set a typeface for. */}
+      {sameType && showsCaption(element) && selected.every(showsCaption) && (
         <>
           <select
             className="text-format-select"
@@ -251,4 +259,18 @@ export function ElementToolbar() {
       )}
     </div>
   );
+}
+
+/**
+ * Does this element draw a caption of its own?
+ *
+ * A locked palette does. A loose chip does not — unlocking writes the hex out as a real
+ * text element and turns the chip's own caption off — so a font control on one sets a
+ * property nothing reads.
+ */
+function showsCaption(
+  element: CanvasElement
+): element is SwatchElement | PaletteGroupElement {
+  if (element.type === 'paletteGroup') return true;
+  return element.type === 'swatch' && element.showHex !== false;
 }
