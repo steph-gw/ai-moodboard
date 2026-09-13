@@ -23,6 +23,7 @@ import {
   Music,
   Palette,
   PartyPopper,
+  RockingChair,
   Scissors,
   Shirt,
   Sofa,
@@ -35,6 +36,34 @@ import {
   Wine,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
+
+/**
+ * A dining table, drawn here because the icon set has none.
+ *
+ * Its "Table" is a spreadsheet — a box ruled into cells — which on a section tab reads as
+ * data, not furniture. This is the same geometry as the rest of the set (24×24, round
+ * caps, the same stroke weight) so it sits among them without looking imported: a top, a
+ * pedestal and a foot.
+ */
+function TableIcon({ size }: { size: number }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M3 9h18" />
+      <path d="M12 9v8" />
+      <path d="M7 19.5c1.4-1.5 3-2.2 5-2.2s3.6.7 5 2.2" />
+    </svg>
+  );
+}
 
 /** Icon keys a Section can carry. `icon` on Section is a string for data compat. */
 const ICONS: Record<string, (size: number) => ReactNode> = {
@@ -56,7 +85,9 @@ const ICONS: Record<string, (size: number) => ReactNode> = {
   // Tablescapes and lounge furniture each get their own, because a board that has one
   // usually has both — tables over here, the seating plan over there — and sharing the
   // dinner icon between them made two sections that look like the same section.
-  tablescape: (s) => <ConciergeBell size={s} strokeWidth={1.4} />,
+  tablescape: (s) => <TableIcon size={s} />,
+  placesetting: (s) => <ConciergeBell size={s} strokeWidth={1.4} />,
+  chair: (s) => <RockingChair size={s} strokeWidth={1.4} />,
   lounge: (s) => <Sofa size={s} strokeWidth={1.4} />,
   timeline: (s) => <CalendarHeart size={s} strokeWidth={1.4} />,
   sparkles: (s) => <Sparkles size={s} strokeWidth={1.4} />,
@@ -89,7 +120,8 @@ const KEYWORD_ICONS: [RegExp, string][] = [
   [/greener|foliage|garden|botanic|leaf|branch/i, 'leaf'],
   [/cake|dessert|sweet|patisserie|pastry/i, 'cake'],
   [/cocktail|bar|drink|wine|champagne|toast|aperitif/i, 'drinks'],
-  [/tablescape|table ?scape|table setting|place setting|centrepiece|centerpiece|tabletop|table decor|china|glassware|linen/i, 'tablescape'],
+  [/tablescape|table ?scape|tabletop|table decor|table plan|seating chart|head table|sweetheart table|linen/i, 'tablescape'],
+  [/place setting|table setting|centrepiece|centerpiece|china|glassware|crockery|cutlery/i, 'placesetting'],
   [/dinner|menu|food|cater|feast|banquet/i, 'utensils'],
   [/reception|breakfast|lunch|brunch/i, 'catering'],
   [/attire|dress|gown|suit|tux|outfit|wardrobe|style|groom|bridal/i, 'shirt'],
@@ -101,7 +133,8 @@ const KEYWORD_ICONS: [RegExp, string][] = [
   [/gift|favour|favor|welcome bag|registry/i, 'gift'],
   [/ring|jewel|band|heirloom|accessor/i, 'rings'],
   [/lounge|sofa|settee|soft seating/i, 'lounge'],
-  [/furnitur|rental|seating|chair|decor|drapery/i, 'furniture'],
+  [/chair|seating|bench|stool/i, 'chair'],
+  [/furnitur|rental|decor|drapery/i, 'furniture'],
   [/timeline|schedule|run ?sheet|itinerary|day-of|hour/i, 'timeline'],
   [/ceremony|vow|aisle|altar/i, 'flower'],
   [/light|candle|glow|ambien|mood/i, 'sparkles'],
