@@ -177,6 +177,7 @@
     position: static !important;
     opacity: 1 !important;
     overflow: visible !important;
+    transform: none !important;
   }
 
   .gw-mb-export .export-page {

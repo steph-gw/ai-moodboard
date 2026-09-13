@@ -16,6 +16,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
  */
 
 const RENDER_TIMEOUT_MS = 15_000;
+/** Decoding is best effort — see decodeImages. */
+const DECODE_TIMEOUT_MS = 2_000;
 /** Marks the one body child the print stylesheet keeps visible. */
 export const EXPORT_ROOT_CLASS = 'gw-mb-export';
 
@@ -135,6 +137,9 @@ function decodeImages(root: HTMLElement): Promise<void> {
   );
   return Promise.race([
     Promise.all(decoded).then(() => undefined),
-    new Promise<void>((resolve) => setTimeout(resolve, RENDER_TIMEOUT_MS)),
+    // A much shorter fuse than loading gets. Chrome leaves decode() pending forever for an
+    // image it has decided not to draw yet, and an export that waits fifteen seconds every
+    // time to find that out is worse than one that prints a frame late.
+    new Promise<void>((resolve) => setTimeout(resolve, DECODE_TIMEOUT_MS)),
   ]);
 }

@@ -2997,6 +2997,12 @@
   opacity: 0.0001;
   pointer-events: none;
   overflow: hidden;
+  /* Shrunk so the whole deck falls inside the viewport. Chrome decodes what it is about
+     to show and defers everything else indefinitely — a page of slides sitting 4000px
+     below the fold is, as far as the compositor is concerned, not worth the work yet. At
+     an eighth, eleven slides fit on one screen and every image is drawn at least once. */
+  transform: scale(0.12);
+  transform-origin: top left;
 }
 
 .export-page {
@@ -4256,6 +4262,23 @@
   opacity: 0.45;
 }
 
+
+
+/*
+ * Flat in the export.
+ *
+ * On screen a chip is velvet — a lit edge, a shadowed one and three layers of grain — and
+ * it reads as cloth. Printed, the same treatment reads as a printing fault: the noise
+ * turns to speckle and the inner shadow to a dirty edge along the bottom of every square.
+ * A palette on paper is being read for its colours, so on paper it is its colours.
+ */
+.export-sheet .swatch-chip {
+  box-shadow: none;
+}
+
+.export-sheet .swatch-chip::after {
+  content: none;
+}
 
 
 /* Reorderable color rows. The grip is the affordance; the whole row is the drag target,
