@@ -232,6 +232,11 @@ export function SlideCanvas({
         onPointerDown={startMarquee}
         onClick={handleArtboardClick}
       >
+        {/* Where every selected element's ring and handles are drawn, above the elements
+            themselves. Inside its own element, a handle is painted over by whatever is
+            stacked above that element — and lifting the element to fix it would restack
+            the slide on every click. */}
+        <div className="selection-layer" aria-hidden />
         {sortedElements.map((element) => (
           <CanvasElementView
             key={element.id}

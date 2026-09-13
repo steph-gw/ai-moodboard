@@ -1558,9 +1558,28 @@
   cursor: default;
 }
 
-.canvas-element.selected {
-  border-color: var(--gold);
+/* The selected element keeps its place in the stack; its ring and handles are drawn by
+   .selection-chrome, in a layer above every element. */
+.selection-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 5000;
+  pointer-events: none;
+}
+
+.selection-chrome {
+  position: absolute;
+  border: 1.5px solid var(--gold);
+  border-radius: 4px;
   box-shadow: 0 0 0 1px var(--gold-border);
+  pointer-events: none;
+}
+
+/* Only the handles take the pointer; the ring must not swallow a click meant for the
+   element under it. */
+.selection-chrome .resize-handle,
+.selection-chrome .rotate-handle {
+  pointer-events: auto;
 }
 
 .canvas-image-inner {
@@ -4189,4 +4208,23 @@
 .color-field-hex-row input[type='text']:focus {
   outline: none;
   border-color: var(--border-strong);
+}
+
+.palette-menu-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.palette-menu-edit:hover {
+  background: var(--white);
+  color: var(--text-primary);
 }

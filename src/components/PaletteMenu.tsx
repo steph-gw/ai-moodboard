@@ -5,6 +5,7 @@ import {
   ChevronUp,
   GripVertical,
   Palette as PaletteIcon,
+  Pencil,
   Plus,
   Trash2,
   X,
@@ -35,7 +36,7 @@ function nextColor(rows: string[]): string {
  * as its own colors, because a name alone doesn't tell you which palette you mean.
  */
 export function PaletteMenu() {
-  const { board, createPalette, deletePalette, placePalette } = useBoard();
+  const { board, createPalette, updatePalette, deletePalette, placePalette } = useBoard();
   const { portalHost } = useHost();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -45,6 +46,8 @@ export function PaletteMenu() {
   /** The row being dragged, and the slot it is currently hovering over. */
   const [drag, setDrag] = useState<{ from: number; over: number } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
+  /** The palette being edited, or null when the editor is making a new one. */
+  const [editingId, setEditingId] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const palettes = board.palettes;
@@ -76,8 +79,18 @@ export function PaletteMenu() {
     return () => window.removeEventListener('keydown', onKey);
   });
 
+  /** Opens the same editor on an existing palette, filled in with what it holds. */
+  const openEditorFor = (palette: { id: string; name: string; colors: string[] }) => {
+    setOpen(false);
+    setEditingId(palette.id);
+    setName(palette.name);
+    setColors(palette.colors.map((c) => c.toUpperCase()));
+    setEditing(true);
+  };
+
   const openEditor = () => {
     setOpen(false);
+    setEditingId(null);
     // The colors already on this moodboard are the obvious first palette — they were
     // picked for this wedding. Offered as a starting point rather than migrated behind
     // the planner's back, so nothing is written until they press Create.
@@ -92,6 +105,7 @@ export function PaletteMenu() {
 
   const closeEditor = () => {
     setEditing(false);
+    setEditingId(null);
     setName('');
     setColors([]);
     setSaving(false);
@@ -99,7 +113,10 @@ export function PaletteMenu() {
 
   const submit = async () => {
     setSaving(true);
-    const ok = await createPalette(name, colors.map(readHex).filter((c): c is string => !!c));
+    const clean = colors.map(readHex).filter((c): c is string => !!c);
+    const ok = editingId
+      ? await updatePalette(editingId, { name, colors: clean })
+      : await createPalette(name, clean);
     setSaving(false);
     if (ok) closeEditor();
   };
@@ -163,6 +180,15 @@ export function PaletteMenu() {
                     ))}
                   </span>
                 </button>
+                <button
+                  type="button"
+                  className="palette-menu-edit"
+                  onClick={() => openEditorFor(palette)}
+                  data-tooltip="Edit palette"
+                  aria-label={`Edit ${palette.name}`}
+                >
+                  <Pencil size={12} strokeWidth={1.6} />
+                </button>
                 {/* Removing a palette leaves every swatch already placed alone — they are
                     copies of the colors, not views onto the palette. */}
                 <button
@@ -198,7 +224,9 @@ export function PaletteMenu() {
             <div className="modal-card modal-card-narrow" role="dialog" aria-modal="true">
               <div className="modal-head">
                 <p className="modal-eyebrow">Palette</p>
-                <h2 className="modal-title modal-title-sm">Create a color palette</h2>
+                <h2 className="modal-title modal-title-sm">
+                  {editingId ? 'Edit palette' : 'Create a color palette'}
+                </h2>
               </div>
 
               <div className="modal-body">
@@ -311,7 +339,7 @@ export function PaletteMenu() {
                   disabled={!canSave}
                   onClick={() => void submit()}
                 >
-                  {saving ? 'Saving…' : 'Create palette'}
+                  {saving ? 'Saving…' : editingId ? 'Save palette' : 'Create palette'}
                 </button>
               </div>
             </div>

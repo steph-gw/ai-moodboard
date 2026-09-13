@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, type ReactNode, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
+import { createPortal } from 'react-dom';
 import { RotateCw } from 'lucide-react';
 
 type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
@@ -202,6 +210,22 @@ export function DraggableBox({
   // unusable. Flip it underneath instead.
   const rotateBelow = y * scale < ROTATE_HANDLE_CLEARANCE;
 
+  /**
+   * Where the selection ring and handles are drawn.
+   *
+   * A layer above every element rather than inside this one. Handles drawn inside their
+   * own element are painted over by anything stacked above it — the rotate handle under a
+   * color chip vanished behind the label beneath it. Lifting the element instead fixed the
+   * handles but restacked the slide on every click, which is a change to what you see for
+   * the sake of what you can grab.
+   */
+  const boxRef = useRef<HTMLDivElement>(null);
+  const [layer, setLayer] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    const found = boxRef.current?.closest('.slide-artboard')?.querySelector('.selection-layer');
+    setLayer(found instanceof HTMLElement ? found : null);
+  }, []);
+
   const startDrag = (e: ReactPointerEvent, mode: DragMode) => {
     if (readOnly) return;
     e.stopPropagation();
@@ -212,7 +236,9 @@ export function DraggableBox({
     // Cmd on a Mac, Ctrl elsewhere — whichever the platform uses for "add to a selection".
     onSelect(e.metaKey || e.ctrlKey);
 
-    const box = (e.currentTarget as HTMLElement).closest('.canvas-element');
+    // The chrome is portalled out of the element, so a handle's nearest box may be either.
+    // Both carry the same rect, so the rotation centre is the same from either one.
+    const box = (e.currentTarget as HTMLElement).closest('.canvas-element, .selection-chrome');
     const rect = box?.getBoundingClientRect();
     const centerX = rect ? rect.left + rect.width / 2 : e.clientX;
     const centerY = rect ? rect.top + rect.height / 2 : e.clientY;
@@ -233,8 +259,9 @@ export function DraggableBox({
     };
   };
 
-  return (
+  const box = (
     <div
+      ref={boxRef}
       data-el-id={elementId}
       className={`canvas-element ${className} ${selected ? 'selected' : ''}`}
       style={{
@@ -251,30 +278,51 @@ export function DraggableBox({
       onContextMenu={onContextMenu}
     >
       {children}
-      {selected && !readOnly && (
-        <>
-          <div className={`rotate-handle-arm${rotateBelow ? ' is-below' : ''}`} aria-hidden />
-          <div
-            className={`rotate-handle${rotateBelow ? ' is-below' : ''}`}
-            role="slider"
-            aria-label="Rotate"
-            aria-valuenow={rotation}
-            aria-valuemin={-180}
-            aria-valuemax={180}
-            title="Drag to rotate · hold Shift to snap"
-            onPointerDown={(e) => startDrag(e, 'rotate')}
-          >
-            <RotateCw size={11} strokeWidth={2} aria-hidden />
-          </div>
-          {HANDLES.map(({ handle, className: handleClass }) => (
-            <div
-              key={handle}
-              className={`resize-handle ${handleClass}`}
-              onPointerDown={(e) => startDrag(e, handle)}
-            />
-          ))}
-        </>
-      )}
     </div>
+  );
+
+  const chrome =
+    selected && !readOnly && layer
+      ? createPortal(
+          <div
+            className="selection-chrome"
+            style={{
+              left: x * scale,
+              top: y * scale,
+              width: width * scale,
+              height: height * scale,
+              transform: rotation ? `rotate(${rotation}deg)` : undefined,
+            }}
+          >
+            <div className={`rotate-handle-arm${rotateBelow ? ' is-below' : ''}`} aria-hidden />
+            <div
+              className={`rotate-handle${rotateBelow ? ' is-below' : ''}`}
+              role="slider"
+              aria-label="Rotate"
+              aria-valuenow={rotation}
+              aria-valuemin={-180}
+              aria-valuemax={180}
+              title="Drag to rotate · hold Shift to snap"
+              onPointerDown={(e) => startDrag(e, 'rotate')}
+            >
+              <RotateCw size={11} strokeWidth={2} aria-hidden />
+            </div>
+            {HANDLES.map(({ handle, className: handleClass }) => (
+              <div
+                key={handle}
+                className={`resize-handle ${handleClass}`}
+                onPointerDown={(e) => startDrag(e, handle)}
+              />
+            ))}
+          </div>,
+          layer
+        )
+      : null;
+
+  return (
+    <>
+      {box}
+      {chrome}
+    </>
   );
 }

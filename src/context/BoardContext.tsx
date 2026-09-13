@@ -96,6 +96,8 @@ interface BoardContextValue {
   setPalette: (colors: string[]) => void;
   /** Saves a new named palette on this moodboard. Resolves false if it could not be saved. */
   createPalette: (name: string, colors: string[]) => Promise<boolean>;
+  /** Renames a palette or changes its colors. */
+  updatePalette: (paletteId: string, patch: { name: string; colors: string[] }) => Promise<boolean>;
   deletePalette: (paletteId: string) => void;
   /** Drops a palette onto the active slide as one grouped row of swatches. */
   placePalette: (paletteId: string) => void;
@@ -1601,6 +1603,36 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     [repo, identity, applyPalettes, onError]
   );
 
+  const updatePalette = useCallback(
+    async (paletteId: string, patch: { name: string; colors: string[] }): Promise<boolean> => {
+      if (!canWriteRef.current) return false;
+      const clean = patch.colors.map((c) => c.trim()).filter(Boolean);
+      const name = patch.name.trim();
+      if (!name || clean.length === 0) return false;
+
+      const previous = boardRef.current.palettes;
+      applyPalettes((prev) => ({
+        ...prev,
+        palettes: prev.palettes.map((p) =>
+          p.id === paletteId ? { ...p, name, colors: clean } : p
+        ),
+      }));
+      if (!repo) return true;
+
+      try {
+        await repo.updatePalette(paletteId, { name, colors: clean });
+        return true;
+      } catch (err) {
+        // Same reasoning as delete: put the old one back rather than reload the board and
+        // take unsaved canvas work with it.
+        applyPalettes((prev) => ({ ...prev, palettes: previous }));
+        onError(err instanceof Error ? err.message : 'Could not save the palette.');
+        return false;
+      }
+    },
+    [repo, applyPalettes, onError]
+  );
+
   const deletePalette = useCallback(
     (paletteId: string) => {
       if (!canWriteRef.current) return;
@@ -2327,6 +2359,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         updateVisionBrief,
         setPalette,
         createPalette,
+        updatePalette,
         deletePalette,
         placePalette,
         ungroupElement,

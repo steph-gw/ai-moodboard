@@ -14,15 +14,6 @@ import type {
 } from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH, DEFAULT_LINE_HEIGHT } from '../types';
 
-/**
- * How far a solely-selected element rises above its neighbours.
- *
- * Its handles are drawn inside its own box, so a neighbour stacked above it paints over
- * them — the rotate handle under a color chip was landing behind the hex label beneath it
- * and could not be grabbed. The lift is while selected only: nothing about the stored
- * order changes, so the board looks exactly as it was arranged the moment you click away.
- */
-const SELECTED_LIFT = 1000;
 import { textFontCss } from '../utils/textFonts';
 import { ElementContextMenu } from './ElementContextMenu';
 
@@ -278,7 +269,7 @@ function TextElementView({
       minWidth={80}
       minHeight={30}
       className={`canvas-element-text${isSelected && !isOnly ? ' in-selection' : ''}`}
-      style={{ zIndex: isOnly ? element.zIndex + SELECTED_LIFT : element.zIndex }}
+      style={{ zIndex: element.zIndex }}
       rotation={element.rotation}
       onSelect={handleSelect}
       onMoveBy={isSelected && !isOnly ? (dx, dy) => moveSelectionBy(slideId, dx, dy) : undefined}
@@ -446,7 +437,7 @@ function BoxElementView({
       minWidth={8}
       minHeight={8}
       className={`canvas-element-shape${isSelected && !isOnly ? ' in-selection' : ''}`}
-      style={{ zIndex: isOnly ? element.zIndex + SELECTED_LIFT : element.zIndex }}
+      style={{ zIndex: element.zIndex }}
       rotation={element.rotation}
       onSelect={(additive) => selectElement(element.id, additive)}
       onMoveBy={isSelected && !isOnly ? (dx, dy) => moveSelectionBy(slideId, dx, dy) : undefined}
