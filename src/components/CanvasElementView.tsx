@@ -3,10 +3,11 @@ import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { DraggableBox } from './DraggableBox';
 import { ShapeView } from './ShapeView';
-import { SwatchView } from './SwatchView';
+import { PaletteGroupView, SwatchView } from './SwatchView';
 import type {
   CanvasElement,
   ImageElement,
+  PaletteGroupElement,
   ShapeElement,
   SwatchElement,
   TextElement,
@@ -319,7 +320,7 @@ export function CanvasElementView({
     );
   }
 
-  if (element.type === 'shape' || element.type === 'swatch') {
+  if (element.type === 'shape' || element.type === 'swatch' || element.type === 'paletteGroup') {
     return (
       <BoxElementView
         element={element}
@@ -352,7 +353,7 @@ function BoxElementView({
   scale,
   readOnly,
 }: {
-  element: ShapeElement | SwatchElement;
+  element: ShapeElement | SwatchElement | PaletteGroupElement;
   slideId: string;
   scale: number;
   readOnly?: boolean;
@@ -404,6 +405,8 @@ function BoxElementView({
     >
       {element.type === 'swatch' ? (
         <SwatchView element={element} />
+      ) : element.type === 'paletteGroup' ? (
+        <PaletteGroupView element={element} />
       ) : (
         <ShapeView element={element} />
       )}

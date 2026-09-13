@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Plus, Copy, Lock, Trash2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { ShapeView } from './ShapeView';
-import { SwatchView } from './SwatchView';
+import { PaletteGroupView, SwatchView } from './SwatchView';
 import type { CanvasElement, Slide } from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 import { textFontCss } from '../utils/textFonts';
@@ -37,6 +37,15 @@ function MiniElement({
     return (
       <div className="slide-mini-shape" style={style}>
         <ShapeView element={element} />
+      </div>
+    );
+  }
+
+  if (element.type === 'paletteGroup') {
+    return (
+      <div className="slide-mini-shape" style={style}>
+        {/* Captions are unreadable at thumbnail size; the colors are the point here. */}
+        <PaletteGroupView element={{ ...element, showHex: false }} />
       </div>
     );
   }

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { BringToFront, Download, SendToBack, Trash2 } from 'lucide-react';
+import { BringToFront, Download, Lock, SendToBack, Trash2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { downloadImage, imageFilename } from '../utils/downloadImage';
 import { ShapeFormatControls } from './ShapeFormatControls';
@@ -30,6 +30,7 @@ export function ElementToolbar() {
     sendToBack,
     deleteSelection,
     canDeleteElement,
+    ungroupElement,
     getImageById,
     activeSectionName,
   } = useBoard();
@@ -117,6 +118,25 @@ export function ElementToolbar() {
       {many && (
         <>
           <span className="toolbar-count">{selected.length} selected</span>
+          <span className="text-format-divider" />
+        </>
+      )}
+
+      {/* A placed palette is one object. The padlock says so, and opening it is the only
+          way to get at the colors and labels separately — which is why it is a labelled
+          button rather than an icon someone has to discover. */}
+      {!many && element.type === 'paletteGroup' && (
+        <>
+          <button
+            type="button"
+            className="text-format-btn is-grouped"
+            onClick={() => ungroupElement(element.id)}
+            data-tooltip="Unlock to edit the colors separately"
+            aria-label="Unlock palette"
+          >
+            <Lock size={13} strokeWidth={1.9} />
+            Locked
+          </button>
           <span className="text-format-divider" />
         </>
       )}

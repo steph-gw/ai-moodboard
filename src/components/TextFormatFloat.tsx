@@ -45,9 +45,11 @@ export function TextFormatFloat({
         // Centred on the slide, and kept inside the stage on narrow windows so the ends
         // of the bar never fall off the side.
         left: Math.max(4, Math.min(s.width - w - 4, a.left - s.left + (a.width - w) / 2)),
-        // Straddling the top edge: mostly above the slide, overlapping it enough to read
-        // as attached to it rather than floating loose above.
-        top: a.top - s.top - h * 0.62,
+        // Inside the stage, never above it. Reaching over the top edge put the bar under
+        // the toolbar row — which paints over it, so it read as translucent and broken.
+        // Clamped here it sits directly below that row on every window size, overlapping
+        // the top of the slide rather than the controls above it.
+        top: Math.max(2, a.top - s.top - h * 0.62),
       });
     };
     place();

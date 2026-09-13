@@ -32,6 +32,7 @@ import {
   withLivePins,
 } from '../utils/commentHelpers';
 import { inferSectionIcon } from '../utils/sectionIcons';
+import { paletteGroupCells, swatchCaption } from '../components/SwatchView';
 import { loadFontsFor } from '../utils/loadFont';
 import { useHost } from '../embed/HostProvider';
 import { useSlideSaver } from '../embed/useSlideSaver';
@@ -96,8 +97,10 @@ interface BoardContextValue {
   /** Saves a new named palette on this moodboard. Resolves false if it could not be saved. */
   createPalette: (name: string, colors: string[]) => Promise<boolean>;
   deletePalette: (paletteId: string) => void;
-  /** Drops every color in a palette onto the active slide as a column of swatches. */
+  /** Drops a palette onto the active slide as one grouped row of swatches. */
   placePalette: (paletteId: string) => void;
+  /** Breaks a placed palette into loose chips and hex labels. */
+  ungroupElement: (elementId: string) => void;
   summarizeVision: () => void;
   isSummarizing: boolean;
   isCommentsOpen: boolean;
@@ -504,6 +507,20 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    * keeps the two independent — see `withLivePins`. Unlike a board edit this doesn't mark
    * the slide dirty either: comments live in their own rows, not in the slide's elements.
    */
+  /**
+   * Palettes are rows of their own, like comments: creating one is not an edit to any
+   * slide. Routing them through applyStructural marked the board dirty and reset undo for
+   * a change no slide contained — and the save that followed could land on a read that
+   * predated the new row, which is why a new palette needed a reload to appear.
+   */
+  const applyPalettes = useCallback((updater: (prev: Board) => Board) => {
+    const prev = boardRef.current;
+    const next = updater(prev);
+    if (next === prev) return;
+    boardRef.current = next;
+    setBoard(next);
+  }, []);
+
   const applyComments = useCallback((updater: (prev: Board) => Board) => {
     const prev = boardRef.current;
     const next = updater(prev);
@@ -1562,7 +1579,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       const order = boardRef.current.palettes.length;
       if (!repo || !identity) {
         // Harness with no repo: keep it in memory so the UI can still be exercised.
-        applyStructural((prev) => ({
+        applyPalettes((prev) => ({
           ...prev,
           palettes: [...prev.palettes, { id: `local-${Date.now()}`, name: name.trim(), colors: clean, order }],
         }));
@@ -1571,7 +1588,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
       try {
         const id = await repo.createPalette(identity.moodboardId, name.trim(), clean, order);
-        applyStructural((prev) => ({
+        applyPalettes((prev) => ({
           ...prev,
           palettes: [...prev.palettes, { id, name: name.trim(), colors: clean, order }],
         }));
@@ -1581,23 +1598,26 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         return false;
       }
     },
-    [repo, identity, applyStructural, onError]
+    [repo, identity, applyPalettes, onError]
   );
 
   const deletePalette = useCallback(
     (paletteId: string) => {
       if (!canWriteRef.current) return;
-      applyStructural((prev) => ({
+      const previous = boardRef.current.palettes;
+      applyPalettes((prev) => ({
         ...prev,
         palettes: prev.palettes.filter((p) => p.id !== paletteId),
       }));
       if (!repo) return;
       void repo.deletePalette(paletteId).catch((err: unknown) => {
+        // Put it back rather than reloading: a reload would also throw away unsaved canvas
+        // work, and the only thing that failed here is one row.
+        applyPalettes((prev) => ({ ...prev, palettes: previous }));
         onError(err instanceof Error ? err.message : 'Could not delete the palette.');
-        void loadBoardRef.current?.(true);
       });
     },
-    [repo, applyStructural, onError]
+    [repo, applyPalettes, onError]
   );
 
   /**
@@ -1614,31 +1634,28 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       if (!palette || palette.colors.length === 0) return;
 
       const n = palette.colors.length;
-      const margin = 48;
-      const gap = 14;
-      const available = SLIDE_HEIGHT - margin * 2;
-      // Fits the column to the slide, then stops growing: a two-color palette should not
-      // render as two enormous slabs.
-      const height = Math.min(132, Math.max(52, (available - gap * (n - 1)) / n));
-      const width = Math.round(height * 0.78);
-      const total = height * n + gap * (n - 1);
-      const top = Math.max(0, (SLIDE_HEIGHT - total) / 2);
-      const left = Math.round((SLIDE_WIDTH - width) / 2);
+      const margin = 60;
+      const available = SLIDE_WIDTH - margin * 2;
+      // Chips as wide as they can be without the row outgrowing the slide, and never so
+      // wide that a two-color palette lands as two slabs.
+      const cell = Math.min(150, available / (n + (n - 1) * 0.12));
+      const width = Math.round(cell * n + cell * 0.12 * (n - 1));
+      const height = Math.round(cell * 1.25);
       const baseZ = activeSlide.elements.reduce((m, e) => Math.max(m, e.zIndex), 0);
 
-      const swatches: CanvasElement[] = palette.colors.map((color, i) => ({
-        id: `swatch-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
-        type: 'swatch',
-        color,
+      const group: CanvasElement = {
+        id: `palette-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        type: 'paletteGroup',
+        colors: [...palette.colors],
         showHex: true,
-        x: left,
-        y: Math.round(top + i * (height + gap)),
+        x: Math.round((SLIDE_WIDTH - width) / 2),
+        y: Math.round((SLIDE_HEIGHT - height) / 2),
         width,
-        height: Math.round(height),
+        height,
         rotation: 0,
-        zIndex: baseZ + 1 + i,
+        zIndex: baseZ + 1,
         createdBy: currentUserId,
-      }));
+      };
 
       commit((prev) => ({
         ...prev,
@@ -1648,15 +1665,94 @@ export function BoardProvider({ children }: { children: ReactNode }) {
             ...section,
             slides: section.slides.map((slide) =>
               slide.id === activeSlideId
-                ? { ...slide, elements: [...slide.elements, ...swatches] }
+                ? { ...slide, elements: [...slide.elements, group] }
                 : slide
             ),
           };
         }),
       }));
-      setSelectedElementIds(swatches.map((el) => el.id));
+      setSelectedElementIds([group.id]);
     },
     [activeSlide, activeSectionId, activeSlideId, commit, currentUserId]
+  );
+
+  /**
+   * Opens a placed palette into its parts.
+   *
+   * The pieces land exactly where the group was drawing them, so nothing appears to move:
+   * unlocking is a change in what you can grab, not in what you see. Each color becomes a
+   * chip and a real text element, so the hex can be retyped into something else — "Shell
+   * cream", say — which is the usual reason for opening one.
+   *
+   * One-way on purpose. Re-grouping arbitrary elements is a different feature, and the
+   * palette is still in the menu if the grouped version is wanted again.
+   */
+  const ungroupElement = useCallback(
+    (elementId: string) => {
+      if (!activeSlide) return;
+      const group = activeSlide.elements.find((el) => el.id === elementId);
+      if (!group || group.type !== 'paletteGroup') return;
+
+      const cells = paletteGroupCells(group.width, group.colors.length);
+      const showHex = group.showHex !== false;
+      const caption = swatchCaption(group.height);
+      const chipH = showHex ? group.height - caption.captionH - caption.gap : group.height;
+      const stamp = Date.now();
+
+      const parts: CanvasElement[] = group.colors.flatMap((color, i) => {
+        const x = Math.round(group.x + i * (cells.width + cells.gap));
+        const width = Math.round(cells.width);
+        const chip: CanvasElement = {
+          id: `sw-${stamp}-${i}`,
+          type: 'swatch',
+          color,
+          showHex: false,
+          x,
+          y: group.y,
+          width,
+          height: Math.round(chipH),
+          rotation: group.rotation,
+          zIndex: group.zIndex + i * 2,
+          createdBy: currentUserId,
+        };
+        if (!showHex) return [chip];
+        const label: CanvasElement = {
+          id: `sw-${stamp}-${i}-hex`,
+          type: 'text',
+          content: color.toUpperCase(),
+          x,
+          y: Math.round(group.y + group.height - caption.captionH),
+          width,
+          height: Math.round(caption.captionH),
+          rotation: group.rotation,
+          zIndex: group.zIndex + i * 2 + 1,
+          fontSize: Math.round(caption.fontSize),
+          fontFamily: 'sans',
+          color: '#6b645a',
+          align: 'center',
+          lineHeight: 1,
+          createdBy: currentUserId,
+        };
+        return [chip, label];
+      });
+
+      commit((prev) => ({
+        ...prev,
+        sections: prev.sections.map((section) => ({
+          ...section,
+          slides: section.slides.map((slide) =>
+            slide.id === activeSlideId
+              ? {
+                  ...slide,
+                  elements: [...slide.elements.filter((el) => el.id !== elementId), ...parts],
+                }
+              : slide
+          ),
+        })),
+      }));
+      setSelectedElementIds(parts.map((el) => el.id));
+    },
+    [activeSlide, activeSlideId, commit, currentUserId]
   );
 
   /**
@@ -2233,6 +2329,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         createPalette,
         deletePalette,
         placePalette,
+        ungroupElement,
         summarizeVision,
         isSummarizing,
         isCommentsOpen,

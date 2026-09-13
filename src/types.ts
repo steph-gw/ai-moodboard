@@ -130,7 +130,26 @@ export interface SwatchElement extends CanvasElementBase {
   showHex?: boolean;
 }
 
-export type CanvasElement = ImageElement | TextElement | ShapeElement | SwatchElement;
+/**
+ * A whole palette placed as one object.
+ *
+ * Grouped by default because a palette is one decision, and five loose boxes that have to
+ * be kept aligned by hand are a chore rather than a feature. Unlocking it replaces the
+ * group with its parts — see ungroupElement — which is the only way back out.
+ */
+export interface PaletteGroupElement extends CanvasElementBase {
+  type: 'paletteGroup';
+  colors: string[];
+  /** The hex captions under each chip. Absent reads as shown. */
+  showHex?: boolean;
+}
+
+export type CanvasElement =
+  | ImageElement
+  | TextElement
+  | ShapeElement
+  | SwatchElement
+  | PaletteGroupElement;
 
 /** A named set of colors belonging to one moodboard. */
 export interface Palette {

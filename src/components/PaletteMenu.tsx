@@ -1,11 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronDown, ChevronUp, Palette as PaletteIcon, Plus, Trash2, X } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronUp,
+  GripVertical,
+  Palette as PaletteIcon,
+  Plus,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { useHost } from '../embed/HostProvider';
 import { ColorField } from './ColorField';
 import { readHex } from '../utils/hex';
 import { rememberColor } from '../utils/recentColors';
+import { ConfirmModal } from './ConfirmModal';
 
 const FALLBACK_COLOR = '#D9D2C7';
 
@@ -33,6 +42,9 @@ export function PaletteMenu() {
   const [name, setName] = useState('');
   const [colors, setColors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  /** The row being dragged, and the slot it is currently hovering over. */
+  const [drag, setDrag] = useState<{ from: number; over: number } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const palettes = board.palettes;
@@ -92,6 +104,16 @@ export function PaletteMenu() {
     if (ok) closeEditor();
   };
 
+  const moveColor = (from: number, to: number) => {
+    if (from === to) return;
+    setColors((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  };
+
   const valid = colors.map(readHex).filter(Boolean).length;
   const canSave = name.trim().length > 0 && valid > 0 && !saving;
 
@@ -146,7 +168,10 @@ export function PaletteMenu() {
                 <button
                   type="button"
                   className="palette-menu-delete"
-                  onClick={() => deletePalette(palette.id)}
+                  onClick={() => {
+                    setOpen(false);
+                    setConfirmDelete({ id: palette.id, name: palette.name });
+                  }}
                   data-tooltip="Delete palette"
                   aria-label={`Delete ${palette.name}`}
                 >
@@ -195,7 +220,33 @@ export function PaletteMenu() {
                 {colors.length > 0 && <label className="modal-label modal-label-spaced">Colors</label>}
                 <div className="palette-rows">
                   {colors.map((color, i) => (
-                    <div className="palette-row" key={i}>
+                    <div
+                      className={`palette-row${drag?.from === i ? ' is-dragging' : ''}${
+                        drag && drag.over === i && drag.from !== i ? ' is-over' : ''
+                      }`}
+                      key={i}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.effectAllowed = 'move';
+                        // Firefox ignores a drag that carries no data at all.
+                        e.dataTransfer.setData('text/plain', String(i));
+                        setDrag({ from: i, over: i });
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        setDrag((d) => (d && d.over !== i ? { ...d, over: i } : d));
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (drag) moveColor(drag.from, i);
+                        setDrag(null);
+                      }}
+                      onDragEnd={() => setDrag(null)}
+                    >
+                      <span className="palette-row-grip" aria-hidden>
+                        <GripVertical size={13} strokeWidth={1.7} />
+                      </span>
                       <ColorField
                         label={`Color ${i + 1}`}
                         value={readHex(color) ?? 'transparent'}
@@ -267,6 +318,20 @@ export function PaletteMenu() {
           </div>,
           portalHost
         )}
+
+      {confirmDelete && (
+        <ConfirmModal
+          eyebrow="Palette"
+          title={`Delete ${confirmDelete.name}?`}
+          body="The palettes already placed on slides keep their colors — they are copies. This only removes the palette from the menu."
+          confirmLabel="Delete palette"
+          onConfirm={() => {
+            deletePalette(confirmDelete.id);
+            setConfirmDelete(null);
+          }}
+          onClose={() => setConfirmDelete(null)}
+        />
+      )}
     </>
   );
 }

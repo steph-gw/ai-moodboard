@@ -127,6 +127,16 @@ function coerceElement(item: unknown, knownImageIds: ReadonlySet<string>): Canva
     };
   }
 
+  if (o.type === 'paletteGroup') {
+    const colors = Array.isArray(o.colors)
+      ? o.colors.filter((c): c is string => typeof c === 'string')
+      : [];
+    // A group with nothing in it would render as an invisible box that still selects and
+    // drags — worse than being dropped.
+    if (colors.length === 0) return null;
+    return { ...base, type: 'paletteGroup', colors, showHex: o.showHex !== false };
+  }
+
   if (o.type === 'swatch') {
     return {
       ...base,
