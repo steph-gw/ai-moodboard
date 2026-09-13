@@ -3842,7 +3842,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  min-width: 186px;
+  min-width: 238px;
   /* No overflow: a tooltip inside a scroll container is clipped by it, and the delete
      tooltip was being cut in half. Palettes are few enough that the list does not need
      to scroll. */
@@ -3856,10 +3856,21 @@
 /* The row is the hover target, not the button inside it — half a row lighting up read as
    two separate controls. */
 .palette-menu-row {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 2px;
   border-radius: 6px;
+}
+
+/* Pinned to the top right, so they sit on the name's line rather than floating beside the
+   whole two-line block. */
+.palette-menu-actions {
+  position: absolute;
+  top: 5px;
+  right: 4px;
+  display: flex;
+  gap: 1px;
 }
 
 .palette-menu-row:hover {
@@ -3868,6 +3879,8 @@
 
 .palette-menu-item {
   flex: 1;
+  /* Room for the actions above, so a long name never runs under them. */
+  padding-right: 56px;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -4166,18 +4179,36 @@
 }
 
 .palette-row {
+  position: relative;
   cursor: grab;
   border-radius: 6px;
-  transition: opacity 0.12s, box-shadow 0.12s;
+  transition: opacity 0.12s;
 }
 
 .palette-row.is-dragging {
   opacity: 0.45;
 }
 
-/* Where it would land. A line rather than a filled box: the row itself has not moved yet. */
-.palette-row.is-over {
-  box-shadow: 0 -2px 0 -1px var(--gold-active);
+/* Where it would land: a straight line, above the row when dragging up and below it when
+   dragging down. Drawn as its own element so it does not inherit the row's rounded
+   corners — a rounded line reads as a highlighted box rather than a position. */
+.palette-row.is-over-above::before,
+.palette-row.is-over-below::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  border-radius: 0;
+  background: var(--gold-active);
+}
+
+.palette-row.is-over-above::before {
+  top: -4px;
+}
+
+.palette-row.is-over-below::after {
+  bottom: -4px;
 }
 
 /* The custom picker and the hex of what is chosen, as one row: the swatch opens the

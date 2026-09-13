@@ -19,10 +19,16 @@ import { ConfirmModal } from './ConfirmModal';
 
 const FALLBACK_COLOR = '#D9D2C7';
 
+let rowSeq = 0;
+function newRow(hex: string): { id: string; hex: string } {
+  rowSeq += 1;
+  return { id: `row-${rowSeq}`, hex };
+}
+
 /** A new row starts from the last color picked, which is usually near the next one. */
-function nextColor(rows: string[]): string {
+function nextColor(rows: { hex: string }[]): string {
   for (let i = rows.length - 1; i >= 0; i -= 1) {
-    const hex = readHex(rows[i]);
+    const hex = readHex(rows[i].hex);
     if (hex) return hex;
   }
   return FALLBACK_COLOR;
@@ -41,7 +47,13 @@ export function PaletteMenu() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
-  const [colors, setColors] = useState<string[]>([]);
+  /**
+   * Editor rows. Each carries an id of its own rather than being identified by position:
+   * React reuses DOM by key, so keying a reorderable list by index makes the inputs stay
+   * put while the values move under them — which is exactly what "things jump around"
+   * looks like.
+   */
+  const [rows, setRows] = useState<{ id: string; hex: string }[]>([]);
   const [saving, setSaving] = useState(false);
   /** The row being dragged, and the slot it is currently hovering over. */
   const [drag, setDrag] = useState<{ from: number; over: number } | null>(null);
@@ -84,7 +96,7 @@ export function PaletteMenu() {
     setOpen(false);
     setEditingId(palette.id);
     setName(palette.name);
-    setColors(palette.colors.map((c) => c.toUpperCase()));
+    setRows(palette.colors.map((c) => newRow(c.toUpperCase())));
     setEditing(true);
   };
 
@@ -99,7 +111,7 @@ export function PaletteMenu() {
     // No blank first row. An empty slot with a default color in it is a color the planner
     // never chose, and the one thing worse than no palette is a palette with a wrong color
     // in it that nobody put there.
-    setColors(seed.map((c) => c.toUpperCase()));
+    setRows(seed.map((c) => newRow(c.toUpperCase())));
     setEditing(true);
   };
 
@@ -107,13 +119,13 @@ export function PaletteMenu() {
     setEditing(false);
     setEditingId(null);
     setName('');
-    setColors([]);
+    setRows([]);
     setSaving(false);
   };
 
   const submit = async () => {
     setSaving(true);
-    const clean = colors.map(readHex).filter((c): c is string => !!c);
+    const clean = rows.map((r) => readHex(r.hex)).filter((c): c is string => !!c);
     const ok = editingId
       ? await updatePalette(editingId, { name, colors: clean })
       : await createPalette(name, clean);
@@ -121,17 +133,26 @@ export function PaletteMenu() {
     if (ok) closeEditor();
   };
 
-  const moveColor = (from: number, to: number) => {
-    if (from === to) return;
-    setColors((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(from, 1);
-      next.splice(to, 0, moved);
-      return next;
+  /**
+   * Drops the dragged row where the line is drawn: above the hovered row when dragging up,
+   * below it when dragging down.
+   *
+   * The insert index is then shifted back by one when the row being moved sat before it,
+   * because removing it moves everything after it up. Without that, a row dragged downward
+   * always landed one place further than the line promised.
+   */
+  const moveRow = (from: number, over: number) => {
+    if (from === over) return;
+    setRows((prev) => {
+      const insertAt = from < over ? over + 1 : over;
+      const moved = prev[from];
+      const without = prev.filter((_, i) => i !== from);
+      without.splice(insertAt - (from < insertAt ? 1 : 0), 0, moved);
+      return without;
     });
   };
 
-  const valid = colors.map(readHex).filter(Boolean).length;
+  const valid = rows.filter((r) => readHex(r.hex)).length;
   const canSave = name.trim().length > 0 && valid > 0 && !saving;
 
   return (
@@ -180,6 +201,7 @@ export function PaletteMenu() {
                     ))}
                   </span>
                 </button>
+                <span className="palette-menu-actions">
                 <button
                   type="button"
                   className="palette-menu-edit"
@@ -203,6 +225,7 @@ export function PaletteMenu() {
                 >
                   <Trash2 size={12} strokeWidth={1.6} />
                 </button>
+                </span>
               </div>
             ))}
             <button type="button" className="palette-menu-add" onClick={openEditor}>
@@ -245,14 +268,18 @@ export function PaletteMenu() {
                   }}
                 />
 
-                {colors.length > 0 && <label className="modal-label modal-label-spaced">Colors</label>}
+                {rows.length > 0 && <label className="modal-label modal-label-spaced">Colors</label>}
                 <div className="palette-rows">
-                  {colors.map((color, i) => (
+                  {rows.map((row, i) => (
                     <div
                       className={`palette-row${drag?.from === i ? ' is-dragging' : ''}${
-                        drag && drag.over === i && drag.from !== i ? ' is-over' : ''
+                        drag && drag.over === i && drag.from !== i
+                          ? drag.from < i
+                            ? ' is-over-below'
+                            : ' is-over-above'
+                          : ''
                       }`}
-                      key={i}
+                      key={row.id}
                       draggable
                       onDragStart={(e) => {
                         e.dataTransfer.effectAllowed = 'move';
@@ -267,7 +294,7 @@ export function PaletteMenu() {
                       }}
                       onDrop={(e) => {
                         e.preventDefault();
-                        if (drag) moveColor(drag.from, i);
+                        if (drag) moveRow(drag.from, i);
                         setDrag(null);
                       }}
                       onDragEnd={() => setDrag(null)}
@@ -277,35 +304,43 @@ export function PaletteMenu() {
                       </span>
                       <ColorField
                         label={`Color ${i + 1}`}
-                        value={readHex(color) ?? 'transparent'}
+                        value={readHex(row.hex) ?? 'transparent'}
                         onChange={(next) =>
-                          setColors((prev) => prev.map((c, j) => (j === i ? next.toUpperCase() : c)))
+                          setRows((prev) =>
+                            prev.map((r) =>
+                              r.id === row.id ? { ...r, hex: next.toUpperCase() } : r
+                            )
+                          )
                         }
                       />
                       <input
-                        className={`palette-row-hex${readHex(color) ? '' : ' is-pending'}`}
-                        value={color}
+                        className={`palette-row-hex${readHex(row.hex) ? '' : ' is-pending'}`}
+                        value={row.hex}
                         placeholder="#F6EFE0"
                         spellCheck={false}
                         aria-label={`Color ${i + 1} hex`}
                         onChange={(e) =>
-                          setColors((prev) => prev.map((c, j) => (j === i ? e.target.value : c)))
+                          setRows((prev) =>
+                            prev.map((r) => (r.id === row.id ? { ...r, hex: e.target.value } : r))
+                          )
                         }
                         onBlur={() => {
                           // Tidied only once they have moved on: #f6efe0 becomes #F6EFE0,
                           // and a half-typed value is left alone to be finished.
-                          const hex = readHex(color);
+                          const hex = readHex(row.hex);
                           if (!hex) return;
-                          // Typed by hand counts as used: it belongs in the session list
-                          // the pickers offer, the same as one clicked from a swatch.
                           rememberColor(hex);
-                          setColors((prev) => prev.map((c, j) => (j === i ? hex.toUpperCase() : c)));
+                          setRows((prev) =>
+                            prev.map((r) =>
+                              r.id === row.id ? { ...r, hex: hex.toUpperCase() } : r
+                            )
+                          );
                         }}
                       />
                       <button
                         type="button"
                         className="palette-row-remove"
-                        onClick={() => setColors((prev) => prev.filter((_, j) => j !== i))}
+                        onClick={() => setRows((prev) => prev.filter((r) => r.id !== row.id))}
                         aria-label={`Remove color ${i + 1}`}
                       >
                         <X size={13} strokeWidth={1.8} />
@@ -316,8 +351,8 @@ export function PaletteMenu() {
 
                 <button
                   type="button"
-                  className={`palette-add-color${colors.length === 0 ? ' is-first' : ''}`}
-                  onClick={() => setColors((prev) => [...prev, nextColor(prev)])}
+                  className={`palette-add-color${rows.length === 0 ? ' is-first' : ''}`}
+                  onClick={() => setRows((prev) => [...prev, newRow(nextColor(prev))])}
                 >
                   <Plus size={13} strokeWidth={1.8} />
                   Add color
