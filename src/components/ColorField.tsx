@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useBoard } from '../context/BoardContext';
 import { useHost } from '../embed/HostProvider';
+import { rememberColor, useRecentColors } from '../utils/recentColors';
 
 /**
  * One swatch that opens the palette, rather than the whole palette inline.
@@ -26,12 +27,29 @@ export function ColorField({
 }) {
   const { board } = useBoard();
   const { portalHost } = useHost();
+  const recent = useRecentColors();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
   const popRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [at, setAt] = useState<{ left: number; top: number } | null>(null);
   const none = value === 'transparent';
+
+  const pick = (color: string) => {
+    rememberColor(color);
+    onChange(color);
+  };
+
+  /**
+   * The board's own colors: the named palettes if there are any, and otherwise the
+   * original single palette. Falling back rather than showing both keeps a board that has
+   * moved on to named palettes from still offering the colors it left behind.
+   */
+  const boardColors = Array.from(
+    new Set(
+      board.palettes.length > 0 ? board.palettes.flatMap((p) => p.colors) : board.palette
+    )
+  );
 
   // Rendered into the portal host rather than next to the swatch: the toolbar row it sits
   // in scrolls horizontally, and an absolutely positioned popover inside a scroll
@@ -102,25 +120,48 @@ export function ColorField({
                 aria-label="No fill"
               />
             )}
-            {board.palette.map((color) => (
+            {boardColors.map((color) => (
               <button
                 key={color}
                 type="button"
                 className={`color-field-swatch ${!none && value === color ? 'active' : ''}`}
                 style={{ backgroundColor: color }}
                 onClick={() => {
-                  onChange(color);
+                  pick(color);
                   setOpen(false);
                 }}
                 aria-label={color}
               />
             ))}
           </div>
+
+          {/* Only once something has been picked. An empty "Recent" heading on a fresh
+              board is a promise of nothing. */}
+          {recent.length > 0 && (
+            <>
+              <p className="color-field-heading">Recent</p>
+              <div className="color-field-swatches">
+                {recent.map((color) => (
+                  <button
+                    key={`recent-${color}`}
+                    type="button"
+                    className={`color-field-swatch ${!none && value === color ? 'active' : ''}`}
+                    style={{ backgroundColor: color }}
+                    onClick={() => {
+                      pick(color);
+                      setOpen(false);
+                    }}
+                    aria-label={color}
+                  />
+                ))}
+              </div>
+            </>
+          )}
           <label className="color-field-custom">
             <input
               type="color"
               value={none ? '#ffffff' : value}
-              onChange={(e) => onChange(e.target.value)}
+              onChange={(e) => pick(e.target.value)}
             />
             <span>Custom…</span>
           </label>

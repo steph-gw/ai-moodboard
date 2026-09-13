@@ -4,23 +4,10 @@ import { ChevronDown, ChevronUp, Palette as PaletteIcon, Plus, Trash2, X } from 
 import { useBoard } from '../context/BoardContext';
 import { useHost } from '../embed/HostProvider';
 import { ColorField } from './ColorField';
+import { readHex } from '../utils/hex';
+import { rememberColor } from '../utils/recentColors';
 
 const FALLBACK_COLOR = '#D9D2C7';
-
-/**
- * A row holds whatever was typed, not a color.
- *
- * Someone pasting a hex passes through "#", "#F", "#F6" on the way to "#F6EFE0", and a
- * field that rejected or rewrote those would fight the typing. The swatch follows along
- * as soon as the text is a real color and simply waits when it is not.
- */
-function readHex(text: string): string | null {
-  const t = text.trim().replace(/^#*/, '');
-  if (/^[0-9a-f]{6}$/i.test(t)) return `#${t.toLowerCase()}`;
-  // Shorthand, as pasted from most design tools: #abc means #aabbcc.
-  if (/^[0-9a-f]{3}$/i.test(t)) return `#${t.split('').map((c) => c + c).join('').toLowerCase()}`;
-  return null;
-}
 
 /** A new row starts from the last color picked, which is usually near the next one. */
 function nextColor(rows: string[]): string {
@@ -229,7 +216,11 @@ export function PaletteMenu() {
                           // Tidied only once they have moved on: #f6efe0 becomes #F6EFE0,
                           // and a half-typed value is left alone to be finished.
                           const hex = readHex(color);
-                          if (hex) setColors((prev) => prev.map((c, j) => (j === i ? hex.toUpperCase() : c)));
+                          if (!hex) return;
+                          // Typed by hand counts as used: it belongs in the session list
+                          // the pickers offer, the same as one clicked from a swatch.
+                          rememberColor(hex);
+                          setColors((prev) => prev.map((c, j) => (j === i ? hex.toUpperCase() : c)));
                         }}
                       />
                       <button

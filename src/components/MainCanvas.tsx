@@ -6,7 +6,7 @@ import { SlideActions } from './SlideActions';
 import { CanvasToolbar } from './CanvasToolbar';
 import { VisionBrief } from './VisionBrief';
 import { SectionStatusSelect } from './SectionStatusSelect';
-import { TextFormatControls } from './TextFormatBar';
+import { TextFormatFloat } from './TextFormatFloat';
 import { PaletteEditor } from './PaletteEditor';
 import { ColorField } from './ColorField';
 import type { Section } from '../types';
@@ -65,32 +65,19 @@ export function MainCanvas() {
           <SectionMeta section={activeSection} />
           {/* Text formatting rides in this row rather than a bar of its own: the row is
               already here, so using it costs the artboard no height. */}
-          {activeSlideId && (selectedText || (isSlideSelected && canEdit)) && (
+          {/* Text formatting has left this row for a bar on the slide itself — see
+              TextFormatFloat. What stays is the slide's own background, which is small
+              and only appears when the slide, not an element, is selected. */}
+          {activeSlideId && !selectedText && isSlideSelected && canEdit && (
             <div className="canvas-bar-mid">
-              {selectedText ? (
-                <>
-                  {selectedTexts.length > 1 && (
-                    <span className="toolbar-count">{selectedTexts.length} selected</span>
-                  )}
-                  <TextFormatControls
-                    element={selectedText as Extract<typeof selectedText, { type: 'text' }>}
-                    slideId={activeSlideId}
-                    applyToIds={selectedTexts.map((el) => el.id)}
-                  />
-                </>
-              ) : (
-                // Only once the slide has actually been clicked — see isSlideSelected.
-                <>
-                  <span className="shape-format-label">Background</span>
-                  <ColorField
-                    label="Slide background"
-                    value={activeSlide?.background ?? 'transparent'}
-                    onChange={(background) => setSlideBackground(activeSlideId, background)}
-                    allowNone
-                    onNone={() => setSlideBackground(activeSlideId, undefined)}
-                  />
-                </>
-              )}
+              <span className="shape-format-label">Background</span>
+              <ColorField
+                label="Slide background"
+                value={activeSlide?.background ?? 'transparent'}
+                onChange={(background) => setSlideBackground(activeSlideId, background)}
+                allowNone
+                onNone={() => setSlideBackground(activeSlideId, undefined)}
+              />
             </div>
           )}
           <div className="canvas-bar-right">
@@ -104,6 +91,14 @@ export function MainCanvas() {
           shrinks the slide — which is what selecting a text box used to do. */}
       <div className="canvas-stage">
         {/* The lock badge lives in SlideActions, top right — one padlock, not two. */}
+        {activeSlideId && selectedText && canEdit && (
+          <TextFormatFloat
+            element={selectedText as Extract<typeof selectedText, { type: 'text' }>}
+            slideId={activeSlideId}
+            applyToIds={selectedTexts.map((el) => el.id)}
+            count={selectedTexts.length}
+          />
+        )}
         <ElementToolbar />
         <SlideActions />
         <SlideCanvas fullWidth fitMode="contain" onWidthChange={onWidthChange} />
