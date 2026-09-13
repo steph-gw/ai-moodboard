@@ -245,7 +245,16 @@ function TextElementView({
     if (editing || readOnly || !isOnly) return;
     const needed = measure();
     if (needed && Math.abs(needed - element.height) > 1) {
-      updateElement(slideId, element.id, { height: needed });
+      // Grow from the middle, not the top. The words are centred in the box, so changing
+      // only the height slides them down by half of whatever it grew — which is what a
+      // palette caption did the moment it was clicked: the box is stored at the height of
+      // the caption, the minimum here is taller than that, and the text dropped. Moving
+      // the top up by half the growth leaves the text exactly where it was drawn.
+      const top = Math.max(
+        0,
+        Math.min(SLIDE_HEIGHT - needed, element.y - (needed - element.height) / 2)
+      );
+      updateElement(slideId, element.id, { height: needed, y: top });
     }
   });
 
