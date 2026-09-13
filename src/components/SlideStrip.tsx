@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { SlideContextMenu } from './SlideContextMenu';
-import { ClipboardPaste, Copy, CopyPlus, Lock, Plus, Trash2 } from 'lucide-react';
+import { Copy, CopyPlus, Lock, Plus, Trash2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { useHost } from '../embed/HostProvider';
 import { ShapeView } from './ShapeView';
@@ -270,7 +270,7 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
 }
 
 export function SlideStrip() {
-  const { board, activeSectionId, canEdit, addSlide, pasteSlide, copiedSlideName } = useBoard();
+  const { board, activeSectionId, canEdit, addSlide } = useBoard();
   
   const section = board.sections.find((s) => s.id === activeSectionId);
   if (!section) return null;
@@ -284,19 +284,6 @@ export function SlideStrip() {
         {canEdit && (
           <button type="button" className="slide-tab-add" onClick={addSlide} data-tooltip="Add slide" aria-label="Add slide">
             <Plus size={16} strokeWidth={1.5} />
-          </button>
-        )}
-        {/* Only while something is held. A paste button that is usually dead is a button
-            you learn to ignore, and the name says which slide is about to land. */}
-        {canEdit && copiedSlideName && (
-          <button
-            type="button"
-            className="slide-tab-add is-paste"
-            onClick={() => void pasteSlide()}
-            data-tooltip={`Paste "${copiedSlideName}" here`}
-            aria-label={`Paste slide ${copiedSlideName}`}
-          >
-            <ClipboardPaste size={15} strokeWidth={1.5} />
           </button>
         )}
       </div>

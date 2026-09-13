@@ -993,16 +993,6 @@
   width: calc(100% - 22px);
 }
 
-/* The paste button is an offer, not an empty slot: solid, and in the gold that marks
-   everything else on the board you can act on. */
-.slide-tab-add.is-paste {
-  border-style: solid;
-  border-color: var(--gold-border);
-  color: var(--gold);
-  background: var(--gold-light);
-  margin-top: 6px;
-}
-
 .slide-tab-add:hover {
   color: var(--text-secondary);
   border-color: var(--gold-border);

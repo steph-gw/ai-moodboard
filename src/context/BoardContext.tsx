@@ -767,7 +767,12 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const activeSection = board.sections.find((s) => s.id === activeSectionId);
   const activeSlide = activeSection?.slides.find((s) => s.id === activeSlideId) ?? null;
   const activeSectionName = activeSection?.name ?? '';
-  const visionBrief = activeSection?.visionBrief ?? board.visionBrief;
+  // The section's own, with no fall back to the moodboard's. Falling back made every
+  // section that had not been given a brief show the board's one, so five sections read as
+  // five copies of the same paragraph — and editing any of them wrote that paragraph into
+  // that section, which is not what it looked like was happening. The board-level brief is
+  // still stored; it is simply not a section's brief.
+  const visionBrief = activeSection?.visionBrief ?? '';
 
   const selectedCommentPin = useMemo(() => {
     if (!selectedCommentPinId) return null;
