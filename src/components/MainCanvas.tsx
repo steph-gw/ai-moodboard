@@ -10,16 +10,18 @@ import { TextFormatControls } from './TextFormatBar';
 import { PaletteEditor } from './PaletteEditor';
 import { ColorField } from './ColorField';
 import type { Section } from '../types';
+import { useHost } from '../embed/HostProvider';
 
 /**
  * Just the status. The section name is already the selected tab directly above this row,
  * and repeating it cost the row width that the text controls now use.
  */
 function SectionMeta({ section }: { section: Section }) {
+  const { features } = useHost();
   return (
     <div className="canvas-bar-left">
       <VisionBrief />
-      <PaletteEditor />
+      {features.legacyPalette && <PaletteEditor />}
       <SectionStatusSelect section={section} />
     </div>
   );

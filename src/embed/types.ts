@@ -16,6 +16,13 @@ export interface FeatureFlags {
   exportPdf?: boolean;
   /** Thumbs up/down on canvas images. */
   imageVoting?: boolean;
+  /**
+   * The original single palette strip in the canvas bar.
+   *
+   * Off while named palettes replace it. The strip is the widest thing in that row, and
+   * with the text controls beside it there was no room left for either.
+   */
+  legacyPalette?: boolean;
   comments?: boolean;
 }
 

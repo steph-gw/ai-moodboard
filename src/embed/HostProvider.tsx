@@ -35,6 +35,7 @@ const DEFAULT_FEATURES: Required<FeatureFlags> = {
   present: true,
   exportPdf: true,
   imageVoting: true,
+  legacyPalette: false,
   comments: true,
 };
 
