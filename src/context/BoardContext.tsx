@@ -44,6 +44,17 @@ const HISTORY_LIMIT = 60;
  * Put on the clipboard for an element with no text of its own — a shape, an image, a
  * palette. Zero-width, so pasting one into another app leaves nothing visible behind.
  */
+/** Which way each arrow key moves a selection, before the step size is applied. */
+const NUDGES: Record<string, [number, number]> = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+};
+
+/** How long after the last arrow key a nudge counts as finished. */
+const NUDGE_SETTLE = 500;
+
 const CLIPBOARD_MARKER = '\u200b';
 
 /** The same idea for a whole slide, told apart from a single element by its length. */
@@ -273,6 +284,10 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   // Read by beginInteraction, which is stable and must not re-create on every selection.
   const selectedIdsRef = useRef<readonly string[]>(selectedElementIds);
   selectedIdsRef.current = selectedElementIds;
+  // Same reason: the arrow keys read the slide they are on without re-binding the
+  // listener every time it changes.
+  const activeSlideIdRef = useRef<string | null>(null);
+  activeSlideIdRef.current = activeSlideId;
   const [selectedCommentPinId, setSelectedCommentPinId] = useState<string | null>(null);
   /**
    * The slide itself is selected — clicked on, with nothing on it selected.
@@ -312,6 +327,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const [copiedSlideName, setCopiedSlideName] = useState<string | null>(null);
   const lastCutAtRef = useRef(0);
   const lastCopyAtRef = useRef(0);
+  /** The timer that closes a run of arrow-key nudges. Null when none is open. */
+  const nudgeEndRef = useRef<number | null>(null);
 
   const versionsRef = useRef<SlideVersions>(new Map());
   /** This viewer's vote row per image, so changing a vote patches rather than duplicates. */
@@ -731,6 +748,62 @@ export function BoardProvider({ children }: { children: ReactNode }) {
               }),
             };
           }),
+        })),
+      }));
+    },
+    [commit]
+  );
+
+  /**
+   * Moves everything selected by a fixed step, for the arrow keys.
+   *
+   * Separate from moveSelectionBy, which tracks a pointer from where the gesture began:
+   * this one steps from wherever things are now, so holding an arrow walks the selection
+   * along rather than re-applying one offset. The group is clamped as a unit for the same
+   * reason a drag is — the offset is trimmed so no member crosses an edge, instead of the
+   * ones that reach the wall piling up against the ones still moving.
+   */
+  const nudgeSelection = useCallback(
+    (dx: number, dy: number) => {
+      if (!canEditRef.current) return;
+      const slideId = activeSlideIdRef.current;
+      if (!slideId) return;
+      const selected = new Set(selectedIdsRef.current);
+      if (!selected.size) return;
+      const onSlide = (boardRef.current.sections
+        .flatMap((section) => section.slides)
+        .find((slide) => slide.id === slideId)?.elements ?? []
+      ).filter((el) => selected.has(el.id));
+      if (!onSlide.length) return;
+
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxRight = -Infinity;
+      let maxBottom = -Infinity;
+      for (const el of onSlide) {
+        minX = Math.min(minX, el.x);
+        minY = Math.min(minY, el.y);
+        maxRight = Math.max(maxRight, el.x + el.width);
+        maxBottom = Math.max(maxBottom, el.y + el.height);
+      }
+      const stepX = Math.max(-minX, Math.min(dx, SLIDE_WIDTH - maxRight));
+      const stepY = Math.max(-minY, Math.min(dy, SLIDE_HEIGHT - maxBottom));
+      if (!stepX && !stepY) return;
+
+      commit((prev) => ({
+        ...prev,
+        sections: prev.sections.map((section) => ({
+          ...section,
+          slides: section.slides.map((slide) =>
+            slide.id === slideId
+              ? {
+                  ...slide,
+                  elements: slide.elements.map((el) =>
+                    selected.has(el.id) ? { ...el, x: el.x + stepX, y: el.y + stepY } : el
+                  ),
+                }
+              : slide
+          ),
         })),
       }));
     },
@@ -2607,6 +2680,26 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         return;
       }
 
+      // The arrow keys nudge whatever is selected: one slide unit, or ten with Shift, for
+      // the last pixel of alignment a drag cannot reach. The whole burst is one undo entry
+      // — holding an arrow for a second would otherwise fill the undo stack with fifty
+      // one-pixel steps and leave nothing to go back to.
+      if (!typing && NUDGES[e.key] && selectedElementIds.length && activeSlideId) {
+        e.preventDefault();
+        const [dx, dy] = NUDGES[e.key];
+        const step = e.shiftKey ? 10 : 1;
+        if (nudgeEndRef.current === null) beginInteraction();
+        else window.clearTimeout(nudgeEndRef.current);
+        nudgeSelection(dx * step, dy * step);
+        // Closed on a pause rather than on keyup, so a run of separate taps while lining
+        // something up stays one step too.
+        nudgeEndRef.current = window.setTimeout(() => {
+          nudgeEndRef.current = null;
+          endInteraction();
+        }, NUDGE_SETTLE);
+        return;
+      }
+
       if (
         (e.key === 'Delete' || e.key === 'Backspace') &&
         selectedElementIds.length &&
@@ -2619,7 +2712,18 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     };
     rootEl.addEventListener('keydown', handleKeyDown);
     return () => rootEl.removeEventListener('keydown', handleKeyDown);
-  }, [selectedElementIds, activeSlideId, deleteSelection, undo, cutSelection, copySelection, rootEl]);
+  }, [
+    selectedElementIds,
+    activeSlideId,
+    deleteSelection,
+    undo,
+    cutSelection,
+    copySelection,
+    nudgeSelection,
+    beginInteraction,
+    endInteraction,
+    rootEl,
+  ]);
 
   return (
     <BoardContext.Provider
