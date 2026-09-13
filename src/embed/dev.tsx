@@ -35,6 +35,8 @@ const PEOPLE: Record<UserRole, { id: string; name: string }> = {
 let role: UserRole = 'planner';
 /** The moodboard tab's permission for this person, as Bubble sends it. */
 let readOnly = false;
+/** The harness runs as an admin so resolving a thread can be tried at all. */
+const isAdmin = true;
 
 /**
  * Stand-in for Bubble's context.uploadContent. Returns a data URL rather than an object
@@ -69,6 +71,7 @@ const id = GWMoodboard.mount(el, {
   currentUserName: PEOPLE[role].name,
   role,
   readOnly,
+  isAdmin,
   logoUrl: './gatherwise-logo.png',
   moodboardId: DEV_MOODBOARD_ID,
   businessId: 'biz-dev',

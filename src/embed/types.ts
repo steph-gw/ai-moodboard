@@ -41,6 +41,13 @@ export interface GWMoodboardProps {
   eventName?: string;
   /** ISO date, e.g. 2026-06-14. */
   eventDate?: string;
+  /**
+   * A Gatherwise admin: the only person who may resolve or reopen a comment thread.
+   *
+   * Separate from `role` and from `readOnly`, because neither can express it — a team
+   * member with edit access is also not read-only, and also not a client.
+   */
+  isAdmin?: boolean;
   /** Overrides the version-derived API base. Rarely needed. */
   apiBase?: string;
   /** Bearer token. Not needed same-origin — the session cookie authenticates. */

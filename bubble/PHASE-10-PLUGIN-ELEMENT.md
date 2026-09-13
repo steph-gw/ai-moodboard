@@ -66,6 +66,7 @@ editor-time toggles rather than data, stay checkboxes.
 | Current user initials | `current_user_initials` | Dynamic value / text | — | leave blank — derived from the name |
 | Is planner | `is_planner` | Dynamic value / yes-no | — | `Current User's Role is not Client` — what is actually bound in the app |
 | Read only | `read_only` | Dynamic value / yes-no | — | see **Who can do what** below — the moodboard tab's own permission |
+| Is admin | `is_admin` | Dynamic value / yes-no | — | `Current User's Role is Wedding Planner Admin` — resolving and reopening comment threads only |
 | Logo url | `logo_url` | Dynamic value / text | — | your wordmark's file URL |
 | Height css | `height_css` | Dynamic value / text | `100%` | — |
 | API base | `api_base` | Dynamic value / text | — | leave blank |
@@ -110,8 +111,22 @@ same way if those should also never be read-only.
 
 | | read-only | write |
 |---|---|---|
-| **Client** | vote, comment | plus: canvas edits, upload, add a section, add or duplicate a slide, palette. Deletes **only what they added**. |
-| **Team member / admin** | vote, comment | everything, including approve, rename and delete, and templates |
+| **Client** | vote, comment, reply | everything a team member can do **except templates**. Deletes **only elements they added**. |
+| **Team member / admin** | vote, comment, reply | everything, including templates |
+
+Write access is the answer to who may change the board; the role used to be a second answer
+to the same question, and a client with edit access was refused things the access had just
+granted. Two exceptions remain, and both are about ownership rather than permission:
+**templates**, which belong to the planner's business and appear on every board it owns, so
+they are not a client's to write; and **deleting someone else's element**, which stays with
+the person who placed it.
+
+**Comments are not gated by write access at all.** Anyone who can open the board can leave
+a comment and reply to one, view-only included — that is what a view-only collaborator is
+there to do. Editing and deleting a comment belong to its author. **Resolving and reopening
+a thread is an admin's alone**, which is why `is_admin` exists: neither `read_only` nor
+`is_planner` can express it, since a team member with edit access is also neither read-only
+nor a client.
 
 **Nothing freezes a slide.** Access to the moodboard tab decides who may edit, and that is
 the whole of it. Approving a section records that the work was agreed; it does not put a
@@ -131,8 +146,13 @@ Only when  Current page's 1 Project / Event's Collaborator Accesses
              :filtered (User = Current User)
              :first item's Tabs with Hidden Access
              contains moodboard
+           and Current User's Role is not Wedding Planner Admin
 Step 1     Go to page  event   (Data to send: Current page's 1 Project / Event)
 ```
+
+The admin clause matches the one on `read_only`. Without it the two disagreed: an admin
+marked view-only still edited, but an admin marked hidden was bounced — and an admin is
+supposed to be able to reach any board.
 
 It has to live here rather than in the element: by the time the bundle could refuse, it has
 already been handed a moodboard id and has started reading the board. The redirect fires

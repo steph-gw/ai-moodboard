@@ -38,6 +38,7 @@ function(instance, properties, context) {
     currentUserName: properties.current_user_name || '',
     currentUserInitials: properties.current_user_initials || '',
     role: properties.is_planner ? 'planner' : 'client',
+    isAdmin: !!properties.is_admin,
     readOnly: !!properties.read_only,
 
     logoUrl: properties.logo_url || '',

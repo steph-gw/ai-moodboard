@@ -29,7 +29,7 @@ function CommentActions({
   canReopen: boolean;
   onStartEdit: () => void;
 }) {
-  const { deleteComment, reopenComment } = useBoard();
+  const { deleteComment, reopenComment, isAdmin } = useBoard();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -55,7 +55,7 @@ function CommentActions({
       </button>
       {open && (
         <div className="thread-menu" role="menu">
-          {canReopen && (
+          {canReopen && isAdmin && (
             <button
               type="button"
               className="thread-menu-item"
@@ -111,12 +111,14 @@ function CommentRow({
   isReply?: boolean;
   isFirst?: boolean;
 }) {
-  const { currentUserId, resolveComment, reopenComment, editComment } = useBoard();
+  const { currentUserId, isAdmin, resolveComment, reopenComment, editComment } = useBoard();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.text);
   const isOwn = comment.authorId === currentUserId;
   // Reopening is offered on the comment that closed the thread.
-  const canReopen = isFirst && !!comment.resolved;
+  // Closing a conversation is a decision about it, not a contribution to it: anyone may
+  // comment and reply, an admin decides when a thread is finished.
+  const canReopen = isAdmin && isFirst && !!comment.resolved;
 
   const saveEdit = () => {
     editComment(pinId, comment.id, draft);
@@ -150,7 +152,7 @@ function CommentRow({
         </span>
         <div className="thread-item-actions">
           {/* Resolve lives on the opening comment only — it closes the thread. */}
-          {isFirst && !comment.resolved && (
+          {isAdmin && isFirst && !comment.resolved && (
             <button
               type="button"
               className="thread-icon-btn"

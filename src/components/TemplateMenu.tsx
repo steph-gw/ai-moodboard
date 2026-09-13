@@ -15,7 +15,7 @@ type Template = { id: string; name: string; system: boolean };
  * is what makes that survivable if someone presses it anyway.
  */
 export function TemplateMenu() {
-  const { board, canManage, saveAsTemplate, applyTemplate, startFromScratch, listTemplates, isCloning } =
+  const { board, canUseTemplates, saveAsTemplate, applyTemplate, startFromScratch, listTemplates, isCloning } =
     useBoard();
   const { portalHost } = useHost();
   const [mode, setMode] = useState<'save' | 'start' | null>(null);
@@ -85,7 +85,7 @@ export function TemplateMenu() {
     };
   }, [mode, listTemplates]);
 
-  if (!canManage) return null;
+  if (!canUseTemplates) return null;
 
   const close = () => {
     setMode(null);

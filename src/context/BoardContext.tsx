@@ -132,8 +132,12 @@ interface BoardContextValue {
   /** False for a client, or when the planner has locked this slide. */
   canEdit: boolean;
   toggleSlideLock: (slideId: string) => void;
-  /** False for a client. Structure — sections, slides, status, vision brief. */
+  /** Structure — sections, slides, status, vision brief. Same as canWrite. */
   canManage: boolean;
+  /** Templates belong to the business, so a client never writes them. */
+  canUseTemplates: boolean;
+  /** Resolving and reopening comment threads is an admin's alone. */
+  isAdmin: boolean;
   /** The host's read/write answer for this viewer, before locks and approval. */
   canWrite: boolean;
   /** Whether this viewer may remove a particular element — clients, only their own. */
@@ -218,6 +222,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     currentUserName,
     currentUserInitials,
     currentUserPhotoUrl,
+    isAdmin,
     rootEl,
     repo,
     identity,
@@ -561,9 +566,13 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    * read-only. Without it the board is a viewer — comments and votes still work, because
    * that is how a client takes part.
    *
-   * `canManage` is `canWrite` minus the client role: approving, locking, templates,
-   * renaming or deleting what someone else made. A client with write access builds on the
-   * board; they don't govern it.
+   * `canManage` is `canWrite`. A client with edit access gets the same controls as anyone
+   * else with it — approving, renaming, deleting a slide, the brief. Access is the answer
+   * to who may change the board; the role was a second answer to the same question.
+   *
+   * Templates are the one exception, in `canUseTemplates`: they belong to the planner's
+   * business and are offered on every board it owns, so they are not this client's to
+   * write. Deleting someone else's element is the other, in deleteElements.
    *
    * `canEdit` is `canWrite`. It used to be less: a lock or an approved section froze the
    * slide for everyone, write access included. That is gone behind the `slideLocking` flag
@@ -576,7 +585,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    */
   const canWrite = !readOnly;
   const isClient = role === 'client';
-  const canManage = canWrite && !isClient;
+  const canManage = canWrite;
+  const canUseTemplates = canWrite && !isClient;
   const activeSectionStatus = board.sections.find((s) => s.id === activeSectionId)?.status;
   const isSlideFrozen =
     features.slideLocking &&
@@ -591,6 +601,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   canWriteRef.current = canWrite;
   const isClientRef = useRef(isClient);
   isClientRef.current = isClient;
+  const isAdminRef = useRef(isAdmin);
+  isAdminRef.current = isAdmin;
   const lockedSlideIdsRef = useRef(lockedSlideIds);
   lockedSlideIdsRef.current = lockedSlideIds;
   const unlockedSlideIdsRef = useRef(unlockedSlideIds);
@@ -1841,6 +1853,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    */
   const setThreadResolved = useCallback(
     (pinId: string, resolved: boolean) => {
+      // Only an admin closes or reopens a thread. The buttons are hidden for everyone
+      // else; this is the same rule somewhere it cannot be clicked around.
+      if (!isAdminRef.current) return;
       const apply = () =>
         applyComments((prev) => {
           const found = findPinInBoard(prev.sections, pinId);
@@ -2401,6 +2416,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         unlockedSlideIds,
         canEdit,
         canManage,
+        canUseTemplates,
+        isAdmin,
         canWrite,
         canDeleteElement,
         toggleSlideLock,

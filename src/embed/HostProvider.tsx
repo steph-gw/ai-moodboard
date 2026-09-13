@@ -12,6 +12,8 @@ export interface HostServices {
   /** The current user's own photo, resolved from the collaborator list. */
   currentUserPhotoUrl?: string;
   role: UserRole;
+  /** Only an admin may resolve or reopen a comment thread. */
+  isAdmin: boolean;
   readOnly: boolean;
   logoUrl: string;
   features: Required<FeatureFlags>;
@@ -62,6 +64,7 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
     currentUserName,
     currentUserInitials,
     role,
+    isAdmin,
     readOnly,
     logoUrl,
     features,
@@ -121,6 +124,7 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
       currentUserInitials: currentUserInitials || initialsFrom(currentUserName),
       currentUserPhotoUrl: identity?.people?.get(currentUserId)?.photoUrl,
       role,
+      isAdmin: isAdmin ?? false,
       // Clients read the board; they still vote and comment, which don't go
       // through the board state at all.
       readOnly: readOnly ?? role === 'client',
@@ -143,6 +147,7 @@ export function HostProvider({ rootEl, portalHost, repoOverride, children, ...pr
       currentUserInitials,
       identity,
       role,
+      isAdmin,
       readOnly,
       logoUrl,
       features,
