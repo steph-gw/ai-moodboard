@@ -95,10 +95,15 @@ export function ShapeFormatControls({
 
       <span className="text-format-divider" />
 
+      {/* No colour is a real choice for an outline — a filled shape with no edge is a
+          shape, not a mistake — so it is offered here the way it is for the fill. A line
+          is only its stroke, so taking that away would leave nothing to select. */}
       <ColorField
         label={isLine ? 'Line color' : 'Outline color'}
         value={element.stroke}
         onChange={(stroke) => patch({ stroke })}
+        allowNone={!isLine}
+        onNone={() => patch({ stroke: 'transparent' })}
       />
 
       {!isLine && (
