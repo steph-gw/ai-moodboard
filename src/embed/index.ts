@@ -13,6 +13,55 @@ interface Instance {
   portalHost: HTMLElement;
   props: GWMoodboardProps;
   focusOnInteract: () => void;
+  /** Tears down the viewport-height listener, when there is one. */
+  stopHeight?: () => void;
+}
+
+/** Never collapse to nothing, however little room is left. */
+const MIN_VIEWPORT_HEIGHT = 320;
+
+/**
+ * Sizes the wrapper.
+ *
+ * `viewport` means "from wherever this element starts, down to the bottom of the window".
+ * Measured from the element's offset in the document rather than from the viewport, so the
+ * number does not change as the page scrolls — measuring against the viewport would grow
+ * the board every time it scrolled out from under the header.
+ */
+function applyHeight(inst: Instance) {
+  inst.stopHeight?.();
+  inst.stopHeight = undefined;
+
+  const height = inst.props.height;
+  if (!height) return;
+
+  if (height !== 'viewport') {
+    inst.el.style.height = height;
+    return;
+  }
+
+  let frame = 0;
+  const measure = () => {
+    frame = 0;
+    const top = inst.el.getBoundingClientRect().top + window.scrollY;
+    inst.el.style.height = `${Math.max(MIN_VIEWPORT_HEIGHT, Math.round(window.innerHeight - top))}px`;
+  };
+  const schedule = () => {
+    if (frame) return;
+    frame = requestAnimationFrame(measure);
+  };
+
+  measure();
+  window.addEventListener('resize', schedule);
+  // The header above it can change height without the window doing anything — a wrapped
+  // title, a banner appearing — and the board has to give back the space.
+  const observer = new ResizeObserver(schedule);
+  observer.observe(document.body);
+  inst.stopHeight = () => {
+    if (frame) cancelAnimationFrame(frame);
+    window.removeEventListener('resize', schedule);
+    observer.disconnect();
+  };
 }
 
 const instances = new Map<string, Instance>();
@@ -55,9 +104,8 @@ export const GWMoodboard: GWMoodboardApi = {
     portalHost.dataset.gwInstance = id;
     document.body.appendChild(portalHost);
 
-    if (props.height) el.style.height = props.height;
-
     const inst: Instance = { root: createRoot(el), el, portalHost, props, focusOnInteract, repoOverride: repo };
+    applyHeight(inst);
     instances.set(id, inst);
     render(id, inst);
     return id;
@@ -67,7 +115,7 @@ export const GWMoodboard: GWMoodboardApi = {
     const inst = instances.get(id);
     if (!inst) return;
     inst.props = { ...inst.props, ...props };
-    if (props.height) inst.el.style.height = props.height;
+    if (props.height !== undefined) applyHeight(inst);
     render(id, inst);
   },
 
@@ -75,6 +123,7 @@ export const GWMoodboard: GWMoodboardApi = {
     const inst = instances.get(id);
     if (!inst) return;
     instances.delete(id);
+    inst.stopHeight?.();
     inst.el.removeEventListener('pointerdown', inst.focusOnInteract);
     inst.root.unmount();
     inst.portalHost.remove();

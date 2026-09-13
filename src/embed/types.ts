@@ -95,7 +95,16 @@ export interface GWMoodboardProps {
   readOnly?: boolean;
   /** Absolute URL of the wordmark in the top nav. */
   logoUrl?: string;
-  /** CSS height for the wrapper. Default '100%' — needs a sized parent to resolve. */
+  /**
+   * CSS height for the wrapper. Default '100%', which needs a parent with a definite
+   * height to resolve — inside a Bubble group that sizes itself to its content, it does
+   * not, and the board lays out at its natural height instead.
+   *
+   * The keyword `viewport` sizes it to the rest of the window instead: the distance from
+   * the element's own top to the bottom of the viewport, re-measured when the window
+   * changes. That is what "fills the screen and no more" means on a page whose header
+   * height is not ours to know.
+   */
   height?: string;
   features?: FeatureFlags;
 
