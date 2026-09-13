@@ -6,11 +6,9 @@ import type { BoardRepo, SlideVersions } from './boardRepo';
  * How long the board must sit still before an idle save.
  *
  * Long enough that a gesture is not a write — the cost at the far end is the number of save
- * cycles, not what each one does — and short enough that a pause for thought saves. It was
- * twenty-five seconds, which is longer than anyone sits still while arranging a slide, so
- * "Unsaved changes" was the normal state of the board and the chip stopped meaning anything.
+ * cycles, not what each one does — and short enough that putting the mouse down saves.
  */
-const IDLE_MS = 6_000;
+const IDLE_MS = 20_000;
 
 /**
  * And a ceiling, because the idle timer restarts on every change: someone dragging things
