@@ -1699,7 +1699,18 @@
   outline: none;
   padding: 4px 8px;
   word-break: break-word;
+  /* Not a text cursor until it is actually editable. Offering one on a box you can only
+     drag invites you to try to select words that cannot be selected. */
+  cursor: inherit;
+}
+
+/* Editing, and only then: the element sets user-select: none so a drag across the canvas
+   does not smear a selection over everything, and the text box inherits it — which is why
+   the words could not be highlighted even with the caret in them. */
+.canvas-text-inner[contenteditable='true'] {
   cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* Comment pins on canvas — teardrop markers */

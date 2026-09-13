@@ -181,8 +181,17 @@ function TextElementView({
   scale: number;
   readOnly?: boolean;
 }) {
-  const { selectedElementIds, selectElement, collapseSelectionTo, updateElement, moveSelectionBy, beginInteraction, endInteraction } =
-    useBoard();
+  const {
+    selectedElementIds,
+    selectElement,
+    collapseSelectionTo,
+    updateElement,
+    moveSelectionBy,
+    beginInteraction,
+    endInteraction,
+    justAddedTextId,
+    clearJustAddedText,
+  } = useBoard();
   const [editing, setEditing] = useState(false);
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const isSelected = selectedElementIds.includes(element.id);
@@ -235,22 +244,43 @@ function TextElementView({
     }
   });
 
+  /**
+   * Editing ends when the box stops being the selection.
+   *
+   * It used to end only on blur, so a box opened for typing and then left alone — clicking
+   * the canvas rather than into another field — stayed contenteditable indefinitely. That
+   * is the state where a drag across the words moves the caret instead of the box, which
+   * is what made text feel stuck.
+   */
   useEffect(() => {
-    if (isOnly && !readOnly && !didAutoFocus.current && ref.current) {
-      didAutoFocus.current = true;
-      setEditing(true);
-      requestAnimationFrame(() => {
-        ref.current?.focus();
-        if (element.content === 'Heading') {
-          const range = document.createRange();
-          range.selectNodeContents(ref.current!);
-          const sel = window.getSelection();
-          sel?.removeAllRanges();
-          sel?.addRange(range);
-        }
-      });
+    if (!isOnly && editing) setEditing(false);
+  }, [isOnly, editing]);
+
+  /**
+   * A box that was just added opens for typing; an existing one waits for a double-click.
+   *
+   * Selecting used to start editing, which put every text box into a mode where a drag
+   * moved the caret instead of the box — so text was hard to move, and the words were hard
+   * to highlight because the drag was being swallowed either way. One click selects and
+   * drags now, two clicks edit, which is what every other canvas tool does.
+   */
+  useEffect(() => {
+    if (readOnly || didAutoFocus.current || justAddedTextId !== element.id || !ref.current) {
+      return;
     }
-  }, [isOnly, readOnly, element.content]);
+    didAutoFocus.current = true;
+    clearJustAddedText();
+    setEditing(true);
+    requestAnimationFrame(() => {
+      ref.current?.focus();
+      // The placeholder is selected so the first keystroke replaces it.
+      const range = document.createRange();
+      range.selectNodeContents(ref.current!);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    });
+  }, [justAddedTextId, element.id, readOnly, clearJustAddedText]);
 
   // Selecting does not restack. Stacking is something the planner arranged — a palette
   // slide is a deliberate pile of shapes and labels — and raising whatever was last

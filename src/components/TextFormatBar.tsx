@@ -1,4 +1,13 @@
-import { Bold, Italic, Minus, Plus, AlignVerticalSpaceAround } from 'lucide-react';
+import {
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  AlignVerticalSpaceAround,
+  Bold,
+  Italic,
+  Minus,
+  Plus,
+} from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { ColorField } from './ColorField';
 import { loadFont } from '../utils/loadFont';
@@ -130,6 +139,24 @@ export function TextFormatControls({
 
       <span className="text-format-divider" />
 
+      {/* Alignment. Icons rather than a dropdown: three mutually exclusive choices that are
+          read at a glance are cheaper as three buttons than as a menu hiding two of them. */}
+      {ALIGNMENTS.map(({ value, Icon, label }) => (
+        <button
+          key={value}
+          type="button"
+          className={`text-format-btn ${text.align === value ? 'active' : ''}`}
+          onClick={() => patch({ align: value })}
+          aria-label={label}
+          aria-pressed={text.align === value}
+          data-tooltip={label}
+        >
+          <Icon size={14} strokeWidth={1.8} />
+        </button>
+      ))}
+
+      <span className="text-format-divider" />
+
       <ColorField
         label="Text color"
         value={text.color}
@@ -138,3 +165,9 @@ export function TextFormatControls({
     </>
   );
 }
+
+const ALIGNMENTS: { value: TextElement['align']; Icon: typeof AlignLeft; label: string }[] = [
+  { value: 'left', Icon: AlignLeft, label: 'Align left' },
+  { value: 'center', Icon: AlignCenter, label: 'Align centre' },
+  { value: 'right', Icon: AlignRight, label: 'Align right' },
+];

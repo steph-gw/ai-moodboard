@@ -153,6 +153,12 @@ interface BoardContextValue {
   bringToFront: (slideId: string, elementId: string) => void;
   sendToBack: (slideId: string, elementId: string) => void;
   addTextElement: (content?: string) => void;
+  /**
+   * The text element just added, which should open for typing rather than waiting for a
+   * double-click. Null once it has been consumed.
+   */
+  justAddedTextId: string | null;
+  clearJustAddedText: () => void;
   addShapeElement: (shape: ShapeKind) => void;
   setSlideBackground: (slideId: string, background: string | undefined) => void;
   addSection: (name: string, visionBrief: string, icon?: string) => void;
@@ -262,6 +268,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    */
   const [isSlideSelected, setSlideSelected] = useState(false);
   const [isPlacingComment, setPlacingComment] = useState(false);
+  const [justAddedTextId, setJustAddedTextId] = useState<string | null>(null);
   const [isCommentsOpen, setCommentsOpenState] = useState(false);
 
   const [isSummarizing, setIsSummarizing] = useState(false);
@@ -1199,6 +1206,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       }),
     }));
     setSelectedElementIds([el.id]);
+    setJustAddedTextId(el.id);
   }, [activeSlide, activeSectionId, activeSlideId, commit, currentUserId]);
 
   const setSlideBackground = useCallback(
@@ -2436,6 +2444,8 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         bringToFront,
         sendToBack,
         addTextElement,
+        justAddedTextId,
+        clearJustAddedText: () => setJustAddedTextId(null),
         addShapeElement,
         setSlideBackground,
         addSection,
