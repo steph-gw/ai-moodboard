@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import type { PaletteGroupElement, SwatchElement } from '../types';
 
 /** Gap between chips in a group, as a share of the chip width. */
@@ -5,6 +6,28 @@ const GROUP_GAP = 0.12;
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), Math.max(min, max));
+}
+
+/**
+ * Where this chip's grain starts, one offset per noise layer.
+ *
+ * Derived from the color, so it is stable — a chip does not shimmer into a different weave
+ * on every render, and the same color looks the same wherever it is placed — but different
+ * between colors, so a palette is not five prints of one texture.
+ */
+function grainOffsets(color: string): Record<string, string> {
+  let h = 0;
+  for (let i = 0; i < color.length; i += 1) h = (h * 31 + color.charCodeAt(i)) >>> 0;
+  const at = (salt: number, tile: number) => {
+    const a = (h >>> salt) % tile;
+    const b = (h >>> (salt + 5)) % tile;
+    return `${a}px ${b}px`;
+  };
+  return {
+    '--grain-1': at(0, 180),
+    '--grain-2': at(7, 110),
+    '--grain-3': at(13, 60),
+  };
 }
 
 /**
@@ -46,7 +69,10 @@ export function SwatchChip({
 
   return (
     <div className="swatch" style={{ gap, width, height }}>
-      <div className="swatch-chip" style={{ background: color }} />
+      <div
+        className="swatch-chip"
+        style={{ background: color, ...grainOffsets(color) } as CSSProperties}
+      />
       {showHex && (
         <span
           className="swatch-hex"
