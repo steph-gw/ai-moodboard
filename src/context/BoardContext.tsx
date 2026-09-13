@@ -94,8 +94,8 @@ interface BoardContextValue {
   visionBrief: string;
   updateVisionBrief: (text: string) => void;
   setPalette: (colors: string[]) => void;
-  /** Saves a new named palette on this moodboard. Resolves false if it could not be saved. */
-  createPalette: (name: string, colors: string[]) => Promise<boolean>;
+  /** Saves a new named palette. Resolves its id, or null if it could not be saved. */
+  createPalette: (name: string, colors: string[]) => Promise<string | null>;
   /** Renames a palette or changes its colors. */
   updatePalette: (paletteId: string, patch: { name: string; colors: string[] }) => Promise<boolean>;
   deletePalette: (paletteId: string) => void;
@@ -1572,32 +1572,43 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
 
   const createPalette = useCallback(
-    async (name: string, colors: string[]): Promise<boolean> => {
+    async (name: string, colors: string[]): Promise<string | null> => {
       // Same rule as the colors themselves: working material, not governance.
-      if (!canWriteRef.current) return false;
+      if (!canWriteRef.current) return null;
       const clean = colors.map((c) => c.trim()).filter(Boolean);
-      if (!name.trim() || clean.length === 0) return false;
+      if (!name.trim() || clean.length === 0) return null;
 
       const order = boardRef.current.palettes.length;
       if (!repo || !identity) {
         // Harness with no repo: keep it in memory so the UI can still be exercised.
-        applyPalettes((prev) => ({
-          ...prev,
-          palettes: [...prev.palettes, { id: `local-${Date.now()}`, name: name.trim(), colors: clean, order }],
-        }));
-        return true;
-      }
-
-      try {
-        const id = await repo.createPalette(identity.moodboardId, name.trim(), clean, order);
+        const id = `local-${Date.now()}`;
         applyPalettes((prev) => ({
           ...prev,
           palettes: [...prev.palettes, { id, name: name.trim(), colors: clean, order }],
         }));
-        return true;
+        return id;
+      }
+
+      try {
+        const id = await repo.createPalette(identity.moodboardId, name.trim(), clean, order);
+        // Read the list back rather than appending a guess. The optimistic copy was right
+        // in every case I could reproduce and wrong on the real board often enough to be
+        // reported twice; asking the database costs one small query per palette created,
+        // and cannot disagree with it.
+        try {
+          const fresh = await repo.listPalettes(identity.moodboardId);
+          applyPalettes((prev) => ({ ...prev, palettes: fresh }));
+        } catch {
+          // The row exists either way — fall back to showing it rather than nothing.
+          applyPalettes((prev) => ({
+            ...prev,
+            palettes: [...prev.palettes, { id, name: name.trim(), colors: clean, order }],
+          }));
+        }
+        return id;
       } catch (err) {
         onError(err instanceof Error ? err.message : 'Could not save the palette.');
-        return false;
+        return null;
       }
     },
     [repo, identity, applyPalettes, onError]

@@ -126,11 +126,22 @@ export function PaletteMenu() {
   const submit = async () => {
     setSaving(true);
     const clean = rows.map((r) => readHex(r.hex)).filter((c): c is string => !!c);
-    const ok = editingId
-      ? await updatePalette(editingId, { name, colors: clean })
-      : await createPalette(name, clean);
+
+    if (editingId) {
+      const ok = await updatePalette(editingId, { name, colors: clean });
+      setSaving(false);
+      if (ok) closeEditor();
+      return;
+    }
+
+    const id = await createPalette(name, clean);
     setSaving(false);
-    if (ok) closeEditor();
+    if (!id) return;
+    closeEditor();
+    // Straight onto the slide you are looking at. Making a palette is something you do
+    // because you want to use it, and landing it on the canvas is also the only proof that
+    // it saved that does not require going and looking for it.
+    placePalette(id);
   };
 
   /**

@@ -5,6 +5,7 @@ import type {
   Comment,
   CommentPin,
   ImageVote,
+  Palette,
   Section,
   SectionStatus,
   Slide,
@@ -165,12 +166,12 @@ export class BoardRepo {
         weddingDate: eventDate,
         visionBrief: str(moodboard[K.moodboard.visionBrief]),
         palette: asList(moodboard[K.moodboard.palette]),
+        // Order falls back to the row order the sorted query already returned, so palettes
+        // saved before Order was written still come back in a stable sequence.
         palettes: paletteRows.map((r, i) => ({
           id: r._id,
           name: str(r[K.palette.name]) || 'Untitled palette',
           colors: asList(r[K.palette.colors]),
-          // Falls back to the row order the sorted query already returned, so palettes
-          // saved before Order was written still come back in a stable sequence.
           order: typeof r[K.palette.order] === 'number' ? (r[K.palette.order] as number) : i,
         })),
         sections,
@@ -183,6 +184,27 @@ export class BoardRepo {
       lockedSlideIds,
       voteRowIds,
     };
+  }
+
+  /**
+   * The board's palettes, read back from the database.
+   *
+   * Used after a write rather than trusting the local copy: a palette that exists in Bubble
+   * but not on screen is indistinguishable, to the person looking at it, from one that was
+   * never saved — and the fix for that is to ask, not to assume.
+   */
+  async listPalettes(moodboardId: string): Promise<Palette[]> {
+    const rows = await this.api.list(
+      TYPE.palette,
+      [{ key: K.palette.moodboard, constraint_type: 'equals' as const, value: moodboardId }],
+      K.palette.order
+    );
+    return rows.map((r, i) => ({
+      id: r._id,
+      name: str(r[K.palette.name]) || 'Untitled palette',
+      colors: asList(r[K.palette.colors]),
+      order: typeof r[K.palette.order] === 'number' ? (r[K.palette.order] as number) : i,
+    }));
   }
 
   async createPalette(

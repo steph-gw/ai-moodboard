@@ -4136,8 +4136,8 @@
   position: relative;
   overflow: hidden;
   box-shadow:
-    inset 3px 3px 6px rgba(255, 255, 255, 0.5),
-    inset -4px -4px 7px rgba(26, 23, 20, 0.22),
+    inset 2px 2px 4px rgba(255, 255, 255, 0.5),
+    inset -2px -2px 5px rgba(26, 23, 20, 0.22),
     inset 0 0 0 1px rgba(26, 23, 20, 0.05);
 }
 
