@@ -52,10 +52,13 @@ function MoodboardShell() {
       <div className="app-body">
         {!isPresenting && <SlideStrip />}
         <MainCanvas />
-        {!isPresenting && features.comments && <CommentDrawer />}
+        {/* A template has no audience: it is a starting point a planner keeps, not a
+            board anyone is being shown, so there is nobody to comment and nothing to
+            vote on. Everything that invites either is left out. */}
+        {!isPresenting && features.comments && !board.isTemplate && <CommentDrawer />}
         {!isPresenting && features.pinterest && <PinterestPicker />}
       </div>
-      {!isPresenting && features.comments && <CommentWidget />}
+      {!isPresenting && features.comments && !board.isTemplate && <CommentWidget />}
       {isPresenting && <PresentOverlay />}
       <ExportSheet target={exportTarget} />
     </div>

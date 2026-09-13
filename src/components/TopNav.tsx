@@ -50,6 +50,7 @@ export function TopNav() {
             )
           )}
         </div>
+        {!board.isTemplate && (
         <button
           type="button"
           className={`btn-ghost btn-sm btn-icon ${isCommentsOpen ? 'active' : ''}`}
@@ -60,6 +61,7 @@ export function TopNav() {
         >
           <MessageSquare size={13} strokeWidth={1.5} />
         </button>
+        )}
         {/* Board-level, so it lives up here rather than in the section bar — which does
             not render at all on an empty board, which is exactly when someone wants to
             start from a template. Sits with Present and Export, the other board actions. */}

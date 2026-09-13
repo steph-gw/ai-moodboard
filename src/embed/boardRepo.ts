@@ -161,7 +161,11 @@ export class BoardRepo {
 
     return {
       board: {
-        isTemplate: moodboard[K.moodboard.template] === true,
+        // Either flag: the system starter is a template that happens to belong to nobody,
+        // and everything that treats a template differently means it too.
+        isTemplate:
+          moodboard[K.moodboard.template] === true ||
+          moodboard[K.moodboard.systemTemplate] === true,
         weddingName: eventName || str(moodboard[K.moodboard.name]),
         weddingDate: eventDate,
         visionBrief: str(moodboard[K.moodboard.visionBrief]),

@@ -104,8 +104,9 @@ function ImageElementView({
   /** Present mode or the export sheet: nothing interactive, votes included. */
   isStatic?: boolean;
 }) {
-  const { selectedElementIds, selectElement, collapseSelectionTo, updateElement, getImageById, moveSelectionBy, beginInteraction, endInteraction } =
+  const { selectedElementIds, selectElement, collapseSelectionTo, updateElement, getImageById, moveSelectionBy, beginInteraction, endInteraction, board } =
     useBoard();
+  const isTemplate = !!board.isTemplate;
   const isSelected = selectedElementIds.includes(element.id);
   // Resize and rotate handles belong to one element at a time. With several selected the
   // members get an outline and nothing to grab, so a handle never lies about what it moves.
@@ -152,11 +153,14 @@ function ImageElementView({
     >
       <div className="canvas-image-inner">
         <img src={imageUrl} alt="" draggable={false} />
-        {isStatic ? (
-          <ImageVoteBadge imageId={element.imageId} />
-        ) : (
-          <ImageVoteControls imageId={element.imageId} />
-        )}
+        {/* Nobody votes on a template: it is a planner's own starting point, not a board
+            being put in front of a client to react to. */}
+        {!isTemplate &&
+          (isStatic ? (
+            <ImageVoteBadge imageId={element.imageId} />
+          ) : (
+            <ImageVoteControls imageId={element.imageId} />
+          ))}
       </div>
       {menu && (
         <ElementContextMenu

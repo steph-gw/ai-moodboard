@@ -263,7 +263,9 @@ export function SlideCanvas({
             }}
           />
         )}
+        {/* Pins are comments by another name, so a template has none of them either. */}
         {!readOnly &&
+          !board.isTemplate &&
           activeSlide.commentPins.map((pin) => (
             <CommentPinMarker
               key={pin.id}
@@ -275,6 +277,7 @@ export function SlideCanvas({
         {/* Only for a pin with nothing on it yet: once there is a conversation, the
             drawer is the place for it. */}
         {!readOnly &&
+          !board.isTemplate &&
           activeSlide.commentPins
             .filter((pin) => pin.id === selectedCommentPinId && pin.comments.length === 0)
             .map((pin) => (
