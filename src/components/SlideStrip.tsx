@@ -116,6 +116,10 @@ function SlideMiniPreview({ slide }: { slide: Slide }) {
           width: SLIDE_WIDTH,
           height: SLIDE_HEIGHT,
           transform: `scale(${scale})`,
+          // The thumbnail is the slide seen small, so a slide with a colour behind it is
+          // that colour here too — otherwise picking a background leaves the filmstrip
+          // showing a row of white cards that no longer match anything on the stage.
+          ...(slide.background ? { background: slide.background } : {}),
         }}
         aria-hidden
       >

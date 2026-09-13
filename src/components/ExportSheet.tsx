@@ -107,7 +107,11 @@ export function ExportSheet({ target }: { target: HTMLElement | null }) {
         <div
           key={key}
           className="export-page"
-          style={{ width: SLIDE_WIDTH, height: SLIDE_HEIGHT }}
+          style={{
+            width: SLIDE_WIDTH,
+            height: SLIDE_HEIGHT,
+            ...(slide.background ? { background: slide.background } : {}),
+          }}
         >
           {[...slide.elements]
             .sort((a, b) => a.zIndex - b.zIndex)
