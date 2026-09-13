@@ -15,6 +15,8 @@ import { loadFont } from '../utils/loadFont';
 import type { TextElement } from '../types';
 import {
   DEFAULT_LETTER_SPACING,
+  MAX_FONT_SIZE,
+  MIN_FONT_SIZE,
   DEFAULT_LINE_HEIGHT,
   MAX_LETTER_SPACING,
   MAX_LINE_HEIGHT,
@@ -114,7 +116,7 @@ export function TextFormatControls({
         <button
           type="button"
           className="text-format-size-btn"
-          onClick={() => patch({ fontSize: Math.max(12, text.fontSize - 2) })}
+          onClick={() => patch({ fontSize: Math.max(MIN_FONT_SIZE, text.fontSize - 2) })}
           aria-label="Decrease font size"
         >
           <Minus size={12} strokeWidth={2} />
@@ -123,12 +125,12 @@ export function TextFormatControls({
           type="number"
           className="text-format-size-input"
           value={text.fontSize}
-          min={12}
-          max={120}
+          min={MIN_FONT_SIZE}
+          max={MAX_FONT_SIZE}
           onChange={(e) => {
             const size = Number(e.target.value);
             if (!Number.isNaN(size)) {
-              patch({ fontSize: Math.min(120, Math.max(12, size)) });
+              patch({ fontSize: Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, size)) });
             }
           }}
           aria-label="Font size"
@@ -136,7 +138,7 @@ export function TextFormatControls({
         <button
           type="button"
           className="text-format-size-btn"
-          onClick={() => patch({ fontSize: Math.min(120, text.fontSize + 2) })}
+          onClick={() => patch({ fontSize: Math.min(MAX_FONT_SIZE, text.fontSize + 2) })}
           aria-label="Increase font size"
         >
           <Plus size={12} strokeWidth={2} />

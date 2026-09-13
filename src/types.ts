@@ -97,6 +97,10 @@ export const DEFAULT_LINE_HEIGHT = 1.3;
 export const MIN_LINE_HEIGHT = 0.8;
 export const MAX_LINE_HEIGHT = 3;
 
+/** How small and how large the type controls will go. */
+export const MIN_FONT_SIZE = 8;
+export const MAX_FONT_SIZE = 120;
+
 /** Letter spacing, in em. Negative tightens; a display face set large usually wants it. */
 export const DEFAULT_LETTER_SPACING = 0;
 export const MIN_LETTER_SPACING = -0.1;
