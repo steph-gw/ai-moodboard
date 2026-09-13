@@ -294,6 +294,17 @@ export function DraggableBox({
               transform: rotation ? `rotate(${rotation}deg)` : undefined,
             }}
           >
+            {/* The frame itself is a grab handle. Without it a text box being edited has
+                nowhere to take hold of — every pointer inside it belongs to the caret —
+                and the ring showed no cursor at all, so it did not look like it moved.
+                Before the handles in the DOM, so a corner still resizes. */}
+            {(['n', 'e', 's', 'w'] as const).map((side) => (
+              <div
+                key={side}
+                className={`selection-edge is-${side}`}
+                onPointerDown={(e) => startDrag(e, 'move')}
+              />
+            ))}
             <div className={`rotate-handle-arm${rotateBelow ? ' is-below' : ''}`} aria-hidden />
             <div
               className={`rotate-handle${rotateBelow ? ' is-below' : ''}`}

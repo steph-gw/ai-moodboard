@@ -1555,6 +1555,17 @@
   cursor: grabbing;
 }
 
+/* While a text box is open for typing the element itself has to allow selection. Setting
+   user-select: text on the inner alone was not enough: the ancestor still said none, and
+   the browser never fired selectstart — a drag across the words selected nothing at all.
+   touch-action goes back to auto for the same reason on a touchscreen. */
+.canvas-element.is-editing {
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: auto;
+  cursor: text;
+}
+
 /* Present mode and the export sheet: nothing here moves. */
 .slide-canvas-wrap.is-static .canvas-element,
 .slide-canvas-wrap.is-static .canvas-element:active {
@@ -1578,11 +1589,46 @@
   pointer-events: none;
 }
 
-/* Only the handles take the pointer; the ring must not swallow a click meant for the
-   element under it. */
+/* Only the handles and the frame take the pointer; the middle must not swallow a click
+   meant for the element under it. */
 .selection-chrome .resize-handle,
-.selection-chrome .rotate-handle {
+.selection-chrome .rotate-handle,
+.selection-chrome .selection-edge {
   pointer-events: auto;
+}
+
+/* A band along each side of the ring that picks the element up, and says so. */
+.selection-edge {
+  position: absolute;
+  cursor: move;
+}
+
+.selection-edge.is-n {
+  top: -5px;
+  left: 0;
+  right: 0;
+  height: 9px;
+}
+
+.selection-edge.is-s {
+  bottom: -5px;
+  left: 0;
+  right: 0;
+  height: 9px;
+}
+
+.selection-edge.is-w {
+  top: 0;
+  bottom: 0;
+  left: -5px;
+  width: 9px;
+}
+
+.selection-edge.is-e {
+  top: 0;
+  bottom: 0;
+  right: -5px;
+  width: 9px;
 }
 
 .canvas-image-inner {
@@ -1693,9 +1739,13 @@
 .canvas-text-inner {
   width: 100%;
   height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* Grid rather than flex: as a flex container the text became an anonymous item only as
+     wide as the words, so clicking beside a line — which is most of the box — missed the
+     text entirely and started no selection. As a grid item it stretches the full width and
+     text-align does the positioning, so a drag down the box selects line by line. */
+  display: grid;
+  align-content: center;
+  justify-items: stretch;
   outline: none;
   padding: 4px 8px;
   word-break: break-word;
@@ -4100,16 +4150,18 @@
   max-width: calc(100% - 8px);
   /* Breathing room at the ends: the first and last control should not touch the pill. */
   padding: 5px 14px;
-  overflow-x: auto;
-  scrollbar-width: none;
+  /* Wraps rather than scrolls. A scrolling bar hides whatever is past its right edge with
+     nothing to say so — which is how the alignment buttons went missing on a narrow
+     artboard. Two rows is worse looking and better. */
+  flex-wrap: wrap;
+  row-gap: 4px;
+  justify-content: center;
   background: var(--white);
   border: 1px solid var(--border);
-  border-radius: 999px;
+  /* Pill on one row, softened rectangle once it wraps — 999px on a two-row bar bows the
+     sides out around nothing. */
+  border-radius: 22px;
   box-shadow: 0 6px 20px rgba(26, 23, 20, 0.14);
-}
-
-.text-format-float::-webkit-scrollbar {
-  display: none;
 }
 
 /* ── A placed palette ── */

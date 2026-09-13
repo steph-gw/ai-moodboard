@@ -12,7 +12,7 @@ interface Instance {
   el: HTMLElement;
   portalHost: HTMLElement;
   props: GWMoodboardProps;
-  focusOnInteract: () => void;
+  focusOnInteract: (event: Event) => void;
   /** Tears down the viewport-height listener, when there is one. */
   stopHeight?: () => void;
 }
@@ -125,7 +125,18 @@ export const GWMoodboard: GWMoodboardApi = {
     // Keyboard shortcuts listen on this element rather than the window, so it has to
     // be focusable and take focus when the user interacts with the board.
     if (!el.hasAttribute('tabindex')) el.tabIndex = -1;
-    const focusOnInteract = () => el.focus({ preventScroll: true });
+    /**
+     * Keyboard shortcuts listen on the mount root, so it takes focus when the board is
+     * used — except when the press lands in a text box that is open for typing. Focusing
+     * the root there pulls focus out of the caret mid-gesture, which blurs the box, ends
+     * editing, and leaves the drag to be read as moving the element: a drag across the
+     * words moved the box instead of selecting them.
+     */
+    const focusOnInteract = (event: Event) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest('[contenteditable="true"]')) return;
+      el.focus({ preventScroll: true });
+    };
     el.addEventListener('pointerdown', focusOnInteract);
     // Menus and modals portal out of the element to escape its overflow, but must
     // stay inside a .gw-mb ancestor or every rule in the stylesheet stops matching.

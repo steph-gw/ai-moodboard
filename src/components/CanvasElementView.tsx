@@ -245,6 +245,20 @@ function TextElementView({
   });
 
   /**
+   * Turns editing on and puts the caret in the box.
+   *
+   * Setting the flag alone was not enough: contentEditable only appears on the next render,
+   * and without focus the browser refuses to start a selection inside it — so a drag across
+   * the words did nothing at all. Focusing on the following frame is what makes the text
+   * selectable by dragging, which is the whole point of double-clicking it.
+   */
+  const beginEditing = () => {
+    if (readOnly) return;
+    setEditing(true);
+    requestAnimationFrame(() => ref.current?.focus({ preventScroll: true }));
+  };
+
+  /**
    * Editing ends when the box stops being the selection.
    *
    * It used to end only on blur, so a box opened for typing and then left alone — clicking
@@ -304,14 +318,16 @@ function TextElementView({
       boundsHeight={SLIDE_HEIGHT}
       minWidth={80}
       minHeight={30}
-      className={`canvas-element-text${isSelected && !isOnly ? ' in-selection' : ''}`}
+      className={`canvas-element-text${isSelected && !isOnly ? ' in-selection' : ''}${
+        editing ? ' is-editing' : ''
+      }`}
       style={{ zIndex: element.zIndex }}
       rotation={element.rotation}
       onSelect={handleSelect}
       onMoveBy={isSelected && !isOnly ? (dx, dy) => moveSelectionBy(slideId, dx, dy) : undefined}
       onClickWithoutDrag={(additive) => !additive && collapseSelectionTo(element.id)}
       onChange={(patch) => updateElement(slideId, element.id, patch)}
-      onDoubleClick={() => !readOnly && setEditing(true)}
+      onDoubleClick={() => beginEditing()}
       onContextMenu={(e) => {
         if (readOnly) return;
         e.preventDefault();
