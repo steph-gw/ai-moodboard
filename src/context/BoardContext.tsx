@@ -2366,26 +2366,33 @@ export function BoardProvider({ children }: { children: ReactNode }) {
 
   const cutSelection = useCallback(
     (writeClipboard: (text: string) => void): boolean => {
-      // Cut carries one element, because paste puts one back. Several selected is a
-      // delete, and Cmd+X on a group would quietly lose all but one of them.
-      if (!selectedElementId || !activeSlideId) return false;
-      const element = activeSlide?.elements.find((el) => el.id === selectedElementId);
-      if (!element) return false;
+      if (!activeSlideId) return false;
+      // The whole selection, not one of it. Cut used to carry a single element because
+      // paste could only put a single element back; now that both ends take a list, cutting
+      // five and pasting five is the same gesture as cutting one.
+      const selected = (activeSlide?.elements ?? []).filter((el) =>
+        selectedElementIds.includes(el.id)
+      );
       // Cut is a delete with a copy on the side, so it answers to the same rule: a client
-      // cannot take someone else's element off the slide.
-      if (!canDeleteElementRef.current(element)) return false;
+      // cannot take someone else's element off the slide. A mixed selection cuts the part
+      // that is theirs, which is what deleting it would do.
+      const elements = selected.filter((el) => canDeleteElementRef.current(el));
+      if (!elements.length) return false;
       // Chrome can deliver both keydown and the native cut event for one
       // gesture; only the first should actually remove anything.
       if (Date.now() - lastCutAtRef.current < 300) return false;
       lastCutAtRef.current = Date.now();
 
-      const clipboardText = clipboardTextFor([element]);
-      cutRef.current = { kind: 'elements', elements: [element], clipboardText };
+      const clipboardText = clipboardTextFor(elements);
+      cutRef.current = { kind: 'elements', elements, clipboardText };
       writeClipboard(clipboardText);
-      deleteElement(activeSlideId, selectedElementId);
+      deleteElements(
+        activeSlideId,
+        elements.map((el) => el.id)
+      );
       return true;
     },
-    [activeSlide, activeSlideId, selectedElementId, deleteElement]
+    [activeSlide, activeSlideId, selectedElementIds, deleteElements]
   );
 
   // The native cut event: the reliable hook for the gesture, and the only place
