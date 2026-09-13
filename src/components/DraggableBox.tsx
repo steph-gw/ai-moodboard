@@ -70,6 +70,29 @@ const ROTATE_SNAP = 15;
 /** Arm plus handle, in screen px. Below this there isn't room above the box. */
 const ROTATE_HANDLE_CLEARANCE = 40;
 /** Screen px of travel before a press counts as a drag rather than a click. */
+/**
+ * Whether Shift is being held, tracked here rather than read off each pointer event.
+ *
+ * A pointermove is supposed to carry the modifier state, but it does not always — some
+ * input paths deliver moves with the flags cleared — and reading the key directly also
+ * means Shift can be pressed or let go in the middle of a drag and take effect straight
+ * away, which is how the gesture is used: start moving, then decide to keep it straight.
+ *
+ * One listener for every box on the slide, so it lives at module scope.
+ */
+let shiftHeld = false;
+if (typeof window !== 'undefined') {
+  window.addEventListener('keydown', (e) => { if (e.key === 'Shift') shiftHeld = true; }, true);
+  window.addEventListener('keyup', (e) => { if (e.key === 'Shift') shiftHeld = false; }, true);
+  // Leaving the window means the keyup never arrives, and the drag would come back locked.
+  window.addEventListener('blur', () => { shiftHeld = false; });
+}
+
+/** Shift, from either source: whichever noticed it. */
+function isShift(e: { shiftKey: boolean }): boolean {
+  return e.shiftKey || shiftHeld;
+}
+
 const CLICK_SLOP = 3;
 
 export function DraggableBox({
@@ -156,7 +179,7 @@ export function DraggableBox({
         const angle =
           (Math.atan2(e.clientY - drag.centerY, e.clientX - drag.centerX) * 180) / Math.PI;
         let next = drag.origRotation + (angle - drag.startAngle);
-        if (e.shiftKey) next = Math.round(next / ROTATE_SNAP) * ROTATE_SNAP;
+        if (isShift(e)) next = Math.round(next / ROTATE_SNAP) * ROTATE_SNAP;
         // Keep it in (-180, 180] so the readout stays legible.
         next = ((((next + 180) % 360) + 360) % 360) - 180;
         onChange({ rotation: Math.round(next) });
@@ -175,7 +198,7 @@ export function DraggableBox({
         // direction and pulling the other way switches tracks rather than sticking.
         let mx = dx;
         let my = dy;
-        if (e.shiftKey) {
+        if (isShift(e)) {
           if (Math.abs(dx) >= Math.abs(dy)) my = 0;
           else mx = 0;
         }
