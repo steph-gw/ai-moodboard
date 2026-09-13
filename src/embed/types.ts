@@ -17,6 +17,14 @@ export interface FeatureFlags {
   /** Thumbs up/down on canvas images. */
   imageVoting?: boolean;
   /**
+   * Per-slide locking: the padlock, the filmstrip markers, and approval freezing a section.
+   *
+   * Off. Who may edit is decided by the collaborator's access to the moodboard tab and
+   * their role, and a second, per-slide gate on top of that was one mechanism too many —
+   * approval is a statement about the work, not a barrier in front of it.
+   */
+  slideLocking?: boolean;
+  /**
    * The original single palette strip in the canvas bar.
    *
    * Off while named palettes replace it. The strip is the widest thing in that row, and

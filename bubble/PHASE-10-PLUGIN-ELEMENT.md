@@ -113,22 +113,15 @@ same way if those should also never be read-only.
 | **Client** | vote, comment | plus: canvas edits, upload, add a section, add or duplicate a slide, palette. Deletes **only what they added**. |
 | **Team member / admin** | vote, comment | everything, including approve, lock, rename and delete, and templates |
 
-Two things then freeze a slide for **everyone**, write access included:
+**Nothing freezes a slide.** Access to the moodboard tab decides who may edit, and that is
+the whole of it. Approving a section records that the work was agreed; it does not put a
+barrier in front of the canvas, and there is no per-slide lock.
 
-- **Lock**, per slide, set from the padlock at the top right of the stage. Persisted on the
-  section's `Locked slides` field. A client never gets the toggle.
-- **Approved**, per section. Approval freezes every slide in it the moment it is set.
-
-Both are lifted from the same padlock, by anyone who can manage the board. Lifting
-approval's freeze **does not un-approve the section** — the status stays Approved and the
-canvas becomes editable. Approval is the record of a decision; the padlock is a working
-state on top of it, and the two are not the same statement. That override is held in memory
-only: a reload, or setting the status again, puts the freeze back. Nothing new is stored in
-Bubble for it.
-
-The padlock is the only lock indicator on the stage — it is also what a viewer who cannot
-lift it sees, with the reason ("This slide has been approved on 8 Sep 2026") and without the
-invitation to click.
+Both of those existed and are now behind the element's `slideLocking` flag, off by default.
+The code — the padlock, the filmstrip markers, the `Locked slides` field on Moodboard
+Section, approval freezing its slides — is intact and turns back on by ticking the flag. A
+second, per-slide gate on top of collaborator access was one mechanism too many: two
+different places to look when somebody asks why they cannot move a photograph.
 
 **Hidden is enforced on the page, not in the bundle.** The `moodboard` page carries a
 second `Page is loaded` workflow:

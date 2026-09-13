@@ -28,7 +28,7 @@ function today(): string {
 
 export function SectionStatusSelect({ section }: { section: Section }) {
   const { updateSection, canManage } = useBoard();
-  const { portalHost } = useHost();
+  const { portalHost, features } = useHost();
   const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
   
@@ -60,11 +60,16 @@ export function SectionStatusSelect({ section }: { section: Section }) {
   // sitting in the pill — and the pill is a status, not a log.
   const label = current === 'approved' ? 'Approved' : 'Open';
 
-  // Approval freezes the section, so it is drawn with the same padlock the canvas and the
-  // filmstrip use. One idea, one symbol — a tick said "good" where the truth is "closed".
+  // A padlock only while approval actually locks something. With slideLocking off it is a
+  // statement that the work was agreed, and a tick says that; a padlock would promise a
+  // freeze that is not there.
   const icon =
     current === 'approved' ? (
-      <Lock size={11} strokeWidth={2} />
+      features.slideLocking ? (
+        <Lock size={11} strokeWidth={2} />
+      ) : (
+        <Check size={12} strokeWidth={2.2} />
+      )
     ) : (
       <MessageCircle size={12} strokeWidth={1.8} />
     );

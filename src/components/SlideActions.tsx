@@ -1,5 +1,6 @@
 import { Copy, Lock, Plus, Unlock } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
+import { useHost } from '../embed/HostProvider';
 import { formatApprovalDate } from '../utils/formatDate';
 
 /**
@@ -27,13 +28,15 @@ export function SlideActions() {
     board,
     activeSectionId,
   } = useBoard();
+  const { features } = useHost();
 
   if (!activeSlideId) return null;
 
   const section = board.sections.find((s) => s.id === activeSectionId);
   const approved = section?.status === 'approved';
   const opened = unlockedSlideIds.has(activeSlideId);
-  const locked = (lockedSlideIds.has(activeSlideId) || approved) && !opened;
+  const locked =
+    features.slideLocking && (lockedSlideIds.has(activeSlideId) || approved) && !opened;
 
   // A viewer with no write access has nothing to do here, but they still need to be told
   // why the slide won't take an edit — so the padlock stays and the rest goes.
@@ -60,7 +63,7 @@ export function SlideActions() {
           Unlocking an approved section does not un-approve it. Approval is a record of a
           decision; the padlock is a working state on top of it. Re-approving, or a reload,
           puts the freeze back. */}
-      {(canManage || locked) && (
+      {features.slideLocking && (canManage || locked) && (
         <button
           type="button"
           className={`slide-action-btn ${locked ? 'is-locked' : ''} ${canManage ? '' : 'is-static'}`}

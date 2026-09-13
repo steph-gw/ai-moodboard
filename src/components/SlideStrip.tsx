@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Plus, Copy, Lock, Trash2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
+import { useHost } from '../embed/HostProvider';
 import { ShapeView } from './ShapeView';
 import { PaletteGroupView, SwatchView } from './SwatchView';
 import type { CanvasElement, Slide } from '../types';
@@ -144,6 +145,7 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
     lockedSlideIds,
     unlockedSlideIds,
   } = useBoard();
+  const { features } = useHost();
 
   const section = board.sections.find((s) => s.id === activeSectionId);
   const slide = section?.slides.find((s) => s.id === slideId);
@@ -153,6 +155,7 @@ function SlideThumbnail({ slideId, index }: { slideId: string; index: number }) 
   // exactly, override included: a slide opened back up while its section stays approved is
   // not locked, and the thumbnail must not claim otherwise.
   const locked =
+    features.slideLocking &&
     (lockedSlideIds.has(slideId) || section?.status === 'approved') &&
     !unlockedSlideIds.has(slideId);
   // Removing a slide takes other people's work with it, so it stays a planner action —

@@ -225,6 +225,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     uploadFile,
     onStateChange,
     onLoaded,
+    features,
   } = useHost();
   // With no moodboard to open, run on the seed board so the dev harness and a bare
   // element still show something rather than an empty shell.
@@ -564,12 +565,11 @@ export function BoardProvider({ children }: { children: ReactNode }) {
    * renaming or deleting what someone else made. A client with write access builds on the
    * board; they don't govern it.
    *
-   * `canEdit` is `canWrite` plus the active slide being editable at all. Two things freeze
-   * a slide, and both override write access for everyone including the planner who holds
-   * it: an explicit lock, and the section being approved. Either one can be lifted from the
-   * padlock by someone who can manage the board — lifting approval's freeze leaves the
-   * Approved status standing, because "we agreed this" and "nobody may touch it" are two
-   * different statements and only the second is a padlock.
+   * `canEdit` is `canWrite`. It used to be less: a lock or an approved section froze the
+   * slide for everyone, write access included. That is gone behind the `slideLocking` flag
+   * — access to the moodboard tab decides who edits, and a second per-slide gate on top of
+   * it was one mechanism too many. Approved is now a statement about the work rather than
+   * a barrier in front of it.
    *
    * Deleting an element has one more rule on top, in deleteElements: a client may remove
    * what they added and nothing else.
@@ -579,6 +579,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   const canManage = canWrite && !isClient;
   const activeSectionStatus = board.sections.find((s) => s.id === activeSectionId)?.status;
   const isSlideFrozen =
+    features.slideLocking &&
     (lockedSlideIds.has(activeSlideId) || activeSectionStatus === 'approved') &&
     !unlockedSlideIds.has(activeSlideId);
   const canEdit = canWrite && !isSlideFrozen;
