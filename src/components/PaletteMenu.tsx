@@ -7,9 +7,28 @@ import { ColorField } from './ColorField';
 
 const FALLBACK_COLOR = '#D9D2C7';
 
-/** A blank row starts from the last color picked, which is usually near the next one. */
-function nextColor(colors: string[]): string {
-  return colors[colors.length - 1] ?? FALLBACK_COLOR;
+/**
+ * A row holds whatever was typed, not a color.
+ *
+ * Someone pasting a hex passes through "#", "#F", "#F6" on the way to "#F6EFE0", and a
+ * field that rejected or rewrote those would fight the typing. The swatch follows along
+ * as soon as the text is a real color and simply waits when it is not.
+ */
+function readHex(text: string): string | null {
+  const t = text.trim().replace(/^#*/, '');
+  if (/^[0-9a-f]{6}$/i.test(t)) return `#${t.toLowerCase()}`;
+  // Shorthand, as pasted from most design tools: #abc means #aabbcc.
+  if (/^[0-9a-f]{3}$/i.test(t)) return `#${t.split('').map((c) => c + c).join('').toLowerCase()}`;
+  return null;
+}
+
+/** A new row starts from the last color picked, which is usually near the next one. */
+function nextColor(rows: string[]): string {
+  for (let i = rows.length - 1; i >= 0; i -= 1) {
+    const hex = readHex(rows[i]);
+    if (hex) return hex;
+  }
+  return FALLBACK_COLOR;
 }
 
 /**
@@ -65,7 +84,10 @@ export function PaletteMenu() {
     // the planner's back, so nothing is written until they press Create.
     const seed = !hasPalettes && board.palette.length > 0 ? board.palette : [];
     setName(seed.length ? 'Wedding palette' : '');
-    setColors(seed.length ? [...seed] : [FALLBACK_COLOR]);
+    // No blank first row. An empty slot with a default color in it is a color the planner
+    // never chose, and the one thing worse than no palette is a palette with a wrong color
+    // in it that nobody put there.
+    setColors(seed.map((c) => c.toUpperCase()));
     setEditing(true);
   };
 
@@ -78,12 +100,13 @@ export function PaletteMenu() {
 
   const submit = async () => {
     setSaving(true);
-    const ok = await createPalette(name, colors);
+    const ok = await createPalette(name, colors.map(readHex).filter((c): c is string => !!c));
     setSaving(false);
     if (ok) closeEditor();
   };
 
-  const canSave = name.trim().length > 0 && colors.length > 0 && !saving;
+  const valid = colors.map(readHex).filter(Boolean).length;
+  const canSave = name.trim().length > 0 && valid > 0 && !saving;
 
   return (
     <>
@@ -182,26 +205,31 @@ export function PaletteMenu() {
                   }}
                 />
 
-                <label className="modal-label">Colors</label>
+                {colors.length > 0 && <label className="modal-label modal-label-spaced">Colors</label>}
                 <div className="palette-rows">
                   {colors.map((color, i) => (
                     <div className="palette-row" key={i}>
                       <ColorField
                         label={`Color ${i + 1}`}
-                        value={color}
+                        value={readHex(color) ?? 'transparent'}
                         onChange={(next) =>
-                          setColors((prev) => prev.map((c, j) => (j === i ? next : c)))
+                          setColors((prev) => prev.map((c, j) => (j === i ? next.toUpperCase() : c)))
                         }
                       />
                       <input
-                        className="palette-row-hex"
-                        value={color.toUpperCase()}
+                        className={`palette-row-hex${readHex(color) ? '' : ' is-pending'}`}
+                        value={color}
+                        placeholder="#F6EFE0"
                         spellCheck={false}
                         aria-label={`Color ${i + 1} hex`}
-                        onChange={(e) => {
-                          const raw = e.target.value.trim();
-                          const next = raw.startsWith('#') ? raw : `#${raw}`;
-                          setColors((prev) => prev.map((c, j) => (j === i ? next : c)));
+                        onChange={(e) =>
+                          setColors((prev) => prev.map((c, j) => (j === i ? e.target.value : c)))
+                        }
+                        onBlur={() => {
+                          // Tidied only once they have moved on: #f6efe0 becomes #F6EFE0,
+                          // and a half-typed value is left alone to be finished.
+                          const hex = readHex(color);
+                          if (hex) setColors((prev) => prev.map((c, j) => (j === i ? hex.toUpperCase() : c)));
                         }}
                       />
                       <button
@@ -218,7 +246,7 @@ export function PaletteMenu() {
 
                 <button
                   type="button"
-                  className="palette-add-color"
+                  className={`palette-add-color${colors.length === 0 ? ' is-first' : ''}`}
                   onClick={() => setColors((prev) => [...prev, nextColor(prev)])}
                 >
                   <Plus size={13} strokeWidth={1.8} />

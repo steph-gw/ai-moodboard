@@ -2983,7 +2983,9 @@
 .color-field-pop {
   position: fixed;
   transform: translateX(-50%);
-  z-index: 9401;
+  /* Above .modal-overlay (9600): the picker is most often opened from inside a modal, and
+     a picker that renders behind the thing that opened it is simply unusable. */
+  z-index: 9700;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -3904,6 +3906,11 @@
   color: var(--text-primary);
 }
 
+/* A second label in the same body needs air above it, or it crowds the field before it. */
+.modal-label-spaced {
+  margin-top: 18px;
+}
+
 /* The editor's color rows: swatch, hex, remove. */
 .palette-rows {
   display: flex;
@@ -3931,6 +3938,17 @@
   font-family: var(--font-sans);
   font-size: 12px;
   letter-spacing: 0.02em;
+}
+
+/* Not yet a color. Quiet rather than an error: it is what every hex looks like halfway
+   through being typed. */
+.palette-row-hex.is-pending {
+  color: var(--text-muted);
+}
+
+.palette-row-hex::placeholder {
+  color: var(--text-muted);
+  opacity: 0.7;
 }
 
 .palette-row-hex:focus {
@@ -3968,6 +3986,11 @@
   font-family: var(--font-sans);
   font-size: 12px;
   cursor: pointer;
+}
+
+/* With no colors yet there is no COLORS label above it, so it carries its own gap. */
+.palette-add-color.is-first {
+  margin-top: 16px;
 }
 
 .palette-add-color:hover {
