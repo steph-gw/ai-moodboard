@@ -65,10 +65,15 @@ export class BoardRepo {
       { key: K.image.moodboard, constraint_type: 'equals' as const, value: moodboardId },
     ];
 
-    const [moodboard, sectionRows, imageRows] = await Promise.all([
+    const [moodboard, sectionRows, imageRows, paletteRows] = await Promise.all([
       this.api.get(TYPE.moodboard, moodboardId),
       this.api.list(TYPE.section, byMoodboard, K.section.order),
       this.api.list(TYPE.image, imagesByMoodboard),
+      this.api.list(
+        TYPE.palette,
+        [{ key: K.palette.moodboard, constraint_type: 'equals' as const, value: moodboardId }],
+        K.palette.order
+      ),
     ]);
 
     const sectionIds = sectionRows.map((r) => r._id);
@@ -160,6 +165,14 @@ export class BoardRepo {
         weddingDate: eventDate,
         visionBrief: str(moodboard[K.moodboard.visionBrief]),
         palette: asList(moodboard[K.moodboard.palette]),
+        palettes: paletteRows.map((r, i) => ({
+          id: r._id,
+          name: str(r[K.palette.name]) || 'Untitled palette',
+          colors: asList(r[K.palette.colors]),
+          // Falls back to the row order the sorted query already returned, so palettes
+          // saved before Order was written still come back in a stable sequence.
+          order: typeof r[K.palette.order] === 'number' ? (r[K.palette.order] as number) : i,
+        })),
         sections,
         images,
         suggestions: [],
@@ -170,6 +183,39 @@ export class BoardRepo {
       lockedSlideIds,
       voteRowIds,
     };
+  }
+
+  async createPalette(
+    moodboardId: string,
+    name: string,
+    colors: string[],
+    order: number
+  ): Promise<string> {
+    return this.api.create(TYPE.palette, {
+      [K.palette.moodboard]: moodboardId,
+      [K.palette.name]: name,
+      [K.palette.colors]: colors,
+      [K.palette.order]: order,
+    });
+  }
+
+  async updatePalette(
+    paletteId: string,
+    patch: { name?: string; colors?: string[]; order?: number }
+  ): Promise<void> {
+    const fields: Record<string, unknown> = {};
+    if (patch.name !== undefined) fields[K.palette.name] = patch.name;
+    if (patch.colors !== undefined) fields[K.palette.colors] = patch.colors;
+    if (patch.order !== undefined) fields[K.palette.order] = patch.order;
+    if (Object.keys(fields).length) await this.api.patch(TYPE.palette, paletteId, fields);
+  }
+
+  /**
+   * Really deletes, unlike sections. A palette holds no work of its own — the swatches it
+   * placed are copies and stay on the board — so there is nothing to archive for.
+   */
+  async deletePalette(paletteId: string): Promise<void> {
+    await this.api.remove(TYPE.palette, paletteId);
   }
 
   /** Writes one slide's canvas: its elements and anything else the slide itself carries. */

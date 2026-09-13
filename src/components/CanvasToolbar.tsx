@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Image as ImageIcon, ImagePlus, Type, Undo2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
+import { PaletteMenu } from './PaletteMenu';
 import { useHost } from '../embed/HostProvider';
 import { AddElementsMenu } from './AddElementsMenu';
 import { compressImage } from '../utils/compressImage';
@@ -93,6 +94,7 @@ export function CanvasToolbar() {
             Add image
           </button>
         )}
+        <PaletteMenu />
         <button
           type="button"
           className="btn-ghost btn-sm"

@@ -4,6 +4,7 @@ import type { CanvasElement } from '../types';
 import { DEFAULT_LINE_HEIGHT, SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 import { textFontCss } from '../utils/textFonts';
 import { ShapeView } from './ShapeView';
+import { SwatchView } from './SwatchView';
 
 /**
  * One slide element, rendered flat at full size — no selection chrome, comment
@@ -38,6 +39,14 @@ function StaticElement({
     return (
       <div className="export-shape" style={style}>
         <ShapeView element={element} />
+      </div>
+    );
+  }
+
+  if (element.type === 'swatch') {
+    return (
+      <div className="export-shape" style={style}>
+        <SwatchView element={element} />
       </div>
     );
   }

@@ -93,6 +93,11 @@ interface BoardContextValue {
   visionBrief: string;
   updateVisionBrief: (text: string) => void;
   setPalette: (colors: string[]) => void;
+  /** Saves a new named palette on this moodboard. Resolves false if it could not be saved. */
+  createPalette: (name: string, colors: string[]) => Promise<boolean>;
+  deletePalette: (paletteId: string) => void;
+  /** Drops every color in a palette onto the active slide as a column of swatches. */
+  placePalette: (paletteId: string) => void;
   summarizeVision: () => void;
   isSummarizing: boolean;
   isCommentsOpen: boolean;
@@ -193,6 +198,7 @@ const EMPTY_BOARD: Board = {
   weddingDate: '',
   visionBrief: '',
   palette: [],
+  palettes: [],
   sections: [],
   images: [],
   suggestions: [],
@@ -1546,6 +1552,113 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   );
 
 
+  const createPalette = useCallback(
+    async (name: string, colors: string[]): Promise<boolean> => {
+      // Same rule as the colors themselves: working material, not governance.
+      if (!canWriteRef.current) return false;
+      const clean = colors.map((c) => c.trim()).filter(Boolean);
+      if (!name.trim() || clean.length === 0) return false;
+
+      const order = boardRef.current.palettes.length;
+      if (!repo || !identity) {
+        // Harness with no repo: keep it in memory so the UI can still be exercised.
+        applyStructural((prev) => ({
+          ...prev,
+          palettes: [...prev.palettes, { id: `local-${Date.now()}`, name: name.trim(), colors: clean, order }],
+        }));
+        return true;
+      }
+
+      try {
+        const id = await repo.createPalette(identity.moodboardId, name.trim(), clean, order);
+        applyStructural((prev) => ({
+          ...prev,
+          palettes: [...prev.palettes, { id, name: name.trim(), colors: clean, order }],
+        }));
+        return true;
+      } catch (err) {
+        onError(err instanceof Error ? err.message : 'Could not save the palette.');
+        return false;
+      }
+    },
+    [repo, identity, applyStructural, onError]
+  );
+
+  const deletePalette = useCallback(
+    (paletteId: string) => {
+      if (!canWriteRef.current) return;
+      applyStructural((prev) => ({
+        ...prev,
+        palettes: prev.palettes.filter((p) => p.id !== paletteId),
+      }));
+      if (!repo) return;
+      void repo.deletePalette(paletteId).catch((err: unknown) => {
+        onError(err instanceof Error ? err.message : 'Could not delete the palette.');
+        void loadBoardRef.current?.(true);
+      });
+    },
+    [repo, applyStructural, onError]
+  );
+
+  /**
+   * Lays a palette down the middle of the slide as one swatch per color.
+   *
+   * Separate elements rather than one block: the ask was that a single color can be pulled
+   * bigger, and that is only possible if each one is its own element. They land aligned and
+   * evenly spaced, so the column reads as a set until someone deliberately breaks it.
+   */
+  const placePalette = useCallback(
+    (paletteId: string) => {
+      if (!activeSlide) return;
+      const palette = boardRef.current.palettes.find((p) => p.id === paletteId);
+      if (!palette || palette.colors.length === 0) return;
+
+      const n = palette.colors.length;
+      const margin = 48;
+      const gap = 14;
+      const available = SLIDE_HEIGHT - margin * 2;
+      // Fits the column to the slide, then stops growing: a two-color palette should not
+      // render as two enormous slabs.
+      const height = Math.min(132, Math.max(52, (available - gap * (n - 1)) / n));
+      const width = Math.round(height * 0.78);
+      const total = height * n + gap * (n - 1);
+      const top = Math.max(0, (SLIDE_HEIGHT - total) / 2);
+      const left = Math.round((SLIDE_WIDTH - width) / 2);
+      const baseZ = activeSlide.elements.reduce((m, e) => Math.max(m, e.zIndex), 0);
+
+      const swatches: CanvasElement[] = palette.colors.map((color, i) => ({
+        id: `swatch-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 6)}`,
+        type: 'swatch',
+        color,
+        showHex: true,
+        x: left,
+        y: Math.round(top + i * (height + gap)),
+        width,
+        height: Math.round(height),
+        rotation: 0,
+        zIndex: baseZ + 1 + i,
+        createdBy: currentUserId,
+      }));
+
+      commit((prev) => ({
+        ...prev,
+        sections: prev.sections.map((section) => {
+          if (section.id !== activeSectionId) return section;
+          return {
+            ...section,
+            slides: section.slides.map((slide) =>
+              slide.id === activeSlideId
+                ? { ...slide, elements: [...slide.elements, ...swatches] }
+                : slide
+            ),
+          };
+        }),
+      }));
+      setSelectedElementIds(swatches.map((el) => el.id));
+    },
+    [activeSlide, activeSectionId, activeSlideId, commit, currentUserId]
+  );
+
   /**
    * Every slide on the board in order, flattened across sections.
    *
@@ -2117,6 +2230,9 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         visionBrief,
         updateVisionBrief,
         setPalette,
+        createPalette,
+        deletePalette,
+        placePalette,
         summarizeVision,
         isSummarizing,
         isCommentsOpen,

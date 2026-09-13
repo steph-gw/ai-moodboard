@@ -113,7 +113,32 @@ export interface ShapeElement extends CanvasElementBase {
   sides?: number;
 }
 
-export type CanvasElement = ImageElement | TextElement | ShapeElement;
+/**
+ * One color from a palette, placed on the board.
+ *
+ * Its own type rather than a shape with a text box beside it: the caption has to stay
+ * attached through a drag and grow with the box through a resize, and two loose elements
+ * that merely start next to each other do neither.
+ *
+ * The color is a copy, not a reference to the palette. Editing a palette later must not
+ * repaint swatches on a board someone has already approved.
+ */
+export interface SwatchElement extends CanvasElementBase {
+  type: 'swatch';
+  color: string;
+  /** The hex caption under the box. Absent reads as shown. */
+  showHex?: boolean;
+}
+
+export type CanvasElement = ImageElement | TextElement | ShapeElement | SwatchElement;
+
+/** A named set of colors belonging to one moodboard. */
+export interface Palette {
+  id: string;
+  name: string;
+  colors: string[];
+  order: number;
+}
 
 export interface Slide {
   id: string;
@@ -155,7 +180,14 @@ export interface Board {
   /** ISO date (YYYY-MM-DD); formatted for display by formatEventDate. */
   weddingDate: string;
   visionBrief: string;
+  /**
+   * The original single unnamed palette, still read off the Moodboard so the colors a
+   * planner already picked are not lost — it seeds the first named palette rather than
+   * being shown anywhere. See palettes.
+   */
   palette: string[];
+  /** Named palettes, the ones the toolbar offers. */
+  palettes: Palette[];
   sections: Section[];
   images: BoardImage[];
   suggestions: Suggestion[];

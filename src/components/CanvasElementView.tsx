@@ -3,7 +3,14 @@ import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { DraggableBox } from './DraggableBox';
 import { ShapeView } from './ShapeView';
-import type { CanvasElement, ImageElement, ShapeElement, TextElement } from '../types';
+import { SwatchView } from './SwatchView';
+import type {
+  CanvasElement,
+  ImageElement,
+  ShapeElement,
+  SwatchElement,
+  TextElement,
+} from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH, DEFAULT_LINE_HEIGHT } from '../types';
 import { textFontCss } from '../utils/textFonts';
 import { ElementContextMenu } from './ElementContextMenu';
@@ -312,9 +319,9 @@ export function CanvasElementView({
     );
   }
 
-  if (element.type === 'shape') {
+  if (element.type === 'shape' || element.type === 'swatch') {
     return (
-      <ShapeElementView
+      <BoxElementView
         element={element}
         slideId={slideId}
         scale={scale}
@@ -333,13 +340,19 @@ export function CanvasElementView({
   );
 }
 
-function ShapeElementView({
+/**
+ * Shapes and swatches: the same box with different contents.
+ *
+ * They behave identically — drag, resize, rotate, right-click — so they share one wrapper.
+ * Only what is painted inside differs, which is the whole of the difference between them.
+ */
+function BoxElementView({
   element,
   slideId,
   scale,
   readOnly,
 }: {
-  element: ShapeElement;
+  element: ShapeElement | SwatchElement;
   slideId: string;
   scale: number;
   readOnly?: boolean;
@@ -389,7 +402,11 @@ function ShapeElementView({
         setMenu({ x: e.clientX, y: e.clientY });
       }}
     >
-      <ShapeView element={element} />
+      {element.type === 'swatch' ? (
+        <SwatchView element={element} />
+      ) : (
+        <ShapeView element={element} />
+      )}
       {menu && (
         <ElementContextMenu
           slideId={slideId}

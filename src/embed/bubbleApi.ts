@@ -50,6 +50,12 @@ export const K = {
     order: 'order_number',
     elementsJson: 'elements_json_text',
   },
+  palette: {
+    moodboard: 'moodboard_custom_moodboard',
+    name: 'name_text',
+    colors: 'colors_list_text',
+    order: 'order_number',
+  },
   image: {
     moodboard: 'moodboard_custom_moodboard',
     image: 'image_image',
@@ -86,6 +92,7 @@ export const TYPE = {
   moodboard: 'moodboard',
   section: 'moodboardsection',
   slide: 'moodboardslide',
+  palette: 'moodboardpalette',
   image: 'moodboardimage',
   vote: 'moodboardimagevote',
   thread: 'moodboardthread',

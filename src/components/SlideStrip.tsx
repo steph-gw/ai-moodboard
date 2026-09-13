@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Plus, Copy, Lock, Trash2 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
 import { ShapeView } from './ShapeView';
+import { SwatchView } from './SwatchView';
 import type { CanvasElement, Slide } from '../types';
 import { SLIDE_HEIGHT, SLIDE_WIDTH } from '../types';
 import { textFontCss } from '../utils/textFonts';
@@ -36,6 +37,16 @@ function MiniElement({
     return (
       <div className="slide-mini-shape" style={style}>
         <ShapeView element={element} />
+      </div>
+    );
+  }
+
+  if (element.type === 'swatch') {
+    // The caption is unreadable at thumbnail size, so the chip stands alone. The colors
+    // are what the filmstrip is being read for anyway.
+    return (
+      <div className="slide-mini-shape" style={style}>
+        <SwatchView element={{ ...element, showHex: false }} />
       </div>
     );
   }

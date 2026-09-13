@@ -127,6 +127,17 @@ function coerceElement(item: unknown, knownImageIds: ReadonlySet<string>): Canva
     };
   }
 
+  if (o.type === 'swatch') {
+    return {
+      ...base,
+      type: 'swatch',
+      color: typeof o.color === 'string' ? o.color : '#cccccc',
+      // Absent means shown: swatches written before the caption could be turned off all
+      // had one, and a missing flag must not silently strip it from them.
+      showHex: o.showHex !== false,
+    };
+  }
+
   if (o.type === 'shape') {
     // An unknown shape name would render as nothing at all, which looks like data loss.
     // Falling back to a rectangle keeps the element visible and movable.
