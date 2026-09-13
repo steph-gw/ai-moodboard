@@ -281,8 +281,16 @@ export function BoardProvider({ children }: { children: ReactNode }) {
   boardRef.current = board;
 
   // What Cmd/Ctrl+X removed, kept so Cmd/Ctrl+V can put it back intact.
-  const cutRef = useRef<{ element: CanvasElement; clipboardText: string } | null>(null);
+  /**
+   * What we last put on the clipboard, kept as the real elements.
+   *
+   * The system clipboard can only carry text, and a shape has no text — so what it
+   * carries is a marker, and this is the thing paste actually puts back. Set by both
+   * cut and copy, which is why it is a list: cut takes one, copy takes the selection.
+   */
+  const cutRef = useRef<{ elements: CanvasElement[]; clipboardText: string } | null>(null);
   const lastCutAtRef = useRef(0);
+  const lastCopyAtRef = useRef(0);
 
   const versionsRef = useRef<SlideVersions>(new Map());
   /** This viewer's vote row per image, so changing a vote patches rather than duplicates. */
@@ -2212,7 +2220,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       lastCutAtRef.current = Date.now();
 
       const clipboardText = element.type === 'text' ? element.content : '';
-      cutRef.current = { element, clipboardText };
+      cutRef.current = { elements: [element], clipboardText };
       writeClipboard(clipboardText);
       deleteElement(activeSlideId, selectedElementId);
       return true;
@@ -2236,19 +2244,39 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     return () => document.removeEventListener('cut', onCutScoped);
   }, [cutSelection, rootEl]);
 
-  const insertElement = useCallback(
-    (element: CanvasElement) => {
-      if (!activeSlide || !activeSlideId) return;
+  /**
+   * Put elements back on the slide, offset from where they came from.
+   *
+   * Offset as a set rather than one by one, so a pasted group keeps its arrangement — five
+   * chips that were in a row come back as a row, nudged, not stacked on one another.
+   */
+  const insertElements = useCallback(
+    (elements: readonly CanvasElement[]) => {
+      if (!activeSlide || !activeSlideId || !elements.length) return;
+      if (!canEditRef.current) return;
       const maxZ = activeSlide.elements.reduce((m, e) => Math.max(m, e.zIndex), 0);
-      const copy = {
-        ...element,
-        id: `el-paste-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        // A pasted copy belongs to whoever pasted it, not to whoever made the original.
-        createdBy: currentUserId,
-        x: Math.min(element.x + PASTE_OFFSET, SLIDE_WIDTH - element.width),
-        y: Math.min(element.y + PASTE_OFFSET, SLIDE_HEIGHT - element.height),
-        zIndex: maxZ + 1,
-      } as CanvasElement;
+      // One offset for the whole set, clamped by the element that would fall off first.
+      const dx = Math.min(
+        PASTE_OFFSET,
+        ...elements.map((el) => Math.max(0, SLIDE_WIDTH - el.width - el.x))
+      );
+      const dy = Math.min(
+        PASTE_OFFSET,
+        ...elements.map((el) => Math.max(0, SLIDE_HEIGHT - el.height - el.y))
+      );
+      const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+      const copies = elements.map(
+        (element, i) =>
+          ({
+            ...element,
+            id: `el-paste-${stamp}-${i}`,
+            // A pasted copy belongs to whoever pasted it, not to whoever made the original.
+            createdBy: currentUserId,
+            x: element.x + dx,
+            y: element.y + dy,
+            zIndex: maxZ + 1 + i,
+          }) as CanvasElement
+      );
 
       commit((prev) => ({
         ...prev,
@@ -2256,15 +2284,62 @@ export function BoardProvider({ children }: { children: ReactNode }) {
           ...section,
           slides: section.slides.map((slide) =>
             slide.id === activeSlideId
-              ? { ...slide, elements: [...slide.elements, copy] }
+              ? { ...slide, elements: [...slide.elements, ...copies] }
               : slide
           ),
         })),
       }));
-      setSelectedElementIds([copy.id]);
+      setSelectedElementIds(copies.map((el) => el.id));
     },
     [activeSlide, activeSlideId, commit, currentUserId]
   );
+
+  /**
+   * Copy: the whole selection, and nothing is removed.
+   *
+   * Separate from cut because the rules differ — cut is a delete, so a client may only cut
+   * what is theirs, while copying someone else's element and pasting your own copy of it
+   * takes nothing away from them.
+   */
+  const copySelection = useCallback(
+    (writeClipboard: (text: string) => void): boolean => {
+      if (!activeSlideId || !canEditRef.current) return false;
+      const elements = (activeSlide?.elements ?? []).filter((el) =>
+        selectedElementIds.includes(el.id)
+      );
+      if (!elements.length) return false;
+      // Chrome delivers both keydown and the native copy event for one gesture.
+      if (Date.now() - lastCopyAtRef.current < 300) return false;
+      lastCopyAtRef.current = Date.now();
+
+      const clipboardText = elements
+        .map((el) => (el.type === 'text' ? el.content : ''))
+        .filter(Boolean)
+        .join('\n');
+      cutRef.current = { elements, clipboardText };
+      writeClipboard(clipboardText);
+      return true;
+    },
+    [activeSlide, activeSlideId, selectedElementIds]
+  );
+
+  // The native copy event, for the same reason cut listens for its own: it is the only
+  // place the system clipboard can be written synchronously.
+  useEffect(() => {
+    const onCopy = (e: ClipboardEvent) => {
+      if (isTypingTarget(e.target)) return;
+      // A real text selection is the user copying words, not elements.
+      if (!window.getSelection()?.isCollapsed) return;
+      const did = copySelection((text) => e.clipboardData?.setData('text/plain', text));
+      if (did) e.preventDefault();
+    };
+    const onCopyScoped = (e: ClipboardEvent) => {
+      if (!rootEl.contains(document.activeElement)) return;
+      onCopy(e);
+    };
+    document.addEventListener('copy', onCopyScoped);
+    return () => document.removeEventListener('copy', onCopyScoped);
+  }, [copySelection, rootEl]);
 
   // Paste: an image on the clipboard lands as an image element, text as a text
   // box, and an element cut from the canvas comes back with its own styling.
@@ -2294,7 +2369,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
       // Our own cut still owns the clipboard, so restore the real element.
       if (cut && text === cut.clipboardText) {
         e.preventDefault();
-        insertElement(cut.element);
+        insertElements(cut.elements);
         return;
       }
 
@@ -2310,7 +2385,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     };
     document.addEventListener('paste', onPasteScoped);
     return () => document.removeEventListener('paste', onPasteScoped);
-  }, [uploadAndAddImage, addTextElement, insertElement, rootEl]);
+  }, [uploadAndAddImage, addTextElement, insertElements, rootEl]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -2327,6 +2402,23 @@ export function BoardProvider({ children }: { children: ReactNode }) {
         if (typing) return;
         e.preventDefault();
         undo();
+        return;
+      }
+
+      // Copy is driven by the native copy event above, which is the only place the
+      // clipboard can be written synchronously. This is the fallback for a browser that
+      // delivers no copy event when nothing on the page is selected — it runs a moment
+      // later, and stands down if the real event did arrive.
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'c') {
+        if (typing) return;
+        if (!window.getSelection()?.isCollapsed) return;
+        const at = Date.now();
+        window.setTimeout(() => {
+          if (lastCopyAtRef.current >= at) return;
+          copySelection((text) => {
+            void navigator.clipboard?.writeText(text).catch(() => {});
+          });
+        }, 60);
         return;
       }
 
@@ -2354,7 +2446,7 @@ export function BoardProvider({ children }: { children: ReactNode }) {
     };
     rootEl.addEventListener('keydown', handleKeyDown);
     return () => rootEl.removeEventListener('keydown', handleKeyDown);
-  }, [selectedElementIds, activeSlideId, deleteSelection, undo, cutSelection, rootEl]);
+  }, [selectedElementIds, activeSlideId, deleteSelection, undo, cutSelection, copySelection, rootEl]);
 
   return (
     <BoardContext.Provider
