@@ -27,7 +27,7 @@ export function PinComposer({
   boardWidth: number;
   boardHeight: number;
 }) {
-  const { addComment, selectCommentPin, role } = useBoard();
+  const { addComment, selectCommentPin, setCommentsOpen, role } = useBoard();
   const [draft, setDraft] = useState('');
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -50,7 +50,11 @@ export function PinComposer({
     if (!body) return;
     addComment(pin.id, body);
     setDraft('');
-    // The pin stays selected: the thread it just became is what the drawer should show.
+    // The pin stays selected: the thread it just became is what the drawer should show —
+    // and now the drawer opens to show it, scrolling to the thread because it is the
+    // selected one. A comment posted into a closed drawer looked like it had gone
+    // nowhere: the composer vanished and a numbered dot appeared in its place.
+    setCommentsOpen(true);
   };
 
   return (

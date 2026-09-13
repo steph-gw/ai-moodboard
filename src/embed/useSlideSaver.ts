@@ -3,12 +3,21 @@ import type { Board, CanvasElement } from '../types';
 import type { BoardRepo, SlideVersions } from './boardRepo';
 
 /**
- * How long the board must sit still before an idle save. Deliberately long: saving on every
- * gesture turns a normal editing session into hundreds of Bubble writes, and the cost there
- * is the number of save cycles, not what each one does. Real work is captured by the
- * boundary flushes instead — switching slide or section, hiding the tab, closing, ⌘S.
+ * How long the board must sit still before an idle save.
+ *
+ * Long enough that a gesture is not a write — the cost at the far end is the number of save
+ * cycles, not what each one does — and short enough that a pause for thought saves. It was
+ * twenty-five seconds, which is longer than anyone sits still while arranging a slide, so
+ * "Unsaved changes" was the normal state of the board and the chip stopped meaning anything.
  */
-const IDLE_MS = 25_000;
+const IDLE_MS = 6_000;
+
+/**
+ * And a ceiling, because the idle timer restarts on every change: someone dragging things
+ * around without pause would otherwise not save until they stopped, whenever that was. This
+ * is the longest a change can sit unwritten while the board is in constant use.
+ */
+const MAX_DIRTY_MS = 45_000;
 
 export type SaveState = 'idle' | 'saving' | 'error' | 'conflict';
 
@@ -59,10 +68,13 @@ export function useSlideSaver({ repo, boardRef, versionsRef, onError, onConflict
   const inFlightRef = useRef<Promise<void> | null>(null);
   /** Set while a conflict reload is pending, so we don't retry against a version we know is stale. */
   const awaitingReloadRef = useRef(false);
+  /** When the board first went dirty in the current run, for the ceiling above. */
+  const dirtySinceRef = useRef<number | null>(null);
 
   /** Seeds the baseline after a load, so a fresh board isn't seen as entirely dirty. */
   const adopt = useCallback((board: Board) => {
     awaitingReloadRef.current = false;
+    dirtySinceRef.current = null;
     setIsDirty(false);
     const map = new Map<string, { elements: readonly CanvasElement[]; background?: string }>();
     for (const section of board.sections) {
@@ -103,6 +115,7 @@ export function useSlideSaver({ repo, boardRef, versionsRef, onError, onConflict
 
     const dirty = collectDirty();
     if (!dirty.length) return;
+    dirtySinceRef.current = null;
 
     const run = (async () => {
       setState('saving');
@@ -164,11 +177,17 @@ export function useSlideSaver({ repo, boardRef, versionsRef, onError, onConflict
     // Each change pushes the idle save further out. Anything the user would notice losing is
     // captured by a boundary flush long before this fires.
     setIsDirty(true);
+    if (dirtySinceRef.current === null) dirtySinceRef.current = Date.now();
     if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      timerRef.current = null;
-      void writeNow();
-    }, IDLE_MS);
+    // Whatever comes first: the pause, or the ceiling measured from the first unsaved change.
+    const remaining = Math.max(0, MAX_DIRTY_MS - (Date.now() - dirtySinceRef.current));
+    timerRef.current = setTimeout(
+      () => {
+        timerRef.current = null;
+        void writeNow();
+      },
+      Math.min(IDLE_MS, remaining)
+    );
   }, [repo, collectDirty, writeNow]);
 
   // Leaving the page or hiding the tab has to take unsaved work with it. beforeunload can't

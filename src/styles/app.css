@@ -2728,7 +2728,10 @@
   background: var(--white);
   border: 1px solid var(--border-strong);
   border-radius: 8px;
-  padding: 10px 22px;
+  /* Even on both sides and no wider than its word needs. It used to carry the same
+     generous padding as the confirm button beside it, which on a dialog this size left
+     Cancel sprawling across the left of the row. */
+  padding: 10px 16px;
   transition: background 0.15s, color 0.15s;
 }
 
@@ -2943,7 +2946,10 @@
 
 /* ── Narrow confirm dialog ── */
 .modal-card-narrow {
-  max-width: 340px;
+  /* Wide enough for the two ways to start to sit side by side on one line each. At 340
+     "Start from scratch" wrapped, so one choice was a line taller than the other and the
+     pair read as two different kinds of thing. */
+  max-width: 430px;
 }
 
 .modal-title-sm {
@@ -3856,10 +3862,48 @@
   color: var(--text-primary);
 }
 
-.modal-choice input {
+/*
+ * The radio, drawn rather than borrowed.
+ *
+ * The native control marks the chosen one with a heavy dark ring, which is louder than the
+ * choice deserves and belongs to no palette in here. This is the same quiet circle whether
+ * it is on or off — only a small gold dot appears inside it.
+ */
+.modal-choice input[type='radio'] {
   flex: none;
-  accent-color: var(--gold);
   margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--white);
+  display: grid;
+  place-content: center;
+  transition: border-color 0.15s;
+}
+
+.modal-choice input[type='radio']::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  transform: scale(0);
+  transition: transform 0.12s ease-out;
+}
+
+.modal-choice input[type='radio']:checked {
+  border-color: var(--gold-border);
+}
+
+.modal-choice input[type='radio']:checked::before {
+  transform: scale(1);
+}
+
+.modal-choice input[type='radio']:disabled {
+  opacity: 0.5;
 }
 
 /* The confirm label changes with the choice ("Replace moodboard" / "Empty this
