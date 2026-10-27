@@ -4,10 +4,12 @@ import {
   ChevronDown,
   ChevronUp,
   GripVertical,
+  ImagePlus,
   Palette as PaletteIcon,
   Pencil,
   Plus,
   Trash2,
+  Upload,
   X,
 } from 'lucide-react';
 import { useBoard } from '../context/BoardContext';
@@ -15,6 +17,7 @@ import { useHost } from '../embed/HostProvider';
 import { ColorField } from './ColorField';
 import { readHex } from '../utils/hex';
 import { rememberColor } from '../utils/recentColors';
+import { extractPalette, loadImageForPalette } from '../utils/extractPalette';
 import { ConfirmModal } from './ConfirmModal';
 
 const FALLBACK_COLOR = '#D9D2C7';
@@ -60,6 +63,15 @@ export function PaletteMenu() {
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
   /** The palette being edited, or null when the editor is making a new one. */
   const [editingId, setEditingId] = useState<string | null>(null);
+  /** The "From image" chooser: open, reading an image, and what went wrong if it failed. */
+  const [picking, setPicking] = useState(false);
+  const [extracting, setExtracting] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+  /** The image the current colors came from, shown so the planner can see what they match. */
+  const [sourceUrl, setSourceUrl] = useState<string | null>(null);
+  /** An uploaded file is read locally, never stored; its preview URL is freed on close. */
+  const localUrlRef = useRef<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const palettes = board.palettes;
@@ -115,13 +127,62 @@ export function PaletteMenu() {
     setEditing(true);
   };
 
+  const releaseLocalUrl = () => {
+    if (localUrlRef.current) URL.revokeObjectURL(localUrlRef.current);
+    localUrlRef.current = null;
+  };
+
   const closeEditor = () => {
     setEditing(false);
     setEditingId(null);
     setName('');
     setRows([]);
     setSaving(false);
+    setPicking(false);
+    setExtracting(false);
+    setImageError(null);
+    setSourceUrl(null);
+    releaseLocalUrl();
   };
+
+  /**
+   * Replaces the colors with the ones found in an image. Replaces rather than appends:
+   * capturing a photo's palette means wanting that photo's colors, and nothing is saved
+   * until Create, so Cancel still gets the old ones back.
+   */
+  const fromImage = async (source: File | string) => {
+    setExtracting(true);
+    setImageError(null);
+    try {
+      const bitmap = await loadImageForPalette(source);
+      const colors = extractPalette(bitmap);
+      bitmap.close();
+      if (!colors.length) throw new Error('no colors');
+      releaseLocalUrl();
+      if (typeof source === 'string') {
+        setSourceUrl(source);
+      } else {
+        localUrlRef.current = URL.createObjectURL(source);
+        setSourceUrl(localUrlRef.current);
+      }
+      setRows(colors.map((c) => newRow(c)));
+      setName((n) => (n.trim() ? n : 'Image palette'));
+      setPicking(false);
+    } catch {
+      setImageError(
+        typeof source === 'string'
+          ? "Couldn't read the colors in that image. Try uploading it from your computer instead."
+          : "Couldn't read the colors in that file. Try a JPG or PNG."
+      );
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  /** Each image once, most recent first — the one just added is usually the one meant. */
+  const boardImages = board.images
+    .filter((img, i, all) => img.url && all.findIndex((o) => o.url === img.url) === i)
+    .reverse();
 
   const submit = async () => {
     setSaving(true);
@@ -279,6 +340,76 @@ export function PaletteMenu() {
                   }}
                 />
 
+                {sourceUrl && !picking && (
+                  <div className="palette-source">
+                    <img className="palette-source-thumb" src={sourceUrl} alt="" />
+                    <span className="palette-source-text">Colors from this image</span>
+                    <button
+                      type="button"
+                      className="palette-source-change"
+                      onClick={() => setPicking(true)}
+                    >
+                      Choose another
+                    </button>
+                  </div>
+                )}
+
+                {picking && (
+                  <div className="palette-image-picker">
+                    <div className="palette-image-picker-head">
+                      <span className="modal-label">
+                        {extracting ? 'Reading colors…' : 'Pick an image'}
+                      </span>
+                      <button
+                        type="button"
+                        className="palette-row-remove"
+                        onClick={() => {
+                          setPicking(false);
+                          setImageError(null);
+                        }}
+                        aria-label="Close image picker"
+                      >
+                        <X size={13} strokeWidth={1.8} />
+                      </button>
+                    </div>
+                    <div className="palette-image-grid">
+                      <button
+                        type="button"
+                        className="palette-image-upload"
+                        disabled={extracting}
+                        onClick={() => fileRef.current?.click()}
+                      >
+                        <Upload size={14} strokeWidth={1.6} />
+                        Upload
+                      </button>
+                      {boardImages.map((img) => (
+                        <button
+                          type="button"
+                          key={img.id}
+                          className="palette-image-option"
+                          disabled={extracting}
+                          onClick={() => void fromImage(img.url)}
+                          aria-label="Use this image's colors"
+                        >
+                          <img src={img.url} alt="" loading="lazy" />
+                        </button>
+                      ))}
+                    </div>
+                    {imageError && <p className="palette-image-error">{imageError}</p>}
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      accept="image/*"
+                      hidden
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = '';
+                        if (file) void fromImage(file);
+                      }}
+                    />
+                  </div>
+                )}
+
                 {rows.length > 0 && <label className="modal-label modal-label-spaced">Colors</label>}
                 <div className="palette-rows">
                   {rows.map((row, i) => (
@@ -360,14 +491,29 @@ export function PaletteMenu() {
                   ))}
                 </div>
 
-                <button
-                  type="button"
-                  className={`palette-add-color${rows.length === 0 ? ' is-first' : ''}`}
-                  onClick={() => setRows((prev) => [...prev, newRow(nextColor(prev))])}
-                >
-                  <Plus size={13} strokeWidth={1.8} />
-                  Add color
-                </button>
+                <div className={`palette-add-actions${rows.length === 0 ? ' is-first' : ''}`}>
+                  <button
+                    type="button"
+                    className="palette-add-color"
+                    onClick={() => setRows((prev) => [...prev, newRow(nextColor(prev))])}
+                  >
+                    <Plus size={13} strokeWidth={1.8} />
+                    Add color
+                  </button>
+                  {!picking && (
+                    <button
+                      type="button"
+                      className="palette-add-color"
+                      onClick={() => {
+                        setImageError(null);
+                        setPicking(true);
+                      }}
+                    >
+                      <ImagePlus size={13} strokeWidth={1.8} />
+                      From image
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="modal-foot">

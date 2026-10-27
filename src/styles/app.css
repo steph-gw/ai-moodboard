@@ -4170,9 +4170,138 @@
   cursor: pointer;
 }
 
+/* Add color and From image, side by side under the rows. */
+.palette-add-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.palette-add-actions .palette-add-color {
+  margin-top: 0;
+}
+
 /* With no colors yet there is no COLORS label above it, so it carries its own gap. */
-.palette-add-color.is-first {
+.palette-add-actions.is-first {
   margin-top: 16px;
+}
+
+/* ── Palette from an image ── */
+.palette-image-picker {
+  margin-top: 16px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--content-bg);
+}
+
+.palette-image-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.palette-image-picker-head .modal-label {
+  margin-bottom: 0;
+}
+
+.palette-image-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  max-height: 184px;
+  overflow-y: auto;
+}
+
+.palette-image-option,
+.palette-image-upload {
+  aspect-ratio: 1;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--white);
+  cursor: pointer;
+}
+
+.palette-image-option img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.palette-image-option:hover:not(:disabled) {
+  border-color: var(--gold-active);
+}
+
+.palette-image-upload {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border-style: dashed;
+  border-color: var(--border-strong);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 11px;
+}
+
+.palette-image-upload:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--gold-active);
+}
+
+.palette-image-option:disabled,
+.palette-image-upload:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.palette-image-error {
+  margin-top: 8px;
+  color: #b04a3a;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* The image the colors came from, so they can be checked against it. */
+.palette-source {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.palette-source-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.palette-source-text {
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+.palette-source-change {
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.palette-source-change:hover {
+  color: var(--text-primary);
 }
 
 .palette-add-color:hover {
