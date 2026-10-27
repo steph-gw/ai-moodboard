@@ -504,7 +504,7 @@ export function PaletteMenu() {
                     <button
                       type="button"
                       className="palette-add-color palette-from-image"
-                      data-tooltip="Fill this palette with the main colors from a photo, with their hex codes. Pick one from the board or upload one."
+                      data-tooltip="Fill this palette with the main colors from a photo. Pick one from the board or upload one."
                       onClick={() => {
                         setImageError(null);
                         setPicking(true);
