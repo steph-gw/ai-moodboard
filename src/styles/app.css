@@ -4188,6 +4188,32 @@
 }
 
 /* ── Palette from an image ── */
+/* Its tooltip opens above and wraps: below, the dialog's scrolling body would clip it,
+   and one long line would run off the side of a narrow dialog. */
+.palette-from-image {
+  position: relative;
+}
+
+.palette-from-image[data-tooltip]::after {
+  top: auto;
+  bottom: calc(100% + 7px);
+  left: 0;
+  transform: none;
+  width: 230px;
+  white-space: normal;
+  text-align: left;
+}
+
+.palette-from-image[data-tooltip]::before {
+  top: auto;
+  bottom: calc(100% + 2px);
+  left: 18px;
+  border-top-width: 5px;
+  border-bottom-width: 0;
+  border-top-color: #17151a;
+  border-bottom-color: transparent;
+}
+
 .palette-image-picker {
   margin-top: 16px;
   padding: 10px 12px 12px;
