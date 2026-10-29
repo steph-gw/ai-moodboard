@@ -42,7 +42,11 @@ export async function loadImageForPalette(source: File | string): Promise<ImageB
   if (typeof source !== 'string') return createImageBitmap(source);
   // Fetched rather than set as an <img src>: an image already on the slide was loaded
   // without CORS, and reusing that cached copy would leave the canvas unreadable.
-  const response = await fetch(source, { mode: 'cors' });
+  // no-store matters too: Bubble's CDN only sends Access-Control-Allow-Origin when the
+  // request carries an Origin, and varies on accept-encoding alone — so a plain fetch is
+  // answered from the <img>'s cached copy, which has no CORS header, and fails.
+  const url = source.startsWith('//') ? `https:${source}` : source;
+  const response = await fetch(url, { mode: 'cors', cache: 'no-store' });
   if (!response.ok) throw new Error(`status ${response.status}`);
   return createImageBitmap(await response.blob());
 }
